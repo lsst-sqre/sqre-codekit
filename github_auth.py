@@ -39,7 +39,7 @@ if not os.path.isfile(file_credential):
 
     note = appname + ' via github3 on ' + hostname + ' by ' + user
     note_url = 'https://lsst.org/'
-    scopes = ['repo']
+    scopes = ['repo','user']
 
     auth = authorize(user, password, scopes, note, note_url)
 
