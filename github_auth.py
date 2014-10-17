@@ -4,6 +4,10 @@
 Generate a github auth token
 """
 
+# technical debt:
+# --------------
+# - add command line option to override default user
+
 from github3 import authorize
 from getpass import getuser, getpass
 import os
