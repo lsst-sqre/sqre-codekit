@@ -38,7 +38,7 @@ with open(file_credential, 'r') as fd:
 gh = login(token=token)
 
 # get the organization object
-organization = gh.organization('LSST')
+organization = gh.organization('lsst')
 
 # list of all LSST repos
 repos = [g for g in organization.iter_repos()]
