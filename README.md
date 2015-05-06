@@ -18,7 +18,7 @@ This is useful for testing tools in this suite safely.
 
 If you want to take a recent fork, you will need to delete the existing shadow repos first:
 
-github_delete_shadow.py
+	github_delete_shadow.py
 
 That requires a token with delete privileges. 
 
