@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 
 """
 Fork github repos
@@ -12,14 +12,14 @@ from github3 import login
 from getpass import getuser
 import os
 import sys
-import time
+from time import sleep
 
 token = ''
 debug = os.getenv("DM_SQUARE_DEBUG")
 user = getuser()
 
 if debug:
-    print user
+    print 'You are', user
 
 # I have cut and pasted code
 # I am a bad person
@@ -52,9 +52,11 @@ for repo in repos:
         print repo.name
 
     forked_repo = repo.create_fork(user+'-shadow')
-    forked_name = forked_repo.name
+    sleep(2)
+
+    # forked_name = forked_repo.name
     # Trap previous fork with dm_ prefix
-    if not forked_name.startswith("dm_"):
-        newname = "dm_" + forked_name
-        forked_repo.edit(newname)
+    #if not forked_name.startswith("dm_"):
+    #    newname = "dm_" + forked_name
+    #    forked_repo.edit(newname)
 
