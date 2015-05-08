@@ -47,7 +47,7 @@ if not os.path.isfile(file_credential):
     note = appname + ' via github3 on ' + hostname + ' by ' + user + file_credential
     note_url = 'https://lsst.org/'
 
-    if delete_scope: scopes = ['repo','user','delete_repo']
+    if delete_scope: scopes = ['repo','user','delete_repo','admin:org']
     else: scopes = ['repo','user']
 
     auth = authorize(user, password, scopes, note, note_url)
