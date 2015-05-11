@@ -8,6 +8,7 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # --------------
 # - sort out the certificate so we don't have to supress warnings
 # - completely hide eups-specifics from this file
+# - skips non-github repos - can add repos.yaml knowhow to address this
 
 import codetools
 import urllib3
@@ -63,12 +64,24 @@ for entry in entries:
 
     repo = gh.repository(orgname, upstream)
 
+    # if the repo is not in github skip it for now
+    # see TD
     if not hasattr(repo, 'name'):
         print '!!! SKIPPING', upstream, (60-len(upstream)) * '-'
         continue
 
+    for team in repo.iter_teams():
+        if team.name == 'Data Management':
+            if debug: print repo.name, 'found in', team.name
+            sha = codetools.eups2git_ref(eups_ref = eups_tag, repo = repo.name)
+            if debug: print 'sha:',sha
+        elif team.name == 'DM External':
+            if debug: print repo.name, 'found in', team.name
+        else:
+            print 'No action for', repo.name, 'belonging to', team.name
 
-        
+
+    
 
     
     
