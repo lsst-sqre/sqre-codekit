@@ -9,19 +9,30 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # - sort out the certificate so we don't have to supress warnings
 # - completely hide eups-specifics from this file
 # - skips non-github repos - can add repos.yaml knowhow to address this
+# - worth doing the smart thing for externals?
+# - command line options
 
 import codetools
 import urllib3
 import webbrowser
 import os, sys
 from time import sleep
+from getpass import getuser
 
 debug = os.getenv("DM_SQUARE_DEBUG")
 
-version = '10.1'
+# we'll pass those as args later (see TD)
+version = 'fe-10.1'
 candidate = '10.1.rc3'
+eupsbuild = 'b1109' # sadly we need to "just" know this
+message = 'Version ' + version + ' release from ' + candidate +'/'+eupsbuild
 eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
 orgname = 'frossie-shadow'
+tagger = dict(name = getuser(),
+          email = getuser() + '@lsst.org',
+          date = '2015-05-11T09:01:45Z')
+          
+if debug: print tagger
 
 gh = codetools.github(authfile='~/.sq_github_token_delete')
 if debug: print(type(gh))
@@ -73,21 +84,20 @@ for entry in entries:
     for team in repo.iter_teams():
         if team.name == 'Data Management':
             if debug: print repo.name, 'found in', team.name
-            sha = codetools.eups2git_ref(eups_ref = eups_tag, repo = repo.name)
-            if debug: print 'sha:',sha
+            sha = codetools.eups2git_ref(eups_ref = eups_tag, repo = repo.name, eupsbuild = eupsbuild, debug = debug)
+            if debug: print 'Will tag sha:',sha, 'as', version, '(was',eups_tag,')'
+
+            repo.create_tag(tag = 'fe-foo',
+                            message = message,
+                            sha = sha,
+                            obj_type = 'commit',
+                            tagger = tagger,
+                            lightweight=False)
+            
         elif team.name == 'DM External':
             if debug: print repo.name, 'found in', team.name
         else:
             print 'No action for', repo.name, 'belonging to', team.name
-
-
-    
-
-    
-    
-
-
-    
 
 
 
