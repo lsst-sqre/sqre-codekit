@@ -11,6 +11,8 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # - skips non-github repos - can add repos.yaml knowhow to address this
 # - worth doing the smart thing for externals?
 # - command line options
+# - deal with authentication version
+# - caclulate the date properly
 
 import codetools
 import urllib3
@@ -20,17 +22,18 @@ from time import sleep
 from getpass import getuser
 
 debug = os.getenv("DM_SQUARE_DEBUG")
+trace = False
 
 # we'll pass those as args later (see TD)
-version = 'fe-10.1'
+orgname = 'lsst'
+version = '10.1'
 candidate = '10.1.rc3'
 eupsbuild = 'b1109' # sadly we need to "just" know this
 message = 'Version ' + version + ' release from ' + candidate +'/'+eupsbuild
 eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
-orgname = 'frossie-shadow'
 tagger = dict(name = getuser(),
-          email = getuser() + '@lsst.org',
-          date = '2015-05-11T09:01:45Z')
+              email = getuser() + '@lsst.org',
+              date = '2015-05-12T21:29:45Z')
           
 if debug: print tagger
 
@@ -52,6 +55,14 @@ if debug: print eupspkg_taglist
 http = urllib3.PoolManager()
 # supress the certificate warning - technical debt
 urllib3.disable_warnings()
+if trace:
+    import logging
+    urllib3 = logging.getLogger('requests.packages.urllib3')
+    stream_handler = logging.StreamHandler()
+    logger = logging.getLogger('github3')
+    logger.addHandler(stream_handler)
+    logger.setLevel(logging.DEBUG)
+
 manifest = http.request('GET', eupspkg_taglist)
 
 if manifest.status >= 300: sys.exit("Failed GET")
@@ -87,19 +98,15 @@ for entry in entries:
             sha = codetools.eups2git_ref(eups_ref = eups_tag, repo = repo.name, eupsbuild = eupsbuild, debug = debug)
             if debug: print 'Will tag sha:',sha, 'as', version, '(was',eups_tag,')'
 
-            repo.create_tag(tag = 'fe-foo',
+            backtag = repo.create_tag(tag = version,
                             message = message,
                             sha = sha,
                             obj_type = 'commit',
                             tagger = tagger,
-                            lightweight=False)
-            
+                            lightweight = False)
+
         elif team.name == 'DM External':
             if debug: print repo.name, 'found in', team.name
         else:
             print 'No action for', repo.name, 'belonging to', team.name
-
-
-
-
 
