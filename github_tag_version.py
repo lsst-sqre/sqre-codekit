@@ -10,31 +10,76 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # - completely hide eups-specifics from this file
 # - skips non-github repos - can add repos.yaml knowhow to address this
 # - worth doing the smart thing for externals?
-# - command line options
 # - deal with authentication version
-# - caclulate the date properly
 
 import codetools
 import urllib3
 import webbrowser
-import os, sys
+import os
+import sys
+import argparse
+import textwrap
 from time import sleep
+from datetime import datetime
 from getpass import getuser
 
 debug = os.getenv("DM_SQUARE_DEBUG")
 trace = False
+user = getuser()
+
+# argument parsing and default options
+
+parser = argparse.ArgumentParser(
+    prog='github_tag_version',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=textwrap.dedent('''
+
+    Tag all repositories in a Github org using a team-based scheme
+
+    Examples:
+    github_tag_version.py --org lsst w.2015.33 b1630
+
+    '''),
+    epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
+)
+
+# for safety, default to dummy org
+# will fail for most people but see github_fork_repos in this module
+# on how to get your own
+
+parser.add_argument('tag')
+if debug: print(tag)
+
+parser.add_argument('manifest')
+if debug: print(manifest)
+
+parser.add_argument('--org',
+                    default=user+'-shadow')
+
+parser.add_argument('--sims')
+
+parser.add_argument('-v', '--version', action='version', version='%(prog)s 0.5')
+
+opt = parser.parse_args()
+
 
 # we'll pass those as args later (see TD)
-orgname = 'lsst'
-version = '10.1'
-candidate = '10.1.rc3'
-eupsbuild = 'b1109' # sadly we need to "just" know this
+orgname = opt.org
+version = opt.tag
+candidate = opt.tag
+eupsbuild = opt.manifest # sadly we need to "just" know this
 message = 'Version ' + version + ' release from ' + candidate +'/'+eupsbuild
 eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
-tagger = dict(name = getuser(),
-              email = getuser() + '@lsst.org',
-              date = '2015-05-12T21:29:45Z')
-          
+
+# generate timestamp for github API
+now = datetime.utcnow()
+timestamp = now.isoformat()[0:19]+'Z'
+if debug: print(timestamp)
+
+tagger = dict(name = user,
+              email = user + '@lsst.org',
+              date = timestamp)
+
 if debug: print tagger
 
 gh = codetools.github(authfile='~/.sq_github_token_delete')
@@ -43,8 +88,12 @@ if debug: print(type(gh))
 org = gh.organization(orgname)
 
 # generate eups-style version
+# fudge for weekly
+
 eups_version = codetools.git2eups_version(git_version=version)
+eups_version = version.replace('.','_')
 eups_candidate = codetools.git2eups_version(git_version=candidate)
+eups_candidate = candidate.replace('.','_')
 
 if debug: print eups_version
 
@@ -108,5 +157,5 @@ for entry in entries:
         elif team.name == 'DM External':
             if debug: print repo.name, 'found in', team.name
         else:
-            print 'No action for', repo.name, 'belonging to', team.name
+            if debug: print 'No action for', repo.name, 'belonging to', team.name
 
