@@ -9,8 +9,12 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # - sort out the certificate so we don't have to supress warnings
 # - completely hide eups-specifics from this file
 # - skips non-github repos - can add repos.yaml knowhow to address this
-# - worth doing the smart thing for externals?
+# - worth doing the smart thing for externals? (yes for Sims)
 # - deal with authentication version
+
+# Known Bugs
+# ----------
+# Yeah, the candidate logic is broken, will fix
 
 import codetools
 import urllib3
@@ -22,6 +26,7 @@ import textwrap
 from time import sleep
 from datetime import datetime
 from getpass import getuser
+from string import maketrans
 
 debug = os.getenv("DM_SQUARE_DEBUG")
 trace = False
@@ -39,6 +44,8 @@ parser = argparse.ArgumentParser(
     Examples:
     github_tag_version.py --org lsst w.2015.33 b1630
 
+    github_tag_version.py --org lsst --candidate v11_0_rc2 11.0.rc2 b1679
+
     '''),
     epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
 )
@@ -48,15 +55,15 @@ parser = argparse.ArgumentParser(
 # on how to get your own
 
 parser.add_argument('tag')
-if debug: print(tag)
 
 parser.add_argument('manifest')
-if debug: print(manifest)
 
 parser.add_argument('--org',
                     default=user+'-shadow')
 
 parser.add_argument('--sims')
+
+parser.add_argument('--candidate')
 
 parser.add_argument('-v', '--version', action='version', version='%(prog)s 0.5')
 
@@ -66,7 +73,20 @@ opt = parser.parse_args()
 # we'll pass those as args later (see TD)
 orgname = opt.org
 version = opt.tag
-candidate = opt.tag
+
+# The candidate is assumed to be the requested EUPS tag unless
+# otherwise specified with the --candidate option The reason to
+# currently do this is that for weeklies and other internal builds,
+# it's okay to eups publish the weekly and git tag post-facto. However
+# for official releases, we don't want to publish until the git tag
+# goes down, because we want to eups publish the build that has the
+# official versions in the eups ref.
+
+if opt.candidate:
+    candidate = opt.candidate
+else:
+    candidate = opt.tag
+
 eupsbuild = opt.manifest # sadly we need to "just" know this
 message = 'Version ' + version + ' release from ' + candidate +'/'+eupsbuild
 eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
@@ -86,16 +106,15 @@ gh = codetools.github(authfile='~/.sq_github_token_delete')
 if debug: print(type(gh))
 
 org = gh.organization(orgname)
+if debug: print("Tagging repos in ",orgname)
 
 # generate eups-style version
-# fudge for weekly
+# eups no likey semantic versioning markup, wants underscores
 
-eups_version = codetools.git2eups_version(git_version=version)
-eups_version = version.replace('.','_')
-eups_candidate = codetools.git2eups_version(git_version=candidate)
-eups_candidate = candidate.replace('.','_')
+map = maketrans('.-','__')
 
-if debug: print eups_version
+eups_version = version.translate(map)
+eups_candidate = candidate.translate(map)
 
 # construct url
 eupspkg_taglist = '/'.join((eupspkg_site, 'tags', eups_candidate + '.list'))

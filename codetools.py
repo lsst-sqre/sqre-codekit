@@ -17,6 +17,7 @@ Module for assorted codetools scripts
 from github3 import login
 import urllib3
 import os, re
+import sys
 
 def github(authfile='~/.github_token'):
 
@@ -38,16 +39,6 @@ def github(authfile='~/.github_token'):
     gh = login(token=mytoken)
 
     return(gh)
-
-def git2eups_version(git_version):
-
-    """
-    Given a version string (10.1) generates an eups style version (v10_1)
-    """
-    
-    elements = git_version.split('.')
-    eups_version = 'v'+'_'.join(elements)
-    return(eups_version)
 
 def eups2git_ref(eups_ref,
                  repo,
