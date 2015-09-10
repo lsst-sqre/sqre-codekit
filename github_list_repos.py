@@ -12,7 +12,10 @@ List repositories on Github belonging to organisations, teams, etc
 
 import argparse
 import codetools
+import os
 import textwrap
+
+debug = os.getenv("DM_SQUARE_DEBUG")
 
 gh = codetools.github(authfile='~/.sq_github_token')
 
@@ -28,7 +31,9 @@ parser = argparse.ArgumentParser(
 
     Examples:
 
-    github_list_repos.py lsst
+    github_list_repos lsst
+
+    github_list_repos --teams --hide 'Data Management' --hide 'Owners' lsst
     
     '''),
     epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
@@ -36,11 +41,16 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('organisation')
 
-parser.add_argument('--teams', action='store_true')
+parser.add_argument('--teams', action='store_true',
+                    help='include team ownership info')
 
-parser.add_argument('--hide')
+parser.add_argument('--hide', action='append',
+                    help='hide a specific team from the output (implies --team)')
 
 opt = parser.parse_args()
+
+if opt.hide:
+    opt.teams = True
 
 # Do Something
 # ------------
@@ -53,18 +63,5 @@ for repo in org.iter_repos():
         print repo.name
     else:
 
-        teamnames = [t.name for t in repo.iter_teams()]
-
-        if opt.hide:
-            teamnames.remove(opt.hide)
-
-        print repo.name + " : " + "\t".join(teamnames)
-
-
-
-
-
-
-
-
-
+        teamnames = [t.name for t in repo.iter_teams() if t.name not in opt.hide]
+        print repo.name.ljust(40) + " ".join(teamnames)
