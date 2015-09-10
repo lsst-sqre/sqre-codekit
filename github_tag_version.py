@@ -65,6 +65,8 @@ parser.add_argument('--sims')
 
 parser.add_argument('--candidate')
 
+parser.add_argument('--dry-run', action='store_true')
+
 parser.add_argument('-v', '--version', action='version', version='%(prog)s 0.5')
 
 opt = parser.parse_args()
@@ -162,16 +164,20 @@ for entry in entries:
 
     for team in repo.iter_teams():
         if team.name == 'Data Management':
-            if debug: print repo.name, 'found in', team.name
+            if debug or opt.dry_run:
+                print repo.name, 'found in', team.name
             sha = codetools.eups2git_ref(eups_ref = eups_tag, repo = repo.name, eupsbuild = eupsbuild, debug = debug)
-            if debug: print 'Will tag sha:',sha, 'as', version, '(was',eups_tag,')'
+            if debug or opt.dry_run:
+                print 'Will tag sha:',sha, 'as', version, '(was',eups_tag,')'
 
-            backtag = repo.create_tag(tag = version,
-                            message = message,
-                            sha = sha,
-                            obj_type = 'commit',
-                            tagger = tagger,
-                            lightweight = False)
+
+            if not opt.dry_run:
+                backtag = repo.create_tag(tag = version,
+                                          message = message,
+                                          sha = sha,
+                                          obj_type = 'commit',
+                                          tagger = tagger,
+                                          lightweight = False)
 
         elif team.name == 'DM External':
             if debug: print repo.name, 'found in', team.name
