@@ -33,7 +33,7 @@ parser = argparse.ArgumentParser(
 
     github_list_repos lsst
 
-    github_list_repos --teams --hide 'Data Management' --hide 'Owners' lsst
+    github_list_repos --hide 'Data Management' --hide 'Owners' lsst
     
     '''),
     epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
@@ -41,16 +41,19 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('organisation')
 
-parser.add_argument('--teams', action='store_true',
-                    help='include team ownership info')
-
 parser.add_argument('--hide', action='append',
-                    help='hide a specific team from the output (implies --team)')
+                    help='hide a specific team from the output')
+
+parser.add_argument('--mint', type=int, default='0',
+                    help='only list repos that have more than MINT teams')
+
+parser.add_argument('--maxt', type=int,
+                    help='only list repos that have fewer than MAXT teams')
 
 opt = parser.parse_args()
 
-if opt.hide:
-    opt.teams = True
+if not opt.hide:
+    opt.hide = [];
 
 # Do Something
 # ------------
@@ -59,9 +62,9 @@ org = gh.organization(opt.organisation)
 
 for repo in org.iter_repos():
 
-    if not opt.teams:
-        print repo.name
-    else:
-
-        teamnames = [t.name for t in repo.iter_teams() if t.name not in opt.hide]
+    teamnames = [t.name for t in repo.iter_teams() if t.name not in opt.hide]
+    maxt = opt.maxt if (opt.maxt >=0) else len(teamnames)
+    if debug: print "MAXT=",maxt
+    
+    if ( opt.mint <= len(teamnames) <= maxt):
         print repo.name.ljust(40) + " ".join(teamnames)
