@@ -36,6 +36,8 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('organisation')
 
+parser.add_argument('--teams', action='store_true')
+
 opt = parser.parse_args()
 
 # Do Something
@@ -44,8 +46,15 @@ opt = parser.parse_args()
 org = gh.organization(opt.organisation)
 
 for repo in org.iter_repos():
-    print repo.name
-    
+
+    if not opt.teams:
+        print repo.name
+    else:
+
+        teamnames = [t.name for t in repo.iter_teams()]
+
+        print repo.name + " : " + "\t".join(teamnames)
+
 
 
 
