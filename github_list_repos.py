@@ -38,6 +38,8 @@ parser.add_argument('organisation')
 
 parser.add_argument('--teams', action='store_true')
 
+parser.add_argument('--hide')
+
 opt = parser.parse_args()
 
 # Do Something
@@ -52,6 +54,9 @@ for repo in org.iter_repos():
     else:
 
         teamnames = [t.name for t in repo.iter_teams()]
+
+        if opt.hide:
+            teamnames.remove(opt.hide)
 
         print repo.name + " : " + "\t".join(teamnames)
 
