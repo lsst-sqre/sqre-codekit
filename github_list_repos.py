@@ -34,6 +34,16 @@ parser = argparse.ArgumentParser(
     github_list_repos lsst
 
     github_list_repos --hide 'Data Management' --hide 'Owners' lsst
+
+    Note:
+
+    --mint and --maxt limits are applied after --hide
+
+    So for example,
+
+    github_list_repos --maxt 0 --hide Owners lsst
+
+    returns the list of repos that are owned by no team besides Owners. 
     
     '''),
     epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
@@ -68,3 +78,4 @@ for repo in org.iter_repos():
     
     if ( opt.mint <= len(teamnames) <= maxt):
         print repo.name.ljust(40) + " ".join(teamnames)
+
