@@ -165,7 +165,7 @@ for entry in entries:
     for team in repo.iter_teams():
         if team.name == 'Data Management':
             if debug or opt.dry_run:
-                print repo.name, 'found in', team.name
+                print repo.name.ljust(40), 'found in', team.name
             sha = codetools.eups2git_ref(eups_ref = eups_tag, repo = repo.name, eupsbuild = eupsbuild, debug = debug)
             if debug or opt.dry_run:
                 print 'Will tag sha:',sha, 'as', version, '(was',eups_tag,')'
