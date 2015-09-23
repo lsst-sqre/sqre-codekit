@@ -1,22 +1,58 @@
 #!/usr/bin/env python
 
 """
-Moves a bunch of repos to a team
+Moves a bunch of Github repos to a team
 """
 
 # Technical Debt
 # -------------
-# - remove all hardcoding
+# - will need updating to be new permissions model aware
+# - warn if repo and teams do not exist
 
 import codetools
-import os, sys
+import os
+import sys
+import argparse
+import textwrap
 from time import sleep
+from getpass import getuser
 
-orgname = 'lsst'
-oldteam = 'Data Management'
-newteam = 'DM Externals'
+debug = os.getenv("DM_SQUARE_DEBUG")
+trace = False
+user = getuser()
 
-trace = 0
+# argument parsing and default options
+
+parser = argparse.ArgumentParser(
+    prog='github_mv_repos_to_team',
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    description=textwrap.dedent('''
+
+    Move repo(s) from one team to another. 
+
+    Examples:
+
+    ./github_mv_repos_to_team.py 
+
+    '''),
+    epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
+)
+
+parser.add_argument('repos', nargs='+')
+
+# because opt.from seems to mean something else
+parser.add_argument('--from', required=True, dest='oldteam')
+
+parser.add_argument('--to', required=True, dest='newteam')
+
+parser.add_argument('--org',
+                    default=user+'-shadow')
+
+parser.add_argument('--dry-run', action='store_true')
+
+opt = parser.parse_args()
+
+if debug: print opt
 
 if trace:
     import logging
@@ -31,10 +67,9 @@ debug = os.getenv("DM_SQUARE_DEBUG")
 gh = codetools.github(authfile='~/.sq_github_token_delete')
 if debug: print(type(gh))
 
-org = gh.organization(orgname)
+org = gh.organization(opt.org)
 
-# pipe list through for now
-move_me = sys.stdin.readlines()
+move_me = opt.repos
 if debug: print len(move_me),'repos to me moved'
 
 teams = [g for g in org.iter_teams()]
@@ -42,29 +77,41 @@ teams = [g for g in org.iter_teams()]
 work = nowork = status = status2 = 0
 
 for r in move_me:
-   repo = orgname + '/' + r.rstrip()
+    repo = opt.org + '/' + r.rstrip()
 
-   # Add team to the repo
+    # Add team to the repo
+    if debug or opt.dry_run:
+        print 'Adding', repo, 'to', opt.newteam, '...',   
 
-   print 'Adding', repo, 'to', newteam, '...',   
-   status += org.add_repo(repo,newteam)
-
-   if status: print 'ok'
-   else: print 'FAILED'
+    if not opt.dry_run:
+        status += org.add_repo(repo,opt.newteam)
+        if status:
+            print 'ok'
+        else:
+            print 'FAILED'
    
-   # remove repo from old team
-   if debug: print 'Removing', repo, 'from', oldteam, '...',
-   status2 += org.remove_repo(repo,oldteam)
+    # remove repo from old team
+    # you cannot move out of Owners
 
-   if status2: print 'ok'
-   else: print 'FAILED'
+    if opt.oldteam != 'Owners':
+        if debug or opt.dry_run:
+            print 'Removing', repo, 'from', opt.oldteam, '...',
 
-   # give the API a rest (*snicker*) we don't want to get throttled
-   sleep(1)
+        if not opt.dry_run:
+            status2 += org.remove_repo(repo,opt.oldteam)
 
+            if status2:
+                print 'ok'
+            else:
+                print 'FAILED'
 
-if debug: print 'Added:', status
-if debug: print 'Removed:', status2
+    # give the API a rest (*snicker*) we don't want to get throttled
+    sleep(1)
+
+if debug:
+    print ' '
+    print 'Added:', status
+    print 'Removed:', status2
 
 
 
