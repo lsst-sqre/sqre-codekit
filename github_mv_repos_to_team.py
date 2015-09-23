@@ -30,9 +30,11 @@ parser = argparse.ArgumentParser(
 
     Move repo(s) from one team to another. 
 
+    Note that --from and --to are required "options". 
+
     Examples:
 
-    ./github_mv_repos_to_team.py 
+    ./github_mv_repos_to_team.py --from test_ext2 --to test_ext pipe_tasks apr_util
 
     '''),
     epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
