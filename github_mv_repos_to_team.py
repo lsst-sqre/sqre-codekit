@@ -9,7 +9,7 @@ Moves a bunch of Github repos to a team
 # - will need updating to be new permissions model aware
 # - warn if repo and teams do not exist
 
-import codetools
+import codekit
 import os
 import sys
 import argparse
@@ -66,7 +66,7 @@ if trace:
 
 debug = os.getenv("DM_SQUARE_DEBUG")
 
-gh = codetools.github(authfile='~/.sq_github_token_delete')
+gh = codekit.github(authfile='~/.sq_github_token_delete')
 if debug: print(type(gh))
 
 org = gh.organization(opt.org)

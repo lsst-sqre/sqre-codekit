@@ -11,13 +11,13 @@ List repositories on Github belonging to organisations, teams, etc
 # ----------
 
 import argparse
-import codetools
+import codekit
 import os
 import textwrap
 
 debug = os.getenv("DM_SQUARE_DEBUG")
 
-gh = codetools.github(authfile='~/.sq_github_token')
+gh = codekit.github(authfile='~/.sq_github_token')
 
 # Argument Parsing
 # ----------------

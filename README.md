@@ -1,4 +1,4 @@
-# codetools
+# codekit
 LSST DM SQuaRE misc. code management tools
 
 Example usage

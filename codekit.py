@@ -1,5 +1,5 @@
 """
-Module for assorted codetools scripts
+Module for assorted codekit scripts
 """
 
 # technical debt

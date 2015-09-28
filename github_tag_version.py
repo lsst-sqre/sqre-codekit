@@ -15,7 +15,7 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # ----------
 # Yeah, the candidate logic is broken, will fix
 
-import codetools
+import codekit
 import urllib3
 import webbrowser
 import os
@@ -97,7 +97,7 @@ message = 'Version ' + version + ' release from ' + candidate +'/'+eupsbuild
 eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
 
 
-gh = codetools.github(authfile='~/.sq_github_token_delete')
+gh = codekit.github(authfile='~/.sq_github_token_delete')
 if debug: print(type(gh))
 
 org = gh.organization(orgname)
@@ -166,12 +166,12 @@ for entry in entries:
         if team.name == 'Data Management':
             if debug or opt.dry_run:
                 print repo.name.ljust(40), 'found in', team.name
-            sha = codetools.eups2git_ref(eups_ref = eups_tag, repo = repo.name, eupsbuild = eupsbuild, debug = debug)
+            sha = codekit.eups2git_ref(eups_ref = eups_tag, repo = repo.name, eupsbuild = eupsbuild, debug = debug)
             if debug or opt.dry_run:
                 print 'Will tag sha:',sha, 'as', version, '(was',eups_tag,')'
 
             if not opt.dry_run:
-                codetools.github_tag(repo, version, message, user, sha)
+                codekit.github_tag(repo, version, message, user, sha)
 
         elif team.name == 'DM External':
             # RFC Policy Part 3 will change this - tagging will happen
@@ -194,7 +194,7 @@ if opt.official:
         for auxrepo in auxteam.iter_repos():
 
             if not opt.dry_run:
-                codetools.gihub_tag(repo, version, message, user, sha)
+                codekit.gihub_tag(repo, version, message, user, sha)
 
     else:
         print '1782361 not the id of DM Auxilliaries any more?'
