@@ -9,7 +9,6 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # - sort out the certificate so we don't have to supress warnings
 # - completely hide eups-specifics from this file
 # - skips non-github repos - can add repos.yaml knowhow to address this
-# - worth doing the smart thing for externals? (yes for Sims)
 # - deal with authentication version
 
 # Known Bugs
@@ -24,9 +23,9 @@ import sys
 import argparse
 import textwrap
 from time import sleep
-from datetime import datetime
 from getpass import getuser
 from string import maketrans
+import github3
 
 debug = os.getenv("DM_SQUARE_DEBUG")
 trace = False
@@ -61,7 +60,8 @@ parser.add_argument('manifest')
 parser.add_argument('--org',
                     default=user+'-shadow')
 
-parser.add_argument('--sims')
+parser.add_argument('--official', action='store_true',
+                    help='official release - tags related tepos')
 
 parser.add_argument('--candidate')
 
@@ -69,12 +69,15 @@ parser.add_argument('--dry-run', action='store_true')
 
 parser.add_argument('-v', '--version', action='version', version='%(prog)s 0.5')
 
+parser.add_argument('--debug', action='store_true')
+
 opt = parser.parse_args()
 
-
-# we'll pass those as args later (see TD)
 orgname = opt.org
 version = opt.tag
+
+if opt.debug:
+    debug = True
 
 # The candidate is assumed to be the requested EUPS tag unless
 # otherwise specified with the --candidate option The reason to
@@ -93,16 +96,6 @@ eupsbuild = opt.manifest # sadly we need to "just" know this
 message = 'Version ' + version + ' release from ' + candidate +'/'+eupsbuild
 eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
 
-# generate timestamp for github API
-now = datetime.utcnow()
-timestamp = now.isoformat()[0:19]+'Z'
-if debug: print(timestamp)
-
-tagger = dict(name = user,
-              email = user + '@lsst.org',
-              date = timestamp)
-
-if debug: print tagger
 
 gh = codetools.github(authfile='~/.sq_github_token_delete')
 if debug: print(type(gh))
@@ -133,6 +126,13 @@ if trace:
     logger.addHandler(stream_handler)
     logger.setLevel(logging.DEBUG)
 
+
+# RFC policy part 1
+# -----------------
+# If a repo is referenced as an eups package in lsst_distrib
+# AND it belongs to the LSST:Data Management team, it gets tagged
+# as part of the release process. 
+    
 manifest = http.request('GET', eupspkg_taglist)
 
 if manifest.status >= 300: sys.exit("Failed GET")
@@ -161,7 +161,7 @@ for entry in entries:
     if not hasattr(repo, 'name'):
         print '!!! SKIPPING', upstream, (60-len(upstream)) * '-'
         continue
-
+    
     for team in repo.iter_teams():
         if team.name == 'Data Management':
             if debug or opt.dry_run:
@@ -170,17 +170,32 @@ for entry in entries:
             if debug or opt.dry_run:
                 print 'Will tag sha:',sha, 'as', version, '(was',eups_tag,')'
 
-
             if not opt.dry_run:
-                backtag = repo.create_tag(tag = version,
-                                          message = message,
-                                          sha = sha,
-                                          obj_type = 'commit',
-                                          tagger = tagger,
-                                          lightweight = False)
+                codetools.github_tag(repo, version, message, user, sha)
 
         elif team.name == 'DM External':
+            # RFC Policy Part 3 will change this - tagging will happen
+            # for releases using eg r.Summer2015
             if debug: print repo.name, 'found in', team.name
         else:
             if debug: print 'No action for', repo.name, 'belonging to', team.name
+
+# RFC policy part II
+# --------------------
+# If a repo is in the Github LSST:DM Auxiliaries team, tag it regardless
+
+if opt.official:
+
+    auxteam = org.team(1782361)
+    message = 'Repo related to version ' + version + 'of the LSST stack'
+
+    if auxteam.name == 'DM Auxilliaries':
+
+        for auxrepo in auxteam.iter_repos():
+
+            if not opt.dry_run:
+                codetools.gihub_tag(repo, version, message, user, sha)
+
+    else:
+        print '1782361 not the id of DM Auxilliaries any more?'
 

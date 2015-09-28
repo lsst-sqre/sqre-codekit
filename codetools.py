@@ -18,13 +18,16 @@ from github3 import login
 import urllib3
 import os, re
 import sys
+from datetime import datetime
+
+debug = os.getenv("DM_SQUARE_DEBUG")
 
 def github(authfile='~/.github_token'):
 
     """
     returns a github login token
     """
-    
+
     mytoken = None
     file_credential = os.path.expanduser(authfile)
 
@@ -35,7 +38,7 @@ def github(authfile='~/.github_token'):
 
     with open(file_credential, 'r') as fd:
         mytoken = fd.readline().strip()
-            
+
     gh = login(token=mytoken)
 
     return(gh)
@@ -45,7 +48,7 @@ def eups2git_ref(eups_ref,
                  eupsbuild,
                  versiondb = 'https://raw.githubusercontent.com/lsst/versiondb/master/manifests',
                  debug = None):
-    
+
     """
     Given an eups tag (master-g3b482c0804 or v10_0) give back the git ref (3b482c0804)
     """
@@ -70,7 +73,7 @@ def eups2git_ref(eups_ref,
         if entry.startswith('#'): continue
         if entry.startswith('BUILD'): continue
         if entry == '': continue
-        
+
         elements = entry.split()
         eupspkg, sha, eupsver = elements[0], elements[1], elements[2]
         if eupspkg != repo: continue
@@ -83,16 +86,39 @@ def eups2git_ref(eups_ref,
 
     return(sha)
 
-            
+def github_tag(repo, version, message, user, sha):
 
+    if debug: print "Tagging " + repo.name + ' with ' + version
 
+    # get the name and timestamp for the tag commit
+    # should really get that out of the git config I'm thinking
+    tagger = github_tagger(user)
 
-        
-        
+    backtag = repo.create_tag(tag = version,
+                            message = message,
+                              obj_type = 'commit',
+                              sha = sha,
+                              tagger = tagger,
+                              lightweight = False)
 
+    if debug: print "Tagged " + sha + " as " + backtag.tag
 
-    
+    return(True)
 
-    
-    
+def github_tagger(user):
 
+    # generate timestamp for github API
+    now = datetime.utcnow()
+    timestamp = now.isoformat()[0:19]+'Z'
+    if debug: print(timestamp)
+
+    # get the name and timestamp for the tag commit
+    # should really get that out of the git config I'm thinking
+
+    tagger = dict(name = user,
+                  email = user + '@lsst.org',
+                  date = timestamp)
+
+    if debug: print "TAGGER: ",tagger
+
+    return(tagger)
