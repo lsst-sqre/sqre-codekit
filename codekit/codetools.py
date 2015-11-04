@@ -19,6 +19,10 @@ import urllib3
 import os, re
 import sys
 
+
+__all__ = ['github', 'eups2git_ref']
+
+
 def github(authfile='~/.github_token'):
 
     """
