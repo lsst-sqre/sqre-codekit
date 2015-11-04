@@ -18,7 +18,6 @@ def main():
     delete_scope = os.getenv("DM_SQUARE_ADMIN")
     hostname = platform.node()
 
-
     user = getuser()
     if debug:
         print user
@@ -26,10 +25,12 @@ def main():
 
     if delete_scope:
         file_credential = os.path.expanduser('~/.sq_github_token_delete')
-        if debug: print 'Token with delete scope will be generated:', file_credential
+        if debug:
+            print 'Token with delete scope will be generated:', file_credential
     else:
         file_credential = os.path.expanduser('~/.sq_github_token')
-        if debug: print 'Token with user scope will be generated:', file_credential
+        if debug:
+            print 'Token with user scope will be generated:', file_credential
 
     if not os.path.isfile(file_credential):
 
@@ -42,11 +43,17 @@ def main():
         while not password:
             password = getpass('Password for {0}: '.format(user))
 
-        note = appname + ' via github3 on ' + hostname + ' by ' + user + file_credential
+        note_template = '{app} via github3 on {host} by {user} {creds}'
+        note = note_template.format(app=appname,
+                                    host=hostname,
+                                    user=user,
+                                    creds=file_credential)
         note_url = 'https://lsst.org/'
 
-        if delete_scope: scopes = ['repo','user','delete_repo','admin:org']
-        else: scopes = ['repo','user']
+        if delete_scope:
+            scopes = ['repo', 'user', 'delete_repo', 'admin:org']
+        else:
+            scopes = ['repo', 'user']
 
         auth = authorize(user, password, scopes, note, note_url)
 
@@ -55,7 +62,6 @@ def main():
             fd.write(str(auth.id))
 
     else:
-
         print "You already have an auth file: {0} ".format(file_credential)
         print "Delete it if you want a new one and run again"
         print "Remember to also remove the corresponding token on Github"

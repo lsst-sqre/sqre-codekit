@@ -45,18 +45,17 @@ def main():
         print repos
 
     for repo in repos:
-        
         if debug:
             print repo.name
 
-        forked_repo = repo.create_fork(user+'-shadow')
+        forked_repo = repo.create_fork(user + '-shadow')  # NOQA
         sleep(2)
 
         # forked_name = forked_repo.name
         # Trap previous fork with dm_ prefix
-        #if not forked_name.startswith("dm_"):
-        #    newname = "dm_" + forked_name
-        #    forked_repo.edit(newname)
+        # if not forked_name.startswith("dm_"):
+        #     newname = "dm_" + forked_name
+        #     forked_repo.edit(newname)
 
 if __name__ == '__main__':
     main()

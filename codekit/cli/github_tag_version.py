@@ -16,12 +16,12 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # ----------
 # Yeah, the candidate logic is broken, will fix
 
-import webbrowser
+# import webbrowser
 import os
 import sys
 import argparse
 import textwrap
-from time import sleep
+# from time import sleep
 from datetime import datetime
 from getpass import getuser
 from string import maketrans
@@ -78,7 +78,6 @@ def main():
 
     opt = parse_args()
 
-
     # we'll pass those as args later (see TD)
     orgname = opt.org
     version = opt.tag
@@ -96,45 +95,54 @@ def main():
     else:
         candidate = opt.tag
 
-    eupsbuild = opt.manifest # sadly we need to "just" know this
-    message = 'Version ' + version + ' release from ' + candidate +'/'+eupsbuild
+    eupsbuild = opt.manifest  # sadly we need to "just" know this
+    # FIXME unused
+    # message_template = 'Version {v} release from {c}/{b}'
+    # message = message_template.format(v=version, c=candidate, b=eupsbuild)
     eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
 
     # generate timestamp for github API
     now = datetime.utcnow()
     timestamp = now.isoformat()[0:19]+'Z'
-    if debug: print(timestamp)
+    if debug:
+        print(timestamp)
 
-    tagger = dict(name = user,
-                email = user + '@lsst.org',
-                date = timestamp)
+    tagger = dict(name=user,
+                  email=user + '@lsst.org',
+                  date=timestamp)
 
-    if debug: print tagger
+    if debug:
+        print tagger
 
     gh = codetools.github(authfile='~/.sq_github_token_delete')
-    if debug: print(type(gh))
+    if debug:
+        print(type(gh))
 
-    org = gh.organization(orgname)
-    if debug: print("Tagging repos in ",orgname)
+    # org = gh.organization(orgname)
+    if debug:
+        print("Tagging repos in ", orgname)
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
 
-    map = maketrans('.-','__')
+    map = maketrans('.-', '__')
 
-    eups_version = version.translate(map)
+    # eups_version = version.translate(map)
     eups_candidate = candidate.translate(map)
 
     # construct url
-    eupspkg_taglist = '/'.join((eupspkg_site, 'tags', eups_candidate + '.list'))
-    if debug: print eupspkg_taglist
+    eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
+                                eups_candidate + '.list'))
+    if debug:
+        print eupspkg_taglist
 
     http = urllib3.PoolManager()
     # supress the certificate warning - technical debt
-    urllib3.disable_warnings()
+    urllib3.disable_warnings()  # NOQA
     if trace:
         import logging
-        urllib3 = logging.getLogger('requests.packages.urllib3')
+        # FIXME what's going on here? assigning a logger to a package?
+        urllib3 = logging.getLogger('requests.packages.urllib3')  # NOQA
         stream_handler = logging.StreamHandler()
         logger = logging.getLogger('github3')
         logger.addHandler(stream_handler)
@@ -142,19 +150,24 @@ def main():
 
     manifest = http.request('GET', eupspkg_taglist)
 
-    if manifest.status >= 300: sys.exit("Failed GET")
+    if manifest.status >= 300:
+        sys.exit("Failed GET")
 
     entries = manifest.data.split('\n')
 
     for entry in entries:
         # skip commented out and blank lines
-        if entry.startswith('#'): continue
-        if entry.startswith('EUPS'): continue
-        if entry == '': continue
+        if entry.startswith('#'):
+            continue
+        if entry.startswith('EUPS'):
+            continue
+        if entry == '':
+            continue
 
         # extract the repo and eups tag from the entry
         (upstream, generic, eups_tag) = entry.split()
-        if debug: print upstream, eups_tag
+        if debug:
+            print upstream, eups_tag
 
         # okay so we still have the data dirs on gitolite
         # for now, just skip them and record them.
@@ -173,23 +186,29 @@ def main():
             if team.name == 'Data Management':
                 if debug or opt.dry_run:
                     print repo.name.ljust(40), 'found in', team.name
-                sha = codetools.eups2git_ref(eups_ref = eups_tag, repo = repo.name, eupsbuild = eupsbuild, debug = debug)
+                sha = codetools.eups2git_ref(eups_ref=eups_tag,
+                                             repo=repo.name,
+                                             eupsbuild=eupsbuild,
+                                             debug=debug)
                 if debug or opt.dry_run:
-                    print 'Will tag sha:',sha, 'as', version, '(was',eups_tag,')'
+                    print 'Will tag sha: {sha} as {v} (was {t})'.format(
+                        sha=sha, v=version, t=eups_tag)
 
-
-                if not opt.dry_run:
-                    backtag = repo.create_tag(tag = version,
-                                            message = message,
-                                            sha = sha,
-                                            obj_type = 'commit',
-                                            tagger = tagger,
-                                            lightweight = False)
+                # if not opt.dry_run:
+                #     # FIXME backtag unused
+                #     backtag = repo.create_tag(tag=version,
+                #                               message=message,
+                #                               sha=sha,
+                #                               obj_type='commit',
+                #                               tagger=tagger,
+                #                               lightweight=False)
 
             elif team.name == 'DM External':
-                if debug: print repo.name, 'found in', team.name
+                if debug:
+                    print repo.name, 'found in', team.name
             else:
-                if debug: print 'No action for', repo.name, 'belonging to', team.name
+                if debug:
+                    print 'No action for', repo.name, 'belonging to', team.name
 
 
 if __name__ == '__main__':

@@ -10,7 +10,7 @@ Moves a bunch of Github repos to a team
 # - warn if repo and teams do not exist
 
 import os
-import sys
+# import sys
 import argparse
 import textwrap
 from time import sleep
@@ -59,11 +59,12 @@ def main():
 
     opt = parse_args()
 
-    if debug: print opt
+    if debug:
+        print opt
 
     if trace:
         import logging
-        urllib3 = logging.getLogger('requests.packages.urllib3')
+        urllib3 = logging.getLogger('requests.packages.urllib3')  # NOQA
         stream_handler = logging.StreamHandler()
         logger = logging.getLogger('github3')
         logger.addHandler(stream_handler)
@@ -72,31 +73,35 @@ def main():
     debug = os.getenv("DM_SQUARE_DEBUG")
 
     gh = codetools.github(authfile='~/.sq_github_token_delete')
-    if debug: print(type(gh))
+    if debug:
+        print(type(gh))
 
     org = gh.organization(opt.org)
 
     move_me = opt.repos
-    if debug: print len(move_me),'repos to me moved'
+    if debug:
+        print len(move_me), 'repos to me moved'
 
-    teams = [g for g in org.iter_teams()]
+    # FIXME unused
+    # teams = [g for g in org.iter_teams()]
 
-    work = nowork = status = status2 = 0
+    status = 0
+    status2 = 0
 
     for r in move_me:
         repo = opt.org + '/' + r.rstrip()
 
         # Add team to the repo
         if debug or opt.dry_run:
-            print 'Adding', repo, 'to', opt.newteam, '...',   
+            print 'Adding', repo, 'to', opt.newteam, '...',
 
         if not opt.dry_run:
-            status += org.add_repo(repo,opt.newteam)
+            status += org.add_repo(repo, opt.newteam)
             if status:
                 print 'ok'
             else:
                 print 'FAILED'
-    
+
         # remove repo from old team
         # you cannot move out of Owners
 
@@ -105,7 +110,7 @@ def main():
                 print 'Removing', repo, 'from', opt.oldteam, '...',
 
             if not opt.dry_run:
-                status2 += org.remove_repo(repo,opt.oldteam)
+                status2 += org.remove_repo(repo, opt.oldteam)
 
                 if status2:
                     print 'ok'

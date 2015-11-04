@@ -50,29 +50,29 @@ def main():
     print 'Here goes:'
 
     if debug:
-        delay = 5;
+        delay = 5
         print delay, 'second gap between deletions'
         work = 0
         nowork = 0
-        
+
     for repo in repos:
 
         if debug:
-            print 'Next deleting:', repo.name,'...',
+            print 'Next deleting:', repo.name, '...',
             sleep(delay)
 
         status = repo.delete()
-
 
         if status:
             print 'ok'
             work += 1
         else:
             print 'FAILED - does your token have delete_repo scope?'
-            nowork +=1
+            nowork += 1
 
     print 'Done - Succeed:', work, 'Failed:', nowork
-    if work: print 'Consider deleting your privileged auth token', file_credential
+    if work:
+        print 'Consider deleting your privileged auth token', file_credential
 
 
 if __name__ == '__main__':

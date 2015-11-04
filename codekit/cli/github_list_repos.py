@@ -65,7 +65,7 @@ def main():
     opt = parse_args()
 
     if not opt.hide:
-        opt.hide = [];
+        opt.hide = []
 
     # Do Something
     # ------------
@@ -73,12 +73,13 @@ def main():
     org = gh.organization(opt.organisation)
 
     for repo in org.iter_repos():
+        teamnames = [t.name for t in repo.iter_teams()
+                     if t.name not in opt.hide]
+        maxt = opt.maxt if (opt.maxt >= 0) else len(teamnames)
+        if debug:
+            print "MAXT=", maxt
 
-        teamnames = [t.name for t in repo.iter_teams() if t.name not in opt.hide]
-        maxt = opt.maxt if (opt.maxt >=0) else len(teamnames)
-        if debug: print "MAXT=",maxt
-        
-        if ( opt.mint <= len(teamnames) <= maxt):
+        if (opt.mint <= len(teamnames) <= maxt):
             print repo.name.ljust(40) + " ".join(teamnames)
 
 
