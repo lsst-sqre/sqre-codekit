@@ -18,7 +18,7 @@ import urllib3
 from github3 import login
 
 
-__all__ = ['github', 'eups2git_ref']
+__all__ = ['github', 'eups2git_ref', 'github_2fa_callback']
 
 
 def github(authfile='~/.github_token'):
@@ -37,6 +37,16 @@ def github(authfile='~/.github_token'):
     gh = login(token=mytoken)
 
     return gh
+
+
+def github_2fa_callback():
+    # http://github3py.readthedocs.org/en/master/examples/two_factor_auth.html
+    code = ''
+    while not code:
+        # The user could accidentally press Enter before being ready,
+        # let's protect them from doing that.
+        code = input('Enter 2FA code: ')
+    return code
 
 
 def eups2git_ref(eups_ref,

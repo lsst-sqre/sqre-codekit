@@ -11,6 +11,7 @@ import os
 import platform
 import sys
 from github3 import authorize
+from .. import codetools
 
 
 def parse_args():
@@ -69,11 +70,14 @@ def main():
         else:
             scopes = ['repo', 'user']
 
-        auth = authorize(user, password, scopes, note, note_url)
+        auth = authorize(user, password, scopes, note, note_url,
+                         two_factor_callback=codetools.github_2fa_callback)
 
         with open(file_credential, 'w') as fd:
             fd.write(auth.token + '\n')
             fd.write(str(auth.id))
+
+        print 'Token written to {0}'.format(file_credential)
 
     else:
         print "You already have an auth file: {0} ".format(file_credential)
