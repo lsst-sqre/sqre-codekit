@@ -6,19 +6,33 @@
 # - add command line option for delete scope
 
 from getpass import getuser, getpass
+import argparse
 import os
 import platform
 import sys
 from github3 import authorize
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        prog='github-auth',
+        description='Generate a GitHub auth token.')
+    parser.add_argument('-u', '--user',
+                        help='GitHub username',
+                        dest='user',
+                        default=getuser())
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
     appname = sys.argv[0]
     debug = os.getenv("DM_SQUARE_DEBUG")
     delete_scope = os.getenv("DM_SQUARE_ADMIN")
     hostname = platform.node()
 
-    user = getuser()
+    user = args.user
     if debug:
         print user
     password = ''
