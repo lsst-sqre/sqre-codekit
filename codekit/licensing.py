@@ -2,6 +2,12 @@
 LSST DM repos.
 """
 
+import re
+
+
+comment_pattern = re.compile(
+    '(?P<comment_flag>^[#* ])(?P<content>[\d\w\s<]*)')
+
 
 def convert_boilerplate(code_stream):
     """Convert old-style licensing boilerplate (with full GPLv3) to RFC-45
@@ -17,22 +23,36 @@ def convert_boilerplate(code_stream):
     converted_text : str
         Converted code text, as a string.
     """
+    # Text for the new copyright/license boilerplate
+    template_lines = [
+        '{comment} See the COPYRIGHT and LICENSE files in the top-level '
+        'directory of this\n',
+        '{comment} package for notices and licensing terms.\n'
+    ]
     lines = code_stream.readlines()
     new_lines = []
     omitting_mode = False
     for line in lines:
-        if line.startswith('# Copyright'):
+        m = comment_pattern.match(line)
+        if m is None:
+            # Pass through of non-comment characters
+            new_lines.append(line)
+            continue
+
+        content = m.group('content').lstrip()
+        if m is not None and content.startswith('Copyright'):
             # Trigger replacement at start of Copyright block
-            new_lines.append('# See the COPYRIGHT and LICENSE files in the top-level directory of this\n')  # NOQA
-            new_lines.append('# package for notices and licensing terms.\n')  # NOQA
+            for template_line in template_lines:
+                new_lines.append(
+                    template_line.format(comment=m.group('comment_flag')))
             omitting_mode = True
-        elif line.startswith('# see <http://www.lsstcorp.org/LegalNotices/>.'):
+        elif content.startswith('see <http'):  # NOQA
             # End replacement mode
             omitting_mode = False
         elif omitting_mode is False:
             # Pass through mode
             if line.rstrip() == '#':
-                # remove whitespace from comment header/footer
+                # remove whitespace from comment header/footer for Python
                 new_lines.append('#\n')
             else:
                 new_lines.append(line)
