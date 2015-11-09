@@ -1,24 +1,31 @@
 """Fork LSST repos into a showow GitHub organization."""
 
 
-from getpass import getuser
 import argparse
 import textwrap
 import os
 from time import sleep
+import progress.bar
 from .. import codetools
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-fork-repos',
-        description=textwrap.detent("""Fork LSST into a shadow GitHub
-        organization"""),
+        description=textwrap.dedent("""
+        Fork LSST into a shadow GitHub organization.
+        """),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
-        '-u', '--user', default=getuser(),
+        '-u', '--user',
+        required=True,
         help='GitHub username')
+    parser.add_argument(
+        '-o', '--org',
+        dest='shadow_org',
+        required=True,
+        help='Organization to fork repos into')
     parser.add_argument(
         '--token-path',
         default='~/.sq_github_token',
@@ -44,16 +51,21 @@ def main():
 
     # list of all LSST repos
     repos = [g for g in organization.iter_repos()]
+    repo_count = len(repos)
 
     if args.debug:
         print repos
 
+    bar = progress.bar.ChargingBar('Forking',
+                                   max=repo_count,
+                                   suffix='%(index)d/%(max)d')
     for repo in repos:
         if args.debug:
             print repo.name
 
-        forked_repo = repo.create_fork(args.user + '-shadow')  # NOQA
+        forked_repo = repo.create_fork(args.shadow_org)  # NOQA
         sleep(2)
+        bar.next()
 
         # forked_name = forked_repo.name
         # Trap previous fork with dm_ prefix

@@ -23,17 +23,14 @@ def parse_args():
 
         Examples:
 
-        github_list_repos lsst
+          github_list_repos --org lsst
 
-        github_list_repos --hide 'Data Management' --hide 'Owners' lsst
+          github_list_repos --hide 'Data Management' --hide 'Owners' --org lsst
 
-        Note:
-
-        --mint and --maxt limits are applied after --hide
-
+        Note: --mint and --maxt limits are applied after --hide.
         So for example,
 
-        github_list_repos --maxt 0 --hide Owners lsst
+          github_list_repos --maxt 0 --hide Owners --org lsst
 
         returns the list of repos that are owned by no team besides Owners.
         """),
@@ -45,13 +42,16 @@ def parse_args():
         required=True)
     parser.add_argument(
         '--hide', action='append',
-        help='hide a specific team from the output')
+        help='Hide a specific team from the output')
     parser.add_argument(
         '--mint', type=int, default='0',
-        help='only list repos that have more than MINT teams')
+        help='Only list repos that have more than MINT teams')
     parser.add_argument(
         '--maxt', type=int,
-        help='only list repos that have fewer than MAXT teams')
+        help='Only list repos that have fewer than MAXT teams')
+    parser.add_argument(
+        '--delimiter', default=', ',
+        help='Character(s) separating teams in print out')
     parser.add_argument(
         '--token-path',
         default='~/.sq_github_token',
@@ -71,7 +71,7 @@ def main():
     if not args.hide:
         args.hide = []
 
-    org = gh.organization(args.organisation)
+    org = gh.organization(args.organization)
 
     for repo in org.iter_repos():
         teamnames = [t.name for t in repo.iter_teams()
@@ -81,7 +81,7 @@ def main():
             print "MAXT=", maxt
 
         if (args.mint <= len(teamnames) <= maxt):
-            print repo.name.ljust(40) + " ".join(teamnames)
+            print repo.name.ljust(40) + args.delimiter.join(teamnames)
 
 
 if __name__ == '__main__':
