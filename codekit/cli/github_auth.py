@@ -18,7 +18,7 @@ from .. import codetools
 def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-auth',
-        description=textwrap.detent("""Generate a GitHub auth token.
+        description=textwrap.dedent("""Generate a GitHub auth token.
 
            By default this token will not allow you to delete repositories.
            Use the --delete-role flag to create a delete-enabled token.

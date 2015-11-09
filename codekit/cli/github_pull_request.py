@@ -7,7 +7,7 @@ import argparse
 def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-pull-request',
-        description=textwrap.detent("""Convert an issue into a pull request
+        description=textwrap.dedent("""Convert an issue into a pull request
             """),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')

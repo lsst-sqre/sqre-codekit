@@ -13,7 +13,7 @@ from .. import codetools
 def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-delete-shadow',
-        description=textwrap.detent("""Delete all repos in the GitHub
+        description=textwrap.dedent("""Delete all repos in the GitHub
             <username>-shadow org"""),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
@@ -33,6 +33,9 @@ def parse_args():
 
 
 def main():
+    work = 0
+    nowork = 0
+
     args = parse_args()
     # Deliberately hardcoding the -shadow part due to cowardice
     orgname = '{user}-shadow'.format(user=args.user)
@@ -40,8 +43,7 @@ def main():
     if args.debug:
         print 'org:', orgname
 
-    # file_credential = os.path.expanduser('~/.sq_github_token_delete')
-    gh = codetools.github_login(token_path=args.token_path)
+    gh = codetools.login_github(token_path=args.token_path)
 
     # get the organization object
     organization = gh.organization(orgname)
