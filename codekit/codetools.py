@@ -18,23 +18,36 @@ import urllib3
 from github3 import login
 
 
-__all__ = ['github', 'eups2git_ref', 'github_2fa_callback']
+__all__ = ['login_github', 'eups2git_ref', 'github_2fa_callback']
 
 
-def github(authfile='~/.github_token'):
-    """Return a github login token."""
-    mytoken = None
-    file_credential = os.path.expanduser(authfile)
+def login_github(token_path=None):
+    """Log into GitHub using an existing token.
 
-    if not os.path.isfile(file_credential):
-        print "You don't have a token in {0} ".format(file_credential)
+    Parameters
+    ----------
+    token_path : str, optional
+        Path to the token file. The default token is used otherwise.
+
+    Returns
+    -------
+    gh : obj
+        A GitHub login instance.
+    """
+    if token_path is None:
+        # Try the default token
+        token_path = '~/.sq_github_token'
+    token_path = os.path.expandvars(os.path.expanduser(token_path))
+
+    if not os.path.isfile(token_path):
+        print "You don't have a token in {0} ".format(token_path)
         print "Have you run github-auth"
         sys.exit(1)
 
-    with open(file_credential, 'r') as fd:
+    with open(token_path, 'r') as fd:
         mytoken = fd.readline().strip()
 
-    gh = login(token=mytoken)
+    gh = login(token=mytoken, two_factor_callback=github_2fa_callback)
 
     return gh
 

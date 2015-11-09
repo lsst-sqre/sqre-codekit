@@ -1,18 +1,26 @@
-#!/usr/bin/env python
-
 import os
 import getpass
+import textwrap
 import argparse
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        prog='github-pull-request')
-    parser.add_argument("issue", type=int, help="Issue number")
-    parser.add_argument("user", help="Your user name")
-    parser.add_argument("branch", help="Pull from this branch in your repo")
-    parser.add_argument("repo", help="Repository name to receive pull request")
-    parser.add_argument("--base", default="master", help="Branch to pull into")
+        prog='github-pull-request',
+        description=textwrap.detent("""Convert an issue into a pull request
+            """),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
+    parser.add_argument(
+        "issue", type=int, help="Issue number")
+    parser.add_argument(
+        "user", help="Your user name")
+    parser.add_argument(
+        "branch", help="Pull from this branch in your repo")
+    parser.add_argument(
+        "repo", help="Repository name to receive pull request")
+    parser.add_argument(
+        "--base", default="master", help="Branch to pull into")
     return parser.parse_args()
 
 

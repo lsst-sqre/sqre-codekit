@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-
-"""
-List repositories on Github belonging to organisations, teams, etc
+"""List repositories on Github belonging to organisations, teams, etc.
 """
 
 # Technical Debt
@@ -11,8 +8,8 @@ List repositories on Github belonging to organisations, teams, etc
 # ----------
 
 import argparse
-import os
 import textwrap
+import os
 from .. import codetools
 
 
@@ -20,7 +17,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-list-repos',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent('''
+        description=textwrap.dedent("""
 
         List repositories on Github using various criteria
 
@@ -39,47 +36,51 @@ def parse_args():
         github_list_repos --maxt 0 --hide Owners lsst
 
         returns the list of repos that are owned by no team besides Owners.
-        '''),
-        epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
-    )
-
-    parser.add_argument('organisation')
-
-    parser.add_argument('--hide', action='append',
-                        help='hide a specific team from the output')
-
-    parser.add_argument('--mint', type=int, default='0',
-                        help='only list repos that have more than MINT teams')
-
-    parser.add_argument('--maxt', type=int,
-                        help='only list repos that have fewer than MAXT teams')
-
+        """),
+        epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
+    parser.add_argument(
+        '-o', '--org',
+        dest='organization',
+        help='GitHub Organization name',
+        required=True)
+    parser.add_argument(
+        '--hide', action='append',
+        help='hide a specific team from the output')
+    parser.add_argument(
+        '--mint', type=int, default='0',
+        help='only list repos that have more than MINT teams')
+    parser.add_argument(
+        '--maxt', type=int,
+        help='only list repos that have fewer than MAXT teams')
+    parser.add_argument(
+        '--token-path',
+        default='~/.sq_github_token',
+        help='Use a token (made with github-auth) in a non-standard loction')
+    parser.add_argument(
+        '-d', '--debug',
+        action='store_true',
+        default=os.getenv('DM_SQUARE_DEBUG'),
+        help='Debug mode')
     return parser.parse_args()
 
 
 def main():
-    debug = os.getenv("DM_SQUARE_DEBUG")
+    args = parse_args()
+    gh = codetools.login_github(token_path=args.token_path)
 
-    gh = codetools.github(authfile='~/.sq_github_token')
+    if not args.hide:
+        args.hide = []
 
-    opt = parse_args()
-
-    if not opt.hide:
-        opt.hide = []
-
-    # Do Something
-    # ------------
-
-    org = gh.organization(opt.organisation)
+    org = gh.organization(args.organisation)
 
     for repo in org.iter_repos():
         teamnames = [t.name for t in repo.iter_teams()
-                     if t.name not in opt.hide]
-        maxt = opt.maxt if (opt.maxt >= 0) else len(teamnames)
-        if debug:
+                     if t.name not in args.hide]
+        maxt = args.maxt if (args.maxt >= 0) else len(teamnames)
+        if args.debug:
             print "MAXT=", maxt
 
-        if (opt.mint <= len(teamnames) <= maxt):
+        if (args.mint <= len(teamnames) <= maxt):
             print repo.name.ljust(40) + " ".join(teamnames)
 
 

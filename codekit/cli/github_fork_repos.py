@@ -1,39 +1,43 @@
-"""Fork github repos"""
-
-# technical debt:
-# --------------
+"""Fork LSST repos into a showow GitHub organization."""
 
 
 from getpass import getuser
+import argparse
+import textwrap
 import os
-import sys
 from time import sleep
-from github3 import login
+from .. import codetools
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        prog='github-fork-repos',
+        description=textwrap.detent("""Fork LSST into a shadow GitHub
+        organization"""),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
+    parser.add_argument(
+        '-u', '--user', default=getuser(),
+        help='GitHub username')
+    parser.add_argument(
+        '--token-path',
+        default='~/.sq_github_token',
+        help='Use a token (made with github-auth) in a non-standard location')
+    parser.add_argument(
+        '-d', '--debug',
+        action='store_true',
+        default=os.getenv('DM_SQUARE_DEBUG'),
+        help='Debug mode')
+    return parser.parse_args()
 
 
 def main():
-    token = ''
-    debug = os.getenv("DM_SQUARE_DEBUG")
-    user = getuser()
+    args = parse_args()
 
-    if debug:
-        print 'You are', user
+    if args.debug:
+        print 'You are', args.user
 
-    # I have cut and pasted code
-    # I am a bad person
-    # I promise to make a module
-
-    file_credential = os.path.expanduser('~/.sq_github_token')
-
-    if not os.path.isfile(file_credential):
-        print "You don't have a token in {0} ".format(file_credential)
-        print "Have you run github_auth.py?"
-        sys.exit(1)
-
-    with open(file_credential, 'r') as fd:
-        token = fd.readline().strip()
-
-    gh = login(token=token)
+    gh = codetools.login_github(token_path=args.token_path)
 
     # get the organization object
     organization = gh.organization('lsst')
@@ -41,14 +45,14 @@ def main():
     # list of all LSST repos
     repos = [g for g in organization.iter_repos()]
 
-    if debug:
+    if args.debug:
         print repos
 
     for repo in repos:
-        if debug:
+        if args.debug:
             print repo.name
 
-        forked_repo = repo.create_fork(user + '-shadow')  # NOQA
+        forked_repo = repo.create_fork(args.user + '-shadow')  # NOQA
         sleep(2)
 
         # forked_name = forked_repo.name

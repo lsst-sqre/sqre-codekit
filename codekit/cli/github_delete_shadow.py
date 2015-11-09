@@ -2,35 +2,46 @@
 
 # (the -u in the commandline unbuffers output so the countdown works)
 
-import sys
 from getpass import getuser
+import textwrap
+import argparse
 import os
 from time import sleep
-from github3 import login
+from .. import codetools
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        prog='github-delete-shadow',
+        description=textwrap.detent("""Delete all repos in the GitHub
+            <username>-shadow org"""),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
+    parser.add_argument(
+        '-u', '--user', default=getuser(),
+        help='GitHub username')
+    parser.add_argument(
+        '--token-path',
+        default='~/.sq_github_token_delete',
+        help='Use a token (made with github-auth) in a non-standard loction')
+    parser.add_argument(
+        '-d', '--debug',
+        action='store_true',
+        default=os.getenv('DM_SQUARE_DEBUG'),
+        help='Debug mode')
+    return parser.parse_args()
 
 
 def main():
-    token = ''
-    debug = os.getenv("DM_SQUARE_DEBUG")
+    args = parse_args()
     # Deliberately hardcoding the -shadow part due to cowardice
-    orgname = getuser() + '-shadow'
+    orgname = '{user}-shadow'.format(user=args.user)
 
-    if debug:
+    if args.debug:
         print 'org:', orgname
 
-    # yes, yes, module
-
-    file_credential = os.path.expanduser('~/.sq_github_token_delete')
-
-    if not os.path.isfile(file_credential):
-        print "You don't have a token in {0} ".format(file_credential)
-        print "Have you run github_auth.py?"
-        sys.exit(1)
-
-    with open(file_credential, 'r') as fd:
-        token = fd.readline().strip()
-
-    gh = login(token=token)
+    # file_credential = os.path.expanduser('~/.sq_github_token_delete')
+    gh = codetools.github_login(token_path=args.token_path)
 
     # get the organization object
     organization = gh.organization(orgname)
@@ -49,7 +60,7 @@ def main():
 
     print 'Here goes:'
 
-    if debug:
+    if args.debug:
         delay = 5
         print delay, 'second gap between deletions'
         work = 0
@@ -57,7 +68,7 @@ def main():
 
     for repo in repos:
 
-        if debug:
+        if args.debug:
             print 'Next deleting:', repo.name, '...',
             sleep(delay)
 
@@ -72,7 +83,7 @@ def main():
 
     print 'Done - Succeed:', work, 'Failed:', nowork
     if work:
-        print 'Consider deleting your privileged auth token', file_credential
+        print 'Consider deleting your privileged auth token', args.token_path
 
 
 if __name__ == '__main__':
