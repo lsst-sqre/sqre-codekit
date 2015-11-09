@@ -17,6 +17,7 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 # import webbrowser
+import logging
 import os
 import sys
 import argparse
@@ -35,16 +36,16 @@ def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-tag-version',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent('''
+        description=textwrap.dedent("""
 
-        Tag all repositories in a Github org using a team-based scheme
+        Tag all repositories in a GitHub org using a team-based scheme
 
         Examples:
         github-tag-version.py --org lsst w.2015.33 b1630
 
         github-tag-version.py --org lsst --candidate v11_0_rc2 11.0.rc2 b1679
 
-        '''),
+        """),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
 
@@ -53,34 +54,45 @@ def parse_args():
     # on how to get your own
 
     parser.add_argument('tag')
-
     parser.add_argument('manifest')
-
-    parser.add_argument('--org',
-                        default=user+'-shadow')
-
+    parser.add_argument(
+        '--org',
+        default=user+'-shadow')
     parser.add_argument('--sims')
-
     parser.add_argument('--candidate')
-
     parser.add_argument('--dry-run', action='store_true')
-
+    parser.add_argument(
+        '--tagger',
+        required=True,
+        help='Name of person making the tag')
+    parser.add_argument(
+        '--email',
+        required=True,
+        help='Email address of tagger')
+    parser.add_argument(
+        '-u', '--user',
+        required=True,
+        help='GitHub username')
+    parser.add_argument(
+        '--token-path',
+        default='~/.sq_github_token_delete',
+        help='Use a token (made with github-auth) in a non-standard location')
+    parser.add_argument(
+        '-d', '--debug',
+        action='store_true',
+        default=os.getenv('DM_SQUARE_DEBUG'),
+        help='Debug mode')
     parser.add_argument('-v', '--version',
                         action='version', version='%(prog)s 0.5')
-
     return parser.parse_args()
 
 
 def main():
-    debug = os.getenv("DM_SQUARE_DEBUG")
-    trace = False
-    user = getuser()
-
-    opt = parse_args()
+    args = parse_args()
 
     # we'll pass those as args later (see TD)
-    orgname = opt.org
-    version = opt.tag
+    orgname = args.org
+    version = args.tag
 
     # The candidate is assumed to be the requested EUPS tag unless
     # otherwise specified with the --candidate option The reason to
@@ -90,36 +102,35 @@ def main():
     # goes down, because we want to eups publish the build that has the
     # official versions in the eups ref.
 
-    if opt.candidate:
-        candidate = opt.candidate
+    if args.candidate:
+        candidate = args.candidate
     else:
-        candidate = opt.tag
+        candidate = args.tag
 
-    eupsbuild = opt.manifest  # sadly we need to "just" know this
-    # FIXME unused
-    # message_template = 'Version {v} release from {c}/{b}'
-    # message = message_template.format(v=version, c=candidate, b=eupsbuild)
+    eupsbuild = args.manifest  # sadly we need to "just" know this
+    message_template = 'Version {v} release from {c}/{b}'
+    message = message_template.format(v=version, c=candidate, b=eupsbuild)
     eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
 
     # generate timestamp for github API
     now = datetime.utcnow()
     timestamp = now.isoformat()[0:19]+'Z'
-    if debug:
+    if args.debug:
         print(timestamp)
 
-    tagger = dict(name=user,
-                  email=user + '@lsst.org',
+    tagger = dict(name=args.tagg,
+                  email=args.email,
                   date=timestamp)
 
-    if debug:
+    if args.debug:
         print tagger
 
-    gh = codetools.github(authfile='~/.sq_github_token_delete')
-    if debug:
+    gh = codetools.login_github(token_path=args.token_path)
+    if args.debug:
         print(type(gh))
 
     # org = gh.organization(orgname)
-    if debug:
+    if args.debug:
         print("Tagging repos in ", orgname)
 
     # generate eups-style version
@@ -133,14 +144,13 @@ def main():
     # construct url
     eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
                                 eups_candidate + '.list'))
-    if debug:
+    if args.debug:
         print eupspkg_taglist
 
     http = urllib3.PoolManager()
     # supress the certificate warning - technical debt
     urllib3.disable_warnings()  # NOQA
-    if trace:
-        import logging
+    if args.debug:
         # FIXME what's going on here? assigning a logger to a package?
         urllib3 = logging.getLogger('requests.packages.urllib3')  # NOQA
         stream_handler = logging.StreamHandler()
@@ -166,7 +176,7 @@ def main():
 
         # extract the repo and eups tag from the entry
         (upstream, generic, eups_tag) = entry.split()
-        if debug:
+        if args.debug:
             print upstream, eups_tag
 
         # okay so we still have the data dirs on gitolite
@@ -184,30 +194,29 @@ def main():
 
         for team in repo.iter_teams():
             if team.name == 'Data Management':
-                if debug or opt.dry_run:
+                if args.debug or args.dry_run:
                     print repo.name.ljust(40), 'found in', team.name
                 sha = codetools.eups2git_ref(eups_ref=eups_tag,
                                              repo=repo.name,
                                              eupsbuild=eupsbuild,
-                                             debug=debug)
-                if debug or opt.dry_run:
+                                             debug=args.debug)
+                if args.debug or args.dry_run:
                     print 'Will tag sha: {sha} as {v} (was {t})'.format(
                         sha=sha, v=version, t=eups_tag)
 
-                # if not opt.dry_run:
-                #     # FIXME backtag unused
-                #     backtag = repo.create_tag(tag=version,
-                #                               message=message,
-                #                               sha=sha,
-                #                               obj_type='commit',
-                #                               tagger=tagger,
-                #                               lightweight=False)
+                if not args.dry_run:
+                    repo.create_tag(tag=version,
+                                    message=message,
+                                    sha=sha,
+                                    obj_type='commit',
+                                    tagger=tagger,
+                                    lightweight=False)
 
             elif team.name == 'DM External':
-                if debug:
+                if args.debug:
                     print repo.name, 'found in', team.name
             else:
-                if debug:
+                if args.debug:
                     print 'No action for', repo.name, 'belonging to', team.name
 
 
