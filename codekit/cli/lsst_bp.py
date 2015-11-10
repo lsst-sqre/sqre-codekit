@@ -6,10 +6,17 @@ Use lsst-dm to accomplish RFC-45 compliance in the Stack.
 Usage
 -----
 
+To migrate boilerplate in all repos in the 'Data Management' team in the
+lsst organization:
+
    lsst-bp -u shipitsquirrel --org lsst --team 'Data Management'
 
+Or you can run lsst-bp on just a single repository:
+
+    lsst-bp -u shipitsqurrel --org lsst --repo afw
+
 Optionally, the script can be run against repositories forked into a
-shadow github organization. Use the github-fork-repos script to do this.
+shadow github organization. Use the github-fork-repos script to do this:
 
    github-fork-repos -u shipitsquirrel --org shadowy-org
    lsst-bp -u shipitsquirrel --org shadowy-org --ignore-teams
@@ -66,6 +73,11 @@ def parse_args():
              'lsst-fork-repos',
         required=True)
     parser.add_argument(
+        '--repo',
+        default=None,
+        help='Upgrade the boilerplate of a single repo, rather than all repos '
+             'in the organization matching --team')
+    parser.add_argument(
         '--branch',
         help='Branch to create and work on',
         required=True)
@@ -93,12 +105,13 @@ def main():
 
     gh = codetools.login_github(token_path=args.token_path)
     org = gh.organization(args.orgname)
-    teams = set(args.team)
 
-    for repo in org.iter_repos():
-        repo_teams = set([t.name for t in repo.iter_teams()])
-        print repo.name
-        if args.ignore_teams or repo_teams.isdisjoint(teams) is False:
-            # This repo has teams we're interested in for processing
-            licensing.upgrade_repo(gh, repo, args.branch)
-            break
+    if args.repo is None:
+        repo_iter = codetools.repos_for_team(org, args.team,
+                                             ignore_teams=args.ignore_teams)
+    else:
+        repo_iter = [codetools.open_repo(org, args.repo)]
+
+    for repo in repo_iter:
+        print "Upgrading {0}".format(repo.name)
+        licensing.upgrade_repo(gh, repo, args.branch)

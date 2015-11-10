@@ -1,6 +1,4 @@
-"""
-Module for assorted codetools scripts
-"""
+"""Assorted codetools utility functions."""
 
 # technical debt
 # --------------
@@ -18,7 +16,8 @@ import urllib3
 from github3 import login
 
 
-__all__ = ['login_github', 'eups2git_ref', 'github_2fa_callback']
+__all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
+           'github_2fa_callback']
 
 
 def login_github(token_path=None):
@@ -31,7 +30,7 @@ def login_github(token_path=None):
 
     Returns
     -------
-    gh : obj
+    gh : :class:`github3.GitHub` instance
         A GitHub login instance.
     """
     if token_path is None:
@@ -60,6 +59,58 @@ def github_2fa_callback():
         # let's protect them from doing that.
         code = input('Enter 2FA code: ')
     return code
+
+
+def repos_for_team(org, teams=None):
+    """Iterate over repos in a GitHub organization that are in the given
+    set of teams.
+
+    Parameters
+    ----------
+    org : class:`github3.github3.orgs.Organization` instance
+        The GitHub organization to operate in. Usually created with the
+        :meth:`github3.GitHub.organization` method.
+    teams : iterable
+        A sequence of team names (as strings). If `None` (default) then
+        team identity will be ignored and all repos in the organization
+        will be iterated over.
+
+    Yields
+    ------
+    repo : :class:`github3.repos.repo.Repository`
+        Yields repositiory instances that pass organization and team criteria.
+    """
+    if teams is not None:
+        teams = set(teams)
+    for repo in org.iter_repos():
+        repo_teams = set([t.name for t in repo.iter_teams()])
+        if teams is None:
+            yield repo
+        elif repo_teams.isdisjoint(teams) is False:
+            yield repo
+
+
+def open_repo(org, repo_name):
+    """Open a :class:`github3.repos.repo.Repository` instance by name
+    in a GitHub organization.
+
+    Parameters
+    ----------
+    org : class:`github3.github3.orgs.Organization` instance
+        The GitHub organization to operate in. Usually created with the
+        :meth:`github3.GitHub.organization` method.
+    repo_name : str
+        Name of the repository (without the organization namespace).
+        E.g. `'afw'`.
+
+    Returns
+    -------
+    repo : :class:`github3.repos.repo.Repository`
+        The repository instance.
+    """
+    for repo in org.iter_repos():
+        if repo.name == repo_name:
+            return repo
 
 
 def eups2git_ref(eups_ref,
