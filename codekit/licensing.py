@@ -65,6 +65,36 @@ def convert_boilerplate(code_stream):
     return ''.join(new_lines)
 
 
+def write_lsst_license(path):
+    """Write the LSST license into a file at `path`.
+
+    Parameters
+    ----------
+    path : str
+        Path to write license file into. Typically the filename is LICENSE,
+        and the file is located at the repo's root.
+    """
+    license = """This product includes software developed by the
+LSST Project (http://www.lsst.org/).
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the LSST License Statement and
+the GNU General Public License along with this program.  If not,
+see <http://www.lsstcorp.org/LegalNotices/>.
+"""
+    with open(path, 'w') as f:
+        f.write(license)
+
+
 def upgrade_repo(gh, github_repo, branch_name):
     """Process a repository and upgrade licensing/copyright to RFC-45 style.
 
@@ -96,6 +126,12 @@ def upgrade_repo(gh, github_repo, branch_name):
         repo.index.add([filepath])
     if repo.is_dirty():
         repo.index.commit('Upgrade license and copyright according to RFC-45')
+
+    # Add LSST license file
+    license_path = os.path.join(temp_dir, 'LICENSE')
+    write_lsst_license(license_path)
+    repo.index.add([license_path])
+    repo.index.commit('Add LICENSE file according to RFC-45')
 
     # push branch to remote
     remote = repo.remote(name='origin')
