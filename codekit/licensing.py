@@ -7,6 +7,7 @@ import os
 import fnmatch
 import tempfile
 import re
+import time
 
 import git
 
@@ -65,6 +66,31 @@ def convert_boilerplate(code_stream):
     return ''.join(new_lines)
 
 
+def list_development_years(repo):
+    """List the years when a repo was actively developed.
+
+    This function does not search all branches; only the history of `repo`'s
+    currently active branch.
+
+    Parameters
+    ----------
+    repo : :class:`git.Repo` instance
+        The GitPython repo instance for this repository.
+
+    Returns
+    -------
+    years : tuple
+        The years where a commit occured in this repo's git history.
+    """
+    years = []
+    for commit in repo.iter_commits():
+        struct_time = time.gmtime(commit.authored_date)
+        years.append(struct_time.tm_year)
+    years = list(set(years))
+    years.sort()
+    return tuple(years)
+
+
 def write_lsst_license(path):
     """Write the LSST license into a file at `path`.
 
@@ -93,6 +119,33 @@ see <http://www.lsstcorp.org/LegalNotices/>.
 """
     with open(path, 'w') as f:
         f.write(license)
+
+
+def write_default_copyright(path, repo):
+    """Write a default COPYRIGHT file according to RFC-45.
+
+    The default copyright is assigned to LSST/AURA. The years are machine-
+    supplied from git history.
+
+    We expect authors from other institutions to add their own copyright lines.
+    We also expect that the years in this COPYRIGHT file will be
+    maintained with a bot.
+
+    Parameters
+    ----------
+    path : str
+        Path to write the copyright file onto.
+    repo : :class:`git.Repo` instance
+        The GitPython repo instance for this repository.
+    """
+    template = 'Copyright {y} The LSST DM Developers'
+    dev_years = list_development_years(repo)
+    if len(dev_years) == 1:
+        year_str = str(dev_years[0])
+    else:
+        year_str = '{0}-{1}'.format(min(dev_years), max(dev_years))
+    with open(path, 'w') as f:
+        f.write(template.format(y=year_str))
 
 
 def upgrade_repo(gh, github_repo, branch_name):
@@ -133,7 +186,14 @@ def upgrade_repo(gh, github_repo, branch_name):
     repo.index.add([license_path])
     repo.index.commit('Add LICENSE file according to RFC-45')
 
+    # Add default COPYRIGHT file, sensitive to git timelines
+    copyright_path = os.path.join(temp_dir, 'COPYRIGHT')
+    write_default_copyright(copyright_path, repo)
+    repo.index.add([copyright_path])
+    repo.index.commit('Add COPYRIGHT file according to RFC-45')
+
     # push branch to remote
+    assert repo.is_dirty() is False
     remote = repo.remote(name='origin')
     refspec = 'refs/heads/{br}:refs/heads/{br}'.format(br=branch_name)
     remote.push(refspec=refspec)
