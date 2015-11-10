@@ -12,7 +12,11 @@ Optionally, the script can be run against repositories forked into a
 shadow github organization. Use the github-fork-repos script to do this.
 
    github-fork-repos -u shipitsquirrel --org shadowy-org
-   lsst-bp -u shipitsquirrel --org shadowy-org --team 'Data Management'
+   lsst-bp -u shipitsquirrel --org shadowy-org --ignore-teams
+
+Note that github-fork-repos does not carry over GitHub team assignments,
+so the --team option will not use useful in shadow organizations.
+Instead use --ignore-teams to avoid filtering by teams.
 
 Processing Flow
 ---------------
@@ -62,9 +66,15 @@ def parse_args():
              'lsst-fork-repos',
         required=True)
     parser.add_argument(
-        '--team', action='append',
-        default=['Data Management'],
+        '--branch',
+        help='Branch to create and work on',
+        required=True)
+    parser.add_argument(
+        '--team', action='append', default=['Data Management'],
         help='Act on a specific team')
+    parser.add_argument(
+        '--ignore-teams', action='store_true', default=False,
+        help='Ignore filtering by GitHub teams')
     parser.add_argument(
         '--token-path',
         default='~/.sq_github_token',
@@ -87,6 +97,8 @@ def main():
 
     for repo in org.iter_repos():
         repo_teams = set([t.name for t in repo.iter_teams()])
-        if repo_teams.isdisjoint(teams) is False:
+        print repo.name
+        if args.ignore_teams or repo_teams.isdisjoint(teams) is False:
             # This repo has teams we're interested in for processing
-            licensing.process_repo(gh, repo)
+            licensing.upgrade_repo(gh, repo, args.branch)
+            break
