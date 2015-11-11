@@ -138,7 +138,7 @@ def write_default_copyright(path, repo):
     repo : :class:`git.Repo` instance
         The GitPython repo instance for this repository.
     """
-    template = 'Copyright {y} The LSST DM Developers'
+    template = 'Copyright {y} The LSST DM Developers\n'
     dev_years = list_development_years(repo)
     if len(dev_years) == 1:
         year_str = str(dev_years[0])
