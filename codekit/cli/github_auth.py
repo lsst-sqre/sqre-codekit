@@ -5,7 +5,7 @@
 # - add command line option to override default user
 # - add command line option for delete scope
 
-from getpass import getuser, getpass
+from getpass import getpass
 import argparse
 import textwrap
 import os
@@ -33,7 +33,7 @@ def parse_args():
         '-u', '--user',
         help='GitHub username',
         dest='user',
-        default=getuser())
+        required=True)
     parser.add_argument(
         '--delete-role',
         default=False,

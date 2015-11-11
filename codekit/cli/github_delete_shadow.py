@@ -2,7 +2,6 @@
 
 # (the -u in the commandline unbuffers output so the countdown works)
 
-from getpass import getuser
 import textwrap
 import argparse
 import os
@@ -18,8 +17,10 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
-        '-u', '--user', default=getuser(),
-        help='GitHub username')
+        '-u', '--user',
+        help='GitHub username',
+        dest='user',
+        required=True)
     parser.add_argument(
         '--token-path',
         default='~/.sq_github_token_delete',

@@ -9,17 +9,19 @@ Usage
 To migrate boilerplate in all repos in the 'Data Management' team in the
 lsst organization:
 
-   lsst-bp -u shipitsquirrel --org lsst --team 'Data Management'
+   lsst-bp -u shipitsquirrel --org lsst --team 'Data Management' \
+        --branch mybranch
 
 Or you can run lsst-bp on just a single repository:
 
-    lsst-bp -u shipitsqurrel --org lsst --repo afw
+    lsst-bp -u shipitsqurrel --org lsst --repo afw --branch mybranch
 
 Optionally, the script can be run against repositories forked into a
 shadow github organization. Use the github-fork-repos script to do this:
 
    github-fork-repos -u shipitsquirrel --org shadowy-org
-   lsst-bp -u shipitsquirrel --org shadowy-org --ignore-teams
+   lsst-bp -u shipitsquirrel --org shadowy-org --ignore-teams \
+        --branch mybranch
 
 Note that github-fork-repos does not carry over GitHub team assignments,
 so the --team option will not use useful in shadow organizations.
@@ -106,9 +108,10 @@ def main():
     gh = codetools.login_github(token_path=args.token_path)
     org = gh.organization(args.orgname)
 
-    if args.repo is None:
-        repo_iter = codetools.repos_for_team(org, args.team,
-                                             ignore_teams=args.ignore_teams)
+    if args.repo is None and args.ignore_teams is True:
+        repo_iter = org.iter_repos()
+    elif args.repo is None and args.ignore_teams is False:
+        repo_iter = codetools.repos_for_team(org, args.team)
     else:
         repo_iter = [codetools.open_repo(org, args.repo)]
 
