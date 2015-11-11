@@ -7,7 +7,7 @@ LSST DM SQuaRE misc. code management tools
 sqre-codekit runs on Python 2.7. You can install it with
 
 ```bash
-pip install git+git://github.com/lsst-sqre/codekit.git
+pip install sqre-codekit
 ```
 
 This will also install dependencies: `github3`, `urllib3`, `requests`, `progress` and `gitpython`.
