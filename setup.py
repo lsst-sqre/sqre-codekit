@@ -9,6 +9,7 @@ AUTHOR = 'Frossie Economou'
 AUTHOR_EMAIL = 'frossie@lsst.org'
 URL = 'https://github.com/lsst-sqre/sqre-codekit'
 VERSION = '0.0.0.dev0'
+LICENSE = 'MIT'
 
 
 def read(filename):
@@ -28,9 +29,11 @@ setup(
     url=URL,
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
+    license=LICENSE,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 2.7',
+        'License :: OSI Approved :: MIT License',
     ],
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
