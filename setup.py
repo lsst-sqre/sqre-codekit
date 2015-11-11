@@ -34,7 +34,8 @@ setup(
     ],
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
-    install_requires=['github3.py', 'urllib3', 'progress', 'gitpython'],
+    install_requires=['github3.py', 'urllib3', 'progress', 'gitpython',
+                      'requests'],
     tests_require=['nose', 'tox'],
     # package_data={},
     entry_points={

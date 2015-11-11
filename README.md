@@ -10,7 +10,7 @@ sqre-codekit runs on Python 2.7. You can install it with
 pip install git+git://github.com/lsst-sqre/codekit.git
 ```
 
-This will also install dependencies: `github3`, `urllib3`, `progress` and `gitpython`.
+This will also install dependencies: `github3`, `urllib3`, `requests`, `progress` and `gitpython`.
 
 ## Example usage
 
@@ -32,7 +32,7 @@ To clone all github.com/lsst repos into an GitHub organization called `{{usernam
 github-fork-repos -u {{username}} --org {{username}}-shadow
 ```
     
-You'll need to create this shadow organization in advance. Working in a shadow organization is useful for testing and safety.
+You'll need to create this shadow organization in advance. Working in a shadow organization is useful for testing.
 
 If you want to take a recent fork, you will need to delete the existing shadow repos first:
 
