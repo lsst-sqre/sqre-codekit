@@ -11,13 +11,15 @@
 #  LATEST:    1.0.0a1
 
 import os
+import shutil
 import sys
+import tempfile
 import urllib3
 from github3 import login
 
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
-           'github_2fa_callback']
+           'github_2fa_callback', 'TempDir']
 
 
 def login_github(token_path=None):
@@ -158,3 +160,26 @@ def eups2git_ref(eups_ref,
         break
 
     return sha
+
+
+class TempDir(object):
+    """ContextManager for temporary directories.
+
+    For example::
+
+        import os
+        with TempDir() as temp_dir:
+            assert os.path.exists(temp_dir)
+        assert os.path.exists(temp_dir) is False
+    """
+
+    def __init__(self):
+        super(TempDir, self).__init__()
+        self._temp_dir = tempfile.mkdtemp()
+
+    def __enter__(self):
+        return self._temp_dir
+
+    def __exit__(self, type, value, traceback):
+        shutil.rmtree(self._temp_dir)
+        self._temp_dir = None

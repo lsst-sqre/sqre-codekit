@@ -117,4 +117,5 @@ def main():
 
     for repo in repo_iter:
         print "Upgrading {0}".format(repo.name)
-        licensing.upgrade_repo(gh, repo, args.branch)
+        with codetools.TempDir() as temp_dir:
+            licensing.upgrade_repo(gh, repo, args.branch, temp_dir)
