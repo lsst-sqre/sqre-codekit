@@ -19,7 +19,18 @@ def test_py_boilerplate_rerun(py_truth):
 
 
 def test_cpp_boilerplate_conversion(cpp_truth):
-    pass
+    example_input, expected_result = cpp_truth
+    converted_text = convert_boilerplate(StringIO(example_input))
+    print converted_text
+    assert expected_result == converted_text
+
+
+def test_cpp_boilerplate_rerun(cpp_truth):
+    """Verify that the conversion doesn't changed converted documents."""
+    example_input, expected_result = cpp_truth
+    converted_text = convert_boilerplate(StringIO(expected_result))
+    print converted_text
+    assert expected_result == converted_text
 
 
 @pytest.fixture
@@ -102,6 +113,7 @@ namespace lsst {
     expected_result = """/* 
  * LSST Data Management System
  * See the COPYRIGHT and LICENSE files in the top-level directory of this
+ * package for notices and licensing terms.
  */
 
 #include "lsst/afw/cameraGeom/CameraSys.h"

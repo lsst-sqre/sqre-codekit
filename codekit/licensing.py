@@ -14,7 +14,7 @@ import git
 
 
 comment_pattern = re.compile(
-    '(?P<comment_flag>^[#* ])(?P<content>[\d\w\s<]*)')
+    '(?P<comment_flag>^[#* ]*)(?P<content>[\d\w\s<]*)')
 
 
 def convert_boilerplate(code_stream):
@@ -50,11 +50,14 @@ def convert_boilerplate(code_stream):
         content = m.group('content').lstrip()
         if m is not None and content.startswith('Copyright'):
             # Trigger replacement at start of Copyright block
+            # Make it the template's responsibility to add a single space
+            # after the comment prefix string
+            comment_text = m.group('comment_flag').rstrip()
             for template_line in template_lines:
                 new_lines.append(
-                    template_line.format(comment=m.group('comment_flag')))
+                    template_line.format(comment=comment_text))
             omitting_mode = True
-        elif content.startswith('see <http'):  # NOQA
+        elif content.startswith('see <http'):
             # End replacement mode
             omitting_mode = False
         elif omitting_mode is False:
