@@ -164,7 +164,8 @@ def upgrade_repo(gh, github_repo, branch_name):
     # repo.head.reference = ticket_branch
 
     # Covert boilerplate
-    for filepath in all_files(temp_dir, patterns=('*.py', '*.cpp', '*.h')):
+    patterns = ('*.py', '*.cpp', '*.cc', '*.h')
+    for filepath in all_files(temp_dir, patterns=patterns):
         with open(filepath, 'r') as f:
             new_code = convert_boilerplate(f)
         with open(filepath, 'w') as f:
