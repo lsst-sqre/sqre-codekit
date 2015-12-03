@@ -1,3 +1,5 @@
+![Travis](https://img.shields.io/travis/lsst-sqre/sqre-codekit.svg)
+
 # sqre-codekit
 
 LSST DM SQuaRE misc. code management tools
