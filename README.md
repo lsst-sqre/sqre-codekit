@@ -70,3 +70,9 @@ python setup.py develop
 ```
 
 Note that all scripts (in `codekit/cli`) are installed using setuptools `entry_points`. See `setup.py`.
+
+Tests can be run with [pytest](http://pytest.org/latest/):
+
+```bash
+py.test
+```

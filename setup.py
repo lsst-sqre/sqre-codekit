@@ -39,7 +39,7 @@ setup(
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=['github3.py', 'urllib3', 'progress', 'gitpython',
                       'requests'],
-    tests_require=['nose', 'tox'],
+    tests_require=['pytest'],
     # package_data={},
     entry_points={
         'console_scripts': [
