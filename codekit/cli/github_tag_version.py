@@ -27,6 +27,8 @@ from datetime import datetime
 from getpass import getuser
 from string import maketrans
 from .. import codetools
+import urllib3
+
 
 def parse_args():
     user = getuser()
@@ -161,14 +163,13 @@ def main():
         print eupspkg_taglist
 
 
-    import urllib3
     http = urllib3.poolmanager.PoolManager()
 
     # supress the certificate warning - technical debt
     urllib3.disable_warnings()  # NOQA
     if args.debug:
         # FIXME what's going on here? assigning a logger to a package?
-        urllib3 = logging.getLogger('requests.packages.urllib3')  # NOQA
+        logging.getLogger('requests.packages.urllib3')  # NOQA
         stream_handler = logging.StreamHandler()
         logger = logging.getLogger('github3')
         logger.addHandler(stream_handler)
