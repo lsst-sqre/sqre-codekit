@@ -39,9 +39,9 @@ def parse_args():
         Tag all repositories in a GitHub org using a team-based scheme
 
         Examples:
-        github-tag-version.py --org lsst w.2015.33 b1630
+        github-tag-version.py --org lsst --team 'Data Management' w.2015.33 b1630
 
-        github-tag-version.py --org lsst --candidate v11_0_rc2 11.0.rc2 b1679
+        github-tag-version.py --org lsst --team 'Data Management' --team 'Externals' --candidate v11_0_rc2 11.0.rc2 b1679
 
         """),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
@@ -56,7 +56,11 @@ def parse_args():
     parser.add_argument(
         '--org',
         default=user+'-shadow')
-    parser.add_argument('--sims')
+    parser.add_argument(
+        '--team',
+        action='append',
+        required=True,
+        help = "team whose repos may be tagged (can specify several times")
     parser.add_argument('--candidate')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
@@ -205,7 +209,7 @@ def main():
             continue
 
         for team in repo.iter_teams():
-            if team.name == 'Data Management':
+            if team.name in args.team:
                 if args.debug or args.dry_run:
                     print repo.name.ljust(40), 'found in', team.name
                 sha = codetools.eups2git_ref(eups_ref=eups_tag,
@@ -224,9 +228,6 @@ def main():
                                     tagger=tagstuff,
                                     lightweight=False)
 
-            elif team.name == 'DM External':
-                if args.debug:
-                    print repo.name, 'found in', team.name
             else:
                 if args.debug:
                     print 'No action for', repo.name, 'belonging to', team.name
