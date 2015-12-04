@@ -26,9 +26,7 @@ import textwrap
 from datetime import datetime
 from getpass import getuser
 from string import maketrans
-import urllib3
 from .. import codetools
-
 
 def parse_args():
     user = getuser()
@@ -49,7 +47,7 @@ def parse_args():
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
 
-    # for safety, default to dummy org
+    # for safety, default to dummy org <user>-shadow
     # will fail for most people but see github_fork_repos in this module
     # on how to get your own
 
@@ -63,16 +61,10 @@ def parse_args():
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
         '--tagger',
-        required=True,
-        help='Name of person making the tag')
+            help='Name of person making the tag - defaults to gitconfig value')
     parser.add_argument(
         '--email',
-        required=True,
-        help='Email address of tagger')
-    parser.add_argument(
-        '-u', '--user',
-        required=True,
-        help='GitHub username')
+        help='Email address of tagger - defaults to gitconfig value')
     parser.add_argument(
         '--token-path',
         default='~/.sq_github_token_delete',
@@ -90,9 +82,26 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # we'll pass those as args later (see TD)
     orgname = args.org
     version = args.tag
+
+    # if email not specified, try getting it from the gitconfig
+    email = args.email
+    if email is None:
+        email = codetools.gituseremail()
+        if email is None:
+            sys.exit("Specify --email option")
+    if args.debug:
+        print("email is " + email)        
+    # ditto for the name of the tagger
+    tagger = args.tagger
+    if tagger is None:
+        tagger = codetools.gitusername()
+        if tagger is None:
+            sys.exit("Specify --name option")
+    if args.debug:
+        print("tagger name is " + tagger)
+    
 
     # The candidate is assumed to be the requested EUPS tag unless
     # otherwise specified with the --candidate option The reason to
@@ -118,12 +127,12 @@ def main():
     if args.debug:
         print(timestamp)
 
-    tagger = dict(name=args.tagg,
-                  email=args.email,
+    tagstuff = dict(name=tagger,
+                  email=email,
                   date=timestamp)
 
     if args.debug:
-        print tagger
+        print(tagstuff)
 
     gh = codetools.login_github(token_path=args.token_path)
     if args.debug:
@@ -147,7 +156,10 @@ def main():
     if args.debug:
         print eupspkg_taglist
 
-    http = urllib3.PoolManager()
+
+    import urllib3
+    http = urllib3.poolmanager.PoolManager()
+
     # supress the certificate warning - technical debt
     urllib3.disable_warnings()  # NOQA
     if args.debug:
@@ -209,7 +221,7 @@ def main():
                                     message=message,
                                     sha=sha,
                                     obj_type='commit',
-                                    tagger=tagger,
+                                    tagger=tagstuff,
                                     lightweight=False)
 
             elif team.name == 'DM External':

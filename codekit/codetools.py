@@ -155,7 +155,7 @@ def eups2git_ref(eups_ref,
         print shafile
 
     # Get the file tying shas to eups versions
-    http = urllib3.PoolManager()
+    http = urllib3.poolmanager.PoolManager()
     refs = http.request('GET', shafile)
     if refs.status >= 300:
         raise RuntimeError('Failed GET with HTTP code', refs.status)
