@@ -152,7 +152,7 @@ def eups2git_ref(eups_ref,
     # eg. https://raw.githubusercontent.com/lsst/versiondb/master/manifests/b1108.txt  # NOQA
     shafile = versiondb + '/' + eupsbuild + '.txt'
     if debug:
-        print shafile
+        print "Shafile " + shafile
 
     # Get the file tying shas to eups versions
     http = urllib3.poolmanager.PoolManager()
@@ -161,6 +161,7 @@ def eups2git_ref(eups_ref,
         raise RuntimeError('Failed GET with HTTP code', refs.status)
     reflines = refs.data.splitlines()
 
+    foundsha = None
     for entry in reflines:
         # skip commented out and blank lines
         if entry.startswith('#'):
@@ -179,11 +180,12 @@ def eups2git_ref(eups_ref,
             raise RuntimeError('Something has gone wrong, release file does '
                                'not match manifest', eups_ref, eupsver)
         # get out if we find it
+        foundsha = sha
         if debug:
-            print eupspkg, sha, eupsver
+            print "Found", eupspkg, sha, eupsver
         break
 
-    return sha
+    return foundsha
 
 
 class TempDir(object):

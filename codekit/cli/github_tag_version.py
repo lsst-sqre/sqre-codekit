@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 
 """
 Use URL to EUPS candidate tag file to git tag repos with official version
@@ -217,6 +216,8 @@ def main():
                                              repo=repo.name,
                                              eupsbuild=eupsbuild,
                                              debug=args.debug)
+                if sha is None:
+                    sys.exit("Fatal: Failed to find repo/sha in manifest")
                 if args.debug or args.dry_run:
                     print 'Will tag sha: {sha} as {v} (was {t})'.format(
                         sha=sha, v=version, t=eups_tag)
