@@ -5,3 +5,4 @@ progress==1.2
 GitPython==1.0.1
 pytest==2.8.2
 MapGitConfig==1.1
+PyYAML

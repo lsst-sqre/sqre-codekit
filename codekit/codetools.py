@@ -17,6 +17,7 @@ import tempfile
 import urllib3
 from github3 import login
 import gitconfig
+import yaml
 
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
@@ -138,7 +139,44 @@ def open_repo(org, repo_name):
         if repo.name == repo_name:
             return repo
 
+def eups2repo(eups_pkg,
+              reposyaml='https://raw.githubusercontent.com/lsst/lsstsw/master/etc/repos.yaml',
+              debug=None):
 
+    """
+    Parses the live repos.yaml file and returns the bare git repository name (or None)
+    """
+
+    if debug:
+        print "eups_pkg " + eupspkg
+
+    # Get repos.yaml
+    # Get the file tying shas to eups versions
+    http = urllib3.poolmanager.PoolManager()
+    repos = http.request('GET', reposyaml)
+    if repos.status >= 300:
+        raise RuntimeError('Failed GET with HTTP code', repos.status)
+
+    # see https://github.com/lsst/lsstsw/blob/master/bin/repos-lint
+    data = yaml.safe_load(repos.data)
+    print data
+
+    if not type(data) is dict:
+        print('YAML file has an invalid format: must be a Mapping')
+        return None
+
+    if data.get(eups_pkg) is not None:
+        # We are going to get something like
+        # https://github.com/lsst/lsst_apps.git
+        # first we drop everything but lsst_apps.git
+        # (basename seems to do the right thing despite it being a URI)
+        repourl = os.path.basename(data[eups_pkg])
+        # then we drop the .git
+        repo = os.path.splitext(repourl)[0]
+        return repo
+    else:
+        return None
+        
 def eups2git_ref(eups_ref,
                  repo,
                  eupsbuild,
