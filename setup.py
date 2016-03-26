@@ -38,7 +38,7 @@ setup(
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=['github3.py', 'urllib3', 'progress', 'gitpython',
-                      'requests'],
+                      'requests', 'sh', 'autopep8'],
     tests_require=['pytest'],
     # package_data={},
     entry_points={
@@ -51,6 +51,7 @@ setup(
             'github-mv-repos-to-team = codekit.cli.github_mv_repos_to_team:main',  # NOQA
             'github-tag-version = codekit.cli.github_tag_version:main',
             'lsst-bp = codekit.cli.lsst_bp:main',
+            'lsst-autopep8 = codekit.cli.lsst_autopep8:main',
         ]
     }
 )
