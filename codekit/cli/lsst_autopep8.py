@@ -35,7 +35,7 @@ at http://developer.lsst.io/en/latest/coding/python_style_guide.html.
 lsst-autopep8 provides the following arguments to control autopep8, with
 default values conforming to the published coding standards:
 
-- --autopep8-ignore (default: E133,E226,E228,E251,N802,N803,W391)
+- --autopep8-ignore (default: E133,E226,E228,E251,N802,N803)
 - --autopep8-max-line-length (default: 110)
 
 You may explicitly set these arguments if you need to deviate from DM
@@ -106,9 +106,10 @@ def parse_args():
         help='Ignore filtering by GitHub teams')
     parser.add_argument(
         '--autopep8-ignore',
-        default='E133,E226,E228,E251,N802,N803,W391',
+        default='E133,E226,E228,E251,N802,N803',
         dest='autopep8_ignore',
-        help='PEP8 errors to ignore')
+        help='PEP8 errors to ignore '
+             '(http://pep8.readthedocs.org/en/latest/intro.html#error-codes)')
     parser.add_argument(
         '--autopep8-max-line-length',
         type=int,
