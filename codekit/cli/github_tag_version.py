@@ -222,12 +222,17 @@ def main():
                         sha=sha, v=version, t=eups_tag)
 
                 if not args.dry_run:
-                    repo.create_tag(tag=version,
+                    try:
+                        repo.create_tag(tag=version,
                                     message=message,
                                     sha=sha,
                                     obj_type='commit',
                                     tagger=tagstuff,
                                     lightweight=False)
+                    except Exception as e:
+                        print 'OOPS: -------------------'
+                        print str(e)
+                        print 'OOPS: -------------------'
 
             else:
                 if args.debug:
