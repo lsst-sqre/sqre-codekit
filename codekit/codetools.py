@@ -16,10 +16,11 @@ import sys
 import tempfile
 import urllib3
 from github3 import login
+import gitconfig
 
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
-           'github_2fa_callback', 'TempDir']
+           'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail']
 
 
 def login_github(token_path=None):
@@ -52,6 +53,29 @@ def login_github(token_path=None):
 
     return gh
 
+def gitusername():
+
+    """
+    Returns the user's name from .gitconfig if available
+    """
+
+    try:
+        mygitconfig = gitconfig.GitConfig()
+        return mygitconfig['user.name']
+    except:
+        return None
+
+def gituseremail():
+
+    """
+    Returns the user's email from .gitconfig if available
+    """
+
+    try:
+        mygitconfig = gitconfig.GitConfig()
+        return(mygitconfig['user.email'])
+    except:
+        return None
 
 def github_2fa_callback():
     # http://github3py.readthedocs.org/en/master/examples/two_factor_auth.html
@@ -131,7 +155,7 @@ def eups2git_ref(eups_ref,
         print shafile
 
     # Get the file tying shas to eups versions
-    http = urllib3.PoolManager()
+    http = urllib3.poolmanager.PoolManager()
     refs = http.request('GET', shafile)
     if refs.status >= 300:
         raise RuntimeError('Failed GET with HTTP code', refs.status)
