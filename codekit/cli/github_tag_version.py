@@ -41,9 +41,9 @@ def parse_args():
         Tag all repositories in a GitHub org using a team-based scheme
 
         Examples:
-        github-tag-version.py --org lsst --team 'Data Management' w.2015.33 b1630
+        github-tag-version --org lsst --team 'Data Management' w.2015.33 b1630
 
-        github-tag-version.py --org lsst --team 'Data Management' --team 'Externals' --candidate v11_0_rc2 11.0.rc2 b1679
+        github-tag-version --org lsst --team 'Data Management' --team 'Externals' --candidate v11_0_rc2 11.0.rc2 b1679
 
         """),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
