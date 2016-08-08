@@ -74,5 +74,5 @@ Note that all scripts (in `codekit/cli`) are installed using setuptools `entry_p
 Tests can be run with [pytest](http://pytest.org/latest/):
 
 ```bash
-py.test
+py.test tests
 ```
