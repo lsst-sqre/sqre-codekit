@@ -109,7 +109,7 @@ def main():
     if tagger is None:
         tagger = codetools.gitusername()
         if tagger is None:
-            sys.exit("Specify --name option")
+            sys.exit("Specify --tagger option")
     if args.debug:
         print("tagger name is " + tagger)
 
