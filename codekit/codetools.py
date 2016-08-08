@@ -53,6 +53,7 @@ def login_github(token_path=None):
 
     return gh
 
+
 def gitusername():
 
     """
@@ -65,6 +66,7 @@ def gitusername():
     except:
         return None
 
+
 def gituseremail():
 
     """
@@ -76,6 +78,7 @@ def gituseremail():
         return(mygitconfig['user.email'])
     except:
         return None
+
 
 def github_2fa_callback():
     # http://github3py.readthedocs.org/en/master/examples/two_factor_auth.html
