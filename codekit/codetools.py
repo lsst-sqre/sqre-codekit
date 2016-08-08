@@ -23,7 +23,7 @@ __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
            'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail']
 
 
-def login_github(token_path=None):
+def login_github(token_path=None, token=None):
     """Log into GitHub using an existing token.
 
     Parameters
@@ -31,25 +31,30 @@ def login_github(token_path=None):
     token_path : str, optional
         Path to the token file. The default token is used otherwise.
 
+    token: str, optional
+        Literial token string. If specifified, this value is used instead of
+        reading from the token_path file.
+
     Returns
     -------
     gh : :class:`github3.GitHub` instance
         A GitHub login instance.
     """
-    if token_path is None:
-        # Try the default token
-        token_path = '~/.sq_github_token'
-    token_path = os.path.expandvars(os.path.expanduser(token_path))
+    if token is None:
+        if token_path is None:
+            # Try the default token
+            token_path = '~/.sq_github_token'
+        token_path = os.path.expandvars(os.path.expanduser(token_path))
 
-    if not os.path.isfile(token_path):
-        print "You don't have a token in {0} ".format(token_path)
-        print "Have you run github-auth"
-        sys.exit(1)
+        if not os.path.isfile(token_path):
+            print "You don't have a token in {0} ".format(token_path)
+            print "Have you run github-auth"
+            sys.exit(1)
 
-    with open(token_path, 'r') as fd:
-        mytoken = fd.readline().strip()
+        with open(token_path, 'r') as fd:
+            token = fd.readline().strip()
 
-    gh = login(token=mytoken, two_factor_callback=github_2fa_callback)
+    gh = login(token=token, two_factor_callback=github_2fa_callback)
 
     return gh
 
