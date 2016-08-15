@@ -43,7 +43,8 @@ def parse_args():
         Examples:
         github-tag-version --org lsst --team 'Data Management' w.2015.33 b1630
 
-        github-tag-version --org lsst --team 'Data Management' --team 'Externals' --candidate v11_0_rc2 11.0.rc2 b1679
+        github-tag-version --org lsst --team 'Data Management' \
+            --team 'External' --candidate v11_0_rc2 11.0.rc2 b1679
 
         """),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
@@ -62,12 +63,12 @@ def parse_args():
         '--team',
         action='append',
         required=True,
-        help = "team whose repos may be tagged (can specify several times")
+        help="team whose repos may be tagged (can specify several times")
     parser.add_argument('--candidate')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
         '--tagger',
-            help='Name of person making the tag - defaults to gitconfig value')
+        help='Name of person making the tag - defaults to gitconfig value')
     parser.add_argument(
         '--email',
         help='Email address of tagger - defaults to gitconfig value')
@@ -75,6 +76,10 @@ def parse_args():
         '--token-path',
         default='~/.sq_github_token_delete',
         help='Use a token (made with github-auth) in a non-standard location')
+    parser.add_argument(
+        '--token',
+        default=None,
+        help='Literal github personal access token string')
     parser.add_argument(
         '-d', '--debug',
         action='store_true',
@@ -98,16 +103,15 @@ def main():
         if email is None:
             sys.exit("Specify --email option")
     if args.debug:
-        print("email is " + email)        
+        print("email is " + email)
     # ditto for the name of the tagger
     tagger = args.tagger
     if tagger is None:
         tagger = codetools.gitusername()
         if tagger is None:
-            sys.exit("Specify --name option")
+            sys.exit("Specify --tagger option")
     if args.debug:
         print("tagger name is " + tagger)
-    
 
     # The candidate is assumed to be the requested EUPS tag unless
     # otherwise specified with the --candidate option The reason to
@@ -134,13 +138,13 @@ def main():
         print(timestamp)
 
     tagstuff = dict(name=tagger,
-                  email=email,
-                  date=timestamp)
+                    email=email,
+                    date=timestamp)
 
     if args.debug:
         print(tagstuff)
 
-    gh = codetools.login_github(token_path=args.token_path)
+    gh = codetools.login_github(token_path=args.token_path, token=args.token)
     if args.debug:
         print(type(gh))
 
@@ -161,7 +165,6 @@ def main():
                                 eups_candidate + '.list'))
     if args.debug:
         print eupspkg_taglist
-
 
     http = urllib3.poolmanager.PoolManager()
 
@@ -224,11 +227,11 @@ def main():
                 if not args.dry_run:
                     try:
                         repo.create_tag(tag=version,
-                                    message=message,
-                                    sha=sha,
-                                    obj_type='commit',
-                                    tagger=tagstuff,
-                                    lightweight=False)
+                                        message=message,
+                                        sha=sha,
+                                        obj_type='commit',
+                                        tagger=tagstuff,
+                                        lightweight=False)
                     except Exception as e:
                         print 'OOPS: -------------------'
                         print str(e)

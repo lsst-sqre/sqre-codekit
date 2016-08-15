@@ -65,6 +65,8 @@ To develop codekit, create a Python virtual environment, and
 ```bash
 git clone https://github.com/lsst-sqre/sqre-codekit.git
 cd sqre-codekit
+virtualenv venv
+. venv/bin/activate
 pip install -r requirements.txt
 python setup.py develop
 ```
@@ -74,5 +76,5 @@ Note that all scripts (in `codekit/cli`) are installed using setuptools `entry_p
 Tests can be run with [pytest](http://pytest.org/latest/):
 
 ```bash
-py.test
+py.test tests
 ```
