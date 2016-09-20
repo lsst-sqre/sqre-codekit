@@ -15,6 +15,7 @@ import shutil
 import sys
 import tempfile
 import urllib3
+import re
 from github3 import login
 import gitconfig
 
@@ -190,6 +191,12 @@ def eups2git_ref(eups_ref,
         if debug:
             print eupspkg, sha, eupsver
         break
+
+        # sanity check that our digest looks like a sha1
+        p = re.compile('\b[0-9a-f]{5,40}\b')
+        m = p.match(sha)
+        if not m:
+            raise RuntimeError('does not appear to be a sha1 digest', sha)
 
     return sha
 

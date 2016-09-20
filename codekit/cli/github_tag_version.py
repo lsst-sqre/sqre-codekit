@@ -218,6 +218,11 @@ def main():
             print '!!! SKIPPING', upstream, (60-len(upstream)) * '-'
             continue
 
+        if not sum(1 for _ in repo.iter_teams()):
+            print '!!! repo has NO teams -- SKIPPING', upstream, \
+                (45-len(upstream)) * '-'
+            continue
+
         for team in repo.iter_teams():
             if team.name in args.team:
                 if args.debug or args.dry_run:
@@ -232,12 +237,17 @@ def main():
 
                 if not args.dry_run:
                     try:
-                        repo.create_tag(tag=version,
-                                        message=message,
-                                        sha=sha,
-                                        obj_type='commit',
-                                        tagger=tagstuff,
-                                        lightweight=False)
+                        # create_tag() returns a Tag object on success or None
+                        # on failure
+                        tag = repo.create_tag(tag=version,
+                                              message=message,
+                                              sha=sha,
+                                              obj_type='commit',
+                                              tagger=tagstuff,
+                                              lightweight=False)
+                        if tag is None:
+                            raise RuntimeError('failed to create git tag')
+
                     except Exception as e:
                         print 'OOPS: -------------------'
                         print str(e)
