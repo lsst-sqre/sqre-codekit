@@ -80,9 +80,6 @@ def main():
     if args.debug:
         print len(move_me), 'repos to me moved'
 
-    # FIXME unused
-    # teams = [g for g in org.teams()]
-
     status = 0
     status2 = 0
 
