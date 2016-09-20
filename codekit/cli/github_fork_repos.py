@@ -50,7 +50,7 @@ def main():
     organization = gh.organization('lsst')
 
     # list of all LSST repos
-    repos = [g for g in organization.iter_repos()]
+    repos = [g for g in organization.repositories()]
     repo_count = len(repos)
 
     if args.debug:

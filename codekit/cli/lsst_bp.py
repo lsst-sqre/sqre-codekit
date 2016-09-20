@@ -109,7 +109,7 @@ def main():
     org = gh.organization(args.orgname)
 
     if args.repo is None and args.ignore_teams is True:
-        repo_iter = org.iter_repos()
+        repo_iter = org.repositories()
     elif args.repo is None and args.ignore_teams is False:
         repo_iter = codetools.repos_for_team(org, args.team)
     else:

@@ -15,6 +15,7 @@ import shutil
 import sys
 import tempfile
 import urllib3
+import re
 from github3 import login
 import gitconfig
 
@@ -116,8 +117,8 @@ def repos_for_team(org, teams=None):
     """
     if teams is not None:
         teams = set(teams)
-    for repo in org.iter_repos():
-        repo_teams = set([t.name for t in repo.iter_teams()])
+    for repo in org.repositories():
+        repo_teams = set([t.name for t in repo.teams()])
         if teams is None:
             yield repo
         elif repo_teams.isdisjoint(teams) is False:
@@ -142,7 +143,7 @@ def open_repo(org, repo_name):
     repo : :class:`github3.repos.repo.Repository`
         The repository instance.
     """
-    for repo in org.iter_repos():
+    for repo in org.repositories():
         if repo.name == repo_name:
             return repo
 
@@ -190,6 +191,12 @@ def eups2git_ref(eups_ref,
         if debug:
             print eupspkg, sha, eupsver
         break
+
+        # sanity check that our digest looks like a sha1
+        p = re.compile('\b[0-9a-f]{5,40}\b')
+        m = p.match(sha)
+        if not m:
+            raise RuntimeError('does not appear to be a sha1 digest', sha)
 
     return sha
 
