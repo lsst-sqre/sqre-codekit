@@ -1,4 +1,7 @@
 github3.py==1.0.0a4
+# dep of github3; uritemplate.py 3.0.[012] is broken
+# see https://github.com/sigmavirus24/uritemplate/issues/27
+uritemplate.py==2.0.0
 requests==2.8.1
 urllib3==1.12
 progress==1.2
