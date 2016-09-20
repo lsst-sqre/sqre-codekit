@@ -73,8 +73,8 @@ def main():
 
     org = gh.organization(args.organization)
 
-    for repo in org.iter_repos():
-        teamnames = [t.name for t in repo.iter_teams()
+    for repo in org.repositories():
+        teamnames = [t.name for t in repo.teams()
                      if t.name not in args.hide]
         maxt = args.maxt if (args.maxt >= 0) else len(teamnames)
         if args.debug:

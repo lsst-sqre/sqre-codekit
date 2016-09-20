@@ -117,8 +117,8 @@ def repos_for_team(org, teams=None):
     """
     if teams is not None:
         teams = set(teams)
-    for repo in org.iter_repos():
-        repo_teams = set([t.name for t in repo.iter_teams()])
+    for repo in org.repositories():
+        repo_teams = set([t.name for t in repo.teams()])
         if teams is None:
             yield repo
         elif repo_teams.isdisjoint(teams) is False:
@@ -143,7 +143,7 @@ def open_repo(org, repo_name):
     repo : :class:`github3.repos.repo.Repository`
         The repository instance.
     """
-    for repo in org.iter_repos():
+    for repo in org.repositories():
         if repo.name == repo_name:
             return repo
 

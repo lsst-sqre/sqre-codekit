@@ -50,7 +50,7 @@ def main():
     organization = gh.organization(orgname)
 
     # get all the repos
-    repos = [g for g in organization.iter_repos()]
+    repos = [g for g in organization.repositories()]
 
     print 'Deleting all repos in', orgname
     print 'Now is the time to panic and Ctrl-C'

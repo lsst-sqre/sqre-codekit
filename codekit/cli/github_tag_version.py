@@ -218,12 +218,12 @@ def main():
             print '!!! SKIPPING', upstream, (60-len(upstream)) * '-'
             continue
 
-        if not sum(1 for _ in repo.iter_teams()):
+        if not sum(1 for _ in repo.teams()):
             print '!!! repo has NO teams -- SKIPPING', upstream, \
                 (45-len(upstream)) * '-'
             continue
 
-        for team in repo.iter_teams():
+        for team in repo.teams():
             if team.name in args.team:
                 if args.debug or args.dry_run:
                     print repo.name.ljust(40), 'found in', team.name

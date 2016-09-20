@@ -85,7 +85,7 @@ def list_development_years(repo):
         The years where a commit occured in this repo's git history.
     """
     years = []
-    for commit in repo.iter_commits():
+    for commit in repo.commits():
         struct_time = time.gmtime(commit.authored_date)
         years.append(struct_time.tm_year)
     years = list(set(years))
