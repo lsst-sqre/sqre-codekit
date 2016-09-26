@@ -55,6 +55,7 @@ To get more debugging information, set your `DM_SQUARE_DEBUG` variable before ru
 - `github-tag-version`: tag all repositories in a GitHub org using a team-based scheme.
 - `github-pull-request`: convert an issue to a pull request.
 - `lsst-bp`: upgrade LSST DM code to [RFC-45](https://jira.lsstcorp.org/browse/RFC-45)-style.
+- `lsst-autopep8`: apply autopep8 to LSST DM python code and push changes to GitHub branches.
 
 Use the `--help` flag with any command to learn more.
 

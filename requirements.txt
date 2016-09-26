@@ -6,5 +6,6 @@ requests==2.8.1
 urllib3==1.12
 progress==1.2
 GitPython==1.0.1
+sh==1.11
 pytest==2.8.2
 MapGitConfig==1.1
