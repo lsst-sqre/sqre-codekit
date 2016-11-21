@@ -3,7 +3,6 @@
 # Technical Debt
 # -------------
 # - will need updating to be new permissions model aware
-# - warn if repo and teams do not exist
 
 import os
 import logging
@@ -57,6 +56,26 @@ def parse_args():
     return parser.parse_args()
 
 
+def search_teams(org, teamname, debug=False):
+    if teamname == '':
+        if debug:
+            print "Searching for empty teamname -> None"
+        return None  # Special case for empty teams
+    teams = org.teams()
+    try:
+        while True:
+            team = teams.next()
+            if debug:
+                print "Considering team %s with ID %i" % (team.name, team.id)
+            if team.name == teamname:
+                if debug:
+                    print "Match found."
+                return team.id
+    except StopIteration:
+        raise NameError("No team '%s' in organization '%s'" % (teamname,
+                                                               org.login))
+
+
 def main():
     args = parse_args()
 
@@ -76,36 +95,39 @@ def main():
 
     org = gh.organization(args.org)
 
+    newteamid = search_teams(org, args.newteam, args.debug)
+    oldteamid = search_teams(org, args.oldteam, args.debug)
+
     move_me = args.repos
     if args.debug:
-        print len(move_me), 'repos to me moved'
+        print len(move_me), 'repos to be moved'
 
     status = 0
     status2 = 0
 
     for r in move_me:
         repo = args.org + '/' + r.rstrip()
+        if newteamid:
+            # Add team to the repo
+            if args.debug or args.dry_run:
+                print 'Adding', repo, 'to', args.newteam, '...',
 
-        # Add team to the repo
-        if args.debug or args.dry_run:
-            print 'Adding', repo, 'to', args.newteam, '...',
-
-        if not args.dry_run:
-            status += org.add_repo(repo, args.newteam)
-            if status:
-                print 'ok'
-            else:
-                print 'FAILED'
+            if not args.dry_run:
+                status += org.add_repository(repo, newteamid)
+                if status:
+                    print 'ok'
+                else:
+                    print 'FAILED'
 
         # remove repo from old team
         # you cannot move out of Owners
 
-        if args.oldteam != 'Owners':
+        if oldteamid and args.oldteam != 'Owners':
             if args.debug or args.dry_run:
                 print 'Removing', repo, 'from', args.oldteam, '...',
 
             if not args.dry_run:
-                status2 += org.remove_repo(repo, args.oldteam)
+                status2 += org.remove_repository(repo, oldteamid)
 
                 if status2:
                     print 'ok'
