@@ -43,7 +43,6 @@ setup(
     # package_data={},
     entry_points={
         'console_scripts': [
-            'github-pull-request = codekit.cli.github_pull_request:main',
             'github-auth = codekit.cli.github_auth:main',
             'github-delete-shadow = codekit.cli.github_delete_shadow:main',
             'github-fork-repos = codekit.cli.github_fork_repos:main',
