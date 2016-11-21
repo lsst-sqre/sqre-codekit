@@ -1,11 +1,10 @@
 """Delete all repos in the Github <user>-shadow org."""
 
-# (the -u in the commandline unbuffers output so the countdown works)
-
 import textwrap
 import argparse
 import os
 from time import sleep
+import progressbar
 from .. import codetools
 
 
@@ -33,6 +32,15 @@ def parse_args():
     return parser.parse_args()
 
 
+def countdown_timer():
+    widgets = ['Pause for panic: ', progressbar.ETA(), ' ', progressbar.Bar()]
+    bar = progressbar.ProgressBar(widgets=widgets, max_value=200).start()
+    for i in range(200):
+        bar.update(i)
+        sleep(0.1)
+    bar.finish()
+
+
 def main():
     work = 0
     nowork = 0
@@ -55,11 +63,7 @@ def main():
     print 'Deleting all repos in', orgname
     print 'Now is the time to panic and Ctrl-C'
 
-    secs = 10
-    while secs >= 0:
-        print secs, '...',
-        sleep(2)
-        secs -= 1
+    countdown_timer()
 
     print 'Here goes:'
 

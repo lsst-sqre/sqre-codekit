@@ -7,7 +7,6 @@
 
 import os
 import shutil
-import sys
 import tempfile
 import urllib3
 import re
