@@ -5,10 +5,6 @@
 # - package
 # - exception rather than sysexit
 # - check explictly for github3 version
-# major API breakage between
-# github3.py Python wrapper for the GitHub API(http://developer.github.com/v3)
-#  INSTALLED: 0.9.4
-#  LATEST:    1.0.0a1
 
 import os
 import shutil
@@ -21,7 +17,8 @@ import gitconfig
 
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
-           'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail']
+           'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
+           'get_team_id_by_name']
 
 
 def login_github(token_path=None, token=None):
@@ -61,7 +58,6 @@ def login_github(token_path=None, token=None):
 
 
 def gitusername():
-
     """
     Returns the user's name from .gitconfig if available
     """
@@ -74,7 +70,6 @@ def gitusername():
 
 
 def gituseremail():
-
     """
     Returns the user's email from .gitconfig if available
     """
@@ -146,6 +141,49 @@ def open_repo(org, repo_name):
     for repo in org.repositories():
         if repo.name == repo_name:
             return repo
+
+
+def get_team_id_by_name(org, team_name, debug=False):
+    """Get the ID of a team in a GitHub organization.
+
+    Parameters
+    ----------
+    org : class:`github3.github3.orgs.Organization` instance
+        The GitHub organization to operate in. Usually created with the
+        :meth:`github3.GitHub.organization` method.
+    team_name : `str`
+        Name of the team to find
+    debug : `bool`, optional
+        Enable debug output.
+
+    Returns
+    -------
+    team_id : `int` or `None`
+        The team ID as an integer, or `None` if `team_name` is the empty string.
+
+    Raises
+    ------
+    `NameError`
+        If there is no team with the given name in the supplied organization.
+    """
+
+    if team_name == '':
+        if debug:
+            print "Searching for empty teamname -> None"
+        return None  # Special case for empty teams
+    teams = org.teams()
+    try:
+        while True:
+            team = teams.next()
+            if debug:
+                print "Considering team %s with ID %i" % (team.name, team.id)
+            if team.name == team_name:
+                if debug:
+                    print "Match found."
+                return team.id
+    except StopIteration:
+        raise NameError("No team '%s' in organization '%s'" % (team_name,
+                                                               org.login))
 
 
 def eups2git_ref(eups_ref,

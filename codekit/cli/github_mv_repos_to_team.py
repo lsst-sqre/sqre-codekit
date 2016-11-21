@@ -56,26 +56,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def search_teams(org, teamname, debug=False):
-    if teamname == '':
-        if debug:
-            print "Searching for empty teamname -> None"
-        return None  # Special case for empty teams
-    teams = org.teams()
-    try:
-        while True:
-            team = teams.next()
-            if debug:
-                print "Considering team %s with ID %i" % (team.name, team.id)
-            if team.name == teamname:
-                if debug:
-                    print "Match found."
-                return team.id
-    except StopIteration:
-        raise NameError("No team '%s' in organization '%s'" % (teamname,
-                                                               org.login))
-
-
 def main():
     args = parse_args()
 
@@ -95,8 +75,8 @@ def main():
 
     org = gh.organization(args.org)
 
-    newteamid = search_teams(org, args.newteam, args.debug)
-    oldteamid = search_teams(org, args.oldteam, args.debug)
+    newteamid = codetools.get_team_id_by_name(org, args.newteam, args.debug)
+    oldteamid = codetools.get_team_id_by_name(org, args.oldteam, args.debug)
 
     move_me = args.repos
     if args.debug:
