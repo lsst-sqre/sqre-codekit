@@ -2,7 +2,7 @@ github3.py==1.0.0a4
 uritemplate>=2.0
 requests==2.8.1
 urllib3==1.12
-progress==1.2
+progressbar2==3.11.0
 GitPython==1.0.1
 pytest==2.8.2
 MapGitConfig==1.1
