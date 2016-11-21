@@ -3,7 +3,6 @@
 # technical debt
 # --------------
 # - package
-# - exception rather than sysexit
 # - check explictly for github3 version
 
 import os
@@ -46,8 +45,8 @@ def login_github(token_path=None, token=None):
 
         if not os.path.isfile(token_path):
             print "You don't have a token in {0} ".format(token_path)
-            print "Have you run github-auth"
-            sys.exit(1)
+            print "Have you run github-auth?"
+            raise EnvironmentError("No token in %v" % token_path)
 
         with open(token_path, 'r') as fd:
             token = fd.readline().strip()
