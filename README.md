@@ -53,7 +53,6 @@ To get more debugging information, set your `DM_SQUARE_DEBUG` variable before ru
 - `github-list-repos`: list repositories in a GitHub organization, showing teams.
 - `github-mv-repos-to-team`: move repositories from one team to another.
 - `github-tag-version`: tag all repositories in a GitHub org using a team-based scheme.
-- `github-pull-request`: convert an issue to a pull request.
 - `lsst-bp`: upgrade LSST DM code to [RFC-45](https://jira.lsstcorp.org/browse/RFC-45)-style.
 
 Use the `--help` flag with any command to learn more.

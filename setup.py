@@ -37,13 +37,12 @@ setup(
     ],
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
-    install_requires=['github3.py', 'urllib3', 'progress', 'gitpython',
+    install_requires=['github3.py', 'urllib3', 'progressbar2', 'gitpython',
                       'requests'],
     tests_require=['pytest'],
     # package_data={},
     entry_points={
         'console_scripts': [
-            'github-pull-request = codekit.cli.github_pull_request:main',
             'github-auth = codekit.cli.github_auth:main',
             'github-delete-shadow = codekit.cli.github_delete_shadow:main',
             'github-fork-repos = codekit.cli.github_fork_repos:main',

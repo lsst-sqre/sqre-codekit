@@ -5,7 +5,7 @@ import argparse
 import textwrap
 import os
 from time import sleep
-import progress.bar
+import progressbar
 from .. import codetools
 
 
@@ -56,16 +56,18 @@ def main():
     if args.debug:
         print repos
 
-    bar = progress.bar.ChargingBar('Forking',
-                                   max=repo_count,
-                                   suffix='%(index)d/%(max)d')
+    widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
+    bar = progressbar.ProgressBar(
+        widgets=widgets, max_value=repo_count).start()
+    repo_idx = 0
     for repo in repos:
         if args.debug:
             print repo.name
 
         forked_repo = repo.create_fork(args.shadow_org)  # NOQA
         sleep(2)
-        bar.next()
+        bar.update(repo_idx)
+        repo_idx = repo_idx + 1
 
         # forked_name = forked_repo.name
         # Trap previous fork with dm_ prefix
