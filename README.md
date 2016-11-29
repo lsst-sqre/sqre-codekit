@@ -1,4 +1,4 @@
-![Travis](https://img.shields.io/travis/lsst-sqre/sqre-codekit.svg)
+[![Build Status](https://travis-ci.org/lsst-sqre/sqre-codekit.svg?branch=master)](https://travis-ci.org/lsst-sqre/sqre-codekit)
 
 # sqre-codekit
 
