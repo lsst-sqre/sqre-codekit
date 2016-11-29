@@ -37,8 +37,15 @@ setup(
     ],
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
-    install_requires=['github3.py', 'urllib3', 'progressbar2', 'gitpython',
-                      'requests'],
+    install_requires=[
+        'github3.py==1.0.0a4',
+        'uritemplate.py==2.0.0',
+        'requests==2.8.1',
+        'urllib3==1.12',
+        'progressbar2==3.11.0',
+        'GitPython==1.0.1',
+        'MapGitConfig==1.1'
+    ],
     tests_require=['pytest'],
     # package_data={},
     entry_points={
