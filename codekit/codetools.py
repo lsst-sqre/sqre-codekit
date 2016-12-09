@@ -211,6 +211,9 @@ def eups2git_ref(eups_ref,
     reflines = refs.data.splitlines()
 
     for entry in reflines:
+        # Python 2/3 accomodation
+        if not isinstance(entry, str):
+            entry = str(entry, 'utf-8')
         # skip commented out and blank lines
         if entry.startswith('#'):
             continue
@@ -231,8 +234,9 @@ def eups2git_ref(eups_ref,
         if debug:
             print(eupspkg, sha, eupsver)
 
-        # break used to be here.  Suspect that means the sanity check
-        #  is broken, so I am commenting it out...
+        break
+
+        # We never reach this sanity check, so I am commenting it out.
 
         # sanity check that our digest looks like a sha1
         # pat = re.compile('\b[0-9a-f]{5,40}\b')

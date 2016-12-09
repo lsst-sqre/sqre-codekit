@@ -200,9 +200,12 @@ def main():
     if manifest.status >= 300:
         sys.exit("Failed GET")
 
-    entries = manifest.data.split('\n')
+    entries = manifest.data.splitlines()
 
     for entry in entries:
+        # Python 2/3 accomodation
+        if not isinstance(entry, str):
+            entry = str(entry, 'utf-8')
         # skip commented out and blank lines
         if entry.startswith('#'):
             continue

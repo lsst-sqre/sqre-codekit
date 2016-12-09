@@ -79,7 +79,8 @@ def main():
     for repo in org.repositories():
         teamnames = [t.name for t in repo.teams()
                      if t.name not in args.hide]
-        maxt = args.maxt if (args.maxt >= 0) else len(teamnames)
+        maxt = args.maxt if (args.maxt is not None and
+                             args.maxt >= 0) else len(teamnames)
         if args.debug:
             print("MAXT=", maxt)
 
