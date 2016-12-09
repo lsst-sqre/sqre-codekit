@@ -21,7 +21,7 @@ def test_py_boilerplate_conversion(py_truth):
 
 def test_py_boilerplate_rerun(py_truth):
     """Verify that the conversion doesn't change converted documents"""
-    expected_result = py_truth
+    _, expected_result = py_truth
     converted_text = convert_boilerplate(StringIO(expected_result))
     assert expected_result == converted_text
 
@@ -36,7 +36,7 @@ def test_cpp_boilerplate_conversion(cpp_truth):
 
 def test_cpp_boilerplate_rerun(cpp_truth):
     """Verify that the conversion doesn't change converted documents"""
-    expected_result = cpp_truth
+    _, expected_result = cpp_truth
     converted_text = convert_boilerplate(StringIO(expected_result))
     print(converted_text)
     assert expected_result == converted_text
