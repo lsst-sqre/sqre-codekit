@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Utilities for maintaining and asserting LICENSE and COPYRIGHT in
 LSST DM repos.
 """
@@ -10,6 +11,7 @@ import time
 import requests
 import git
 
+# pylint: disable=anomalous-backslash-in-string, invalid-name
 
 comment_pattern = re.compile(
     '(?P<comment_flag>^[#* ]*)(?P<content>[\d\w\s<]*)')
@@ -110,9 +112,9 @@ def write_lsst_license(path, url=None):
     """
     if url is None:
         url = 'http://www.lsstcorp.org/LegalNotices/GPLv3License.txt'
-    license = requests.get(url)
+    licensedoc = requests.get(url)
     with open(path, 'w') as f:
-        f.write(license.text)
+        f.write(licensedoc.text)
 
 
 def write_default_copyright(path, repo):
@@ -162,6 +164,8 @@ def upgrade_repo(gh, github_repo, branch_name, clone_dir):
     clone_dir : str
         Directory to clone the repository into.
     """
+    # gh is not actually used.
+    gh = gh
     # Clone repo
     repo = git.Repo.clone_from(github_repo.clone_url, clone_dir)
 
@@ -223,7 +227,7 @@ def all_files(root, patterns=('*',)):
     .. [1] Martelli, A., Ravenscroft, A., & Ascher, D. (2005). *Python
        Cookbook.* O'Reilly Media, Inc..
     """
-    for path, subdirs, files in os.walk(root):
+    for path, _, files in os.walk(root):
         files.sort()
         for name in files:
             for pattern in patterns:

@@ -1,36 +1,48 @@
-from StringIO import StringIO
+# !/usr/bin/env python
+"""Test the licensing conversion functions"""
+from __future__ import print_function
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import pytest
 
 from codekit.licensing import convert_boilerplate
 
+# pylint: disable=redefined-outer-name
+
 
 def test_py_boilerplate_conversion(py_truth):
-    """Test conversion of Python boilerplate."""
+    """Test conversion of Python boilerplate"""
     example_input, expected_result = py_truth
     converted_text = convert_boilerplate(StringIO(example_input))
     assert expected_result == converted_text
 
 
 def test_py_boilerplate_rerun(py_truth):
-    """Verify that the conversion doesn't changed converted documents."""
-    example_input, expected_result = py_truth
+    """Verify that the conversion doesn't change converted documents"""
+    _, expected_result = py_truth
     converted_text = convert_boilerplate(StringIO(expected_result))
     assert expected_result == converted_text
 
 
 def test_cpp_boilerplate_conversion(cpp_truth):
+    """Test conversion of C++ boilerplate"""
     example_input, expected_result = cpp_truth
     converted_text = convert_boilerplate(StringIO(example_input))
-    print converted_text
+    print(converted_text)
     assert expected_result == converted_text
 
 
 def test_cpp_boilerplate_rerun(cpp_truth):
-    """Verify that the conversion doesn't changed converted documents."""
-    example_input, expected_result = cpp_truth
+    """Verify that the conversion doesn't change converted documents"""
+    _, expected_result = cpp_truth
     converted_text = convert_boilerplate(StringIO(expected_result))
-    print converted_text
+    print(converted_text)
     assert expected_result == converted_text
+
+# The linter gets confused by the examples.
+# pylint: disable=missing-docstring
 
 
 @pytest.fixture

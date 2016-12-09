@@ -1,24 +1,26 @@
-from setuptools import setup, find_packages
+#!/usr/bin/env python
+"""Setup Tools Script"""
 import os
 import codecs
-
+from setuptools import setup, find_packages
 
 PACKAGENAME = 'sqre-codekit'
 DESCRIPTION = 'LSST Data Management SQuaRE code management tools'
 AUTHOR = 'Frossie Economou'
 AUTHOR_EMAIL = 'frossie@lsst.org'
 URL = 'https://github.com/lsst-sqre/sqre-codekit'
-VERSION = '1.0.1'
+VERSION = '2.0.0'
 LICENSE = 'MIT'
 
 
 def read(filename):
+    """Convenience function for includes"""
     full_filename = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
         filename)
     return codecs.open(full_filename, 'r', 'utf-8').read()
 
-long_description = read('README.md')
+long_description = read('README.md')  # pylint:disable=invalid-name
 
 
 setup(
@@ -33,6 +35,7 @@ setup(
     classifiers=[
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.5',
         'License :: OSI Approved :: MIT License',
     ],
     keywords='lsst',

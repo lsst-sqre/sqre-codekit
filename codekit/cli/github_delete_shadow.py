@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 """Delete all repos in the Github <user>-shadow org."""
-
+from __future__ import print_function
 import textwrap
 import argparse
 import os
@@ -9,6 +10,7 @@ from .. import codetools
 
 
 def parse_args():
+    """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
         prog='github-delete-shadow',
         description=textwrap.dedent("""Delete all repos in the GitHub
@@ -33,15 +35,17 @@ def parse_args():
 
 
 def countdown_timer():
+    """Show countdown bar"""
     widgets = ['Pause for panic: ', progressbar.ETA(), ' ', progressbar.Bar()]
-    bar = progressbar.ProgressBar(widgets=widgets, max_value=200).start()
+    pbar = progressbar.ProgressBar(widgets=widgets, max_value=200).start()
     for i in range(200):
-        bar.update(i)
+        pbar.update(i)
         sleep(0.1)
-    bar.finish()
+    pbar.finish()
 
 
 def main():
+    """Delete user shadow org"""
     work = 0
     nowork = 0
 
@@ -50,47 +54,47 @@ def main():
     orgname = '{user}-shadow'.format(user=args.user)
 
     if args.debug:
-        print 'org:', orgname
+        print('org:', orgname)
 
-    gh = codetools.login_github(token_path=args.token_path)
+    ghb = codetools.login_github(token_path=args.token_path)
 
     # get the organization object
-    organization = gh.organization(orgname)
+    organization = ghb.organization(orgname)
 
     # get all the repos
     repos = [g for g in organization.repositories()]
 
-    print 'Deleting all repos in', orgname
-    print 'Now is the time to panic and Ctrl-C'
+    print('Deleting all repos in', orgname)
+    print('Now is the time to panic and Ctrl-C')
 
     countdown_timer()
 
-    print 'Here goes:'
+    print('Here goes:')
 
     if args.debug:
         delay = 5
-        print delay, 'second gap between deletions'
+        print(delay, 'second gap between deletions')
         work = 0
         nowork = 0
 
     for repo in repos:
 
         if args.debug:
-            print 'Next deleting:', repo.name, '...',
+            print('Next deleting:', repo.name, '...',)
             sleep(delay)
 
         status = repo.delete()
 
         if status:
-            print 'ok'
+            print('ok')
             work += 1
         else:
-            print 'FAILED - does your token have delete_repo scope?'
+            print('FAILED - does your token have delete_repo scope?')
             nowork += 1
 
-    print 'Done - Succeed:', work, 'Failed:', nowork
+    print('Done - Succeed:', work, 'Failed:', nowork)
     if work:
-        print 'Consider deleting your privileged auth token', args.token_path
+        print('Consider deleting your privileged auth token', args.token_path)
 
 
 if __name__ == '__main__':
