@@ -1,5 +1,5 @@
 """Assorted codetools utility functions."""
-
+from __future__ import print_function
 # technical debt
 # --------------
 # - package
@@ -8,8 +8,8 @@
 import os
 import shutil
 import tempfile
+# import re # Only used in SHA-sanity-check unreachable code
 import urllib3
-import re
 from github3 import login
 import gitconfig
 
@@ -43,23 +43,23 @@ def login_github(token_path=None, token=None):
         token_path = os.path.expandvars(os.path.expanduser(token_path))
 
         if not os.path.isfile(token_path):
-            print "You don't have a token in {0} ".format(token_path)
-            print "Have you run github-auth?"
-            raise EnvironmentError("No token in %v" % token_path)
+            print("You don't have a token in {0} ".format(token_path))
+            print("Have you run github-auth?")
+            raise EnvironmentError("No token in %s" % token_path)
 
-        with open(token_path, 'r') as fd:
-            token = fd.readline().strip()
+        with open(token_path, 'r') as fdo:
+            token = fdo.readline().strip()
 
-    gh = login(token=token, two_factor_callback=github_2fa_callback)
+    ghb = login(token=token, two_factor_callback=github_2fa_callback)
 
-    return gh
+    return ghb
 
 
 def gitusername():
     """
     Returns the user's name from .gitconfig if available
     """
-
+    # pylint: disable=bare-except
     try:
         mygitconfig = gitconfig.GitConfig()
         return mygitconfig['user.name']
@@ -72,14 +72,18 @@ def gituseremail():
     Returns the user's email from .gitconfig if available
     """
 
+    # pylint: disable=bare-except
     try:
         mygitconfig = gitconfig.GitConfig()
-        return(mygitconfig['user.email'])
+        return mygitconfig['user.email']
     except:
         return None
 
 
 def github_2fa_callback():
+    """
+    Prompt for two-factor code
+    """
     # http://github3py.readthedocs.org/en/master/examples/two_factor_auth.html
     code = ''
     while not code:
@@ -167,17 +171,17 @@ def get_team_id_by_name(org, team_name, debug=False):
 
     if team_name == '':
         if debug:
-            print "Searching for empty teamname -> None"
+            print("Searching for empty teamname -> None")
         return None  # Special case for empty teams
     teams = org.teams()
     try:
         while True:
             team = teams.next()
             if debug:
-                print "Considering team %s with ID %i" % (team.name, team.id)
+                print("Considering team %s with ID %i" % (team.name, team.id))
             if team.name == team_name:
                 if debug:
-                    print "Match found."
+                    print("Match found.")
                 return team.id
     except StopIteration:
         raise NameError("No team '%s' in organization '%s'" % (team_name,
@@ -187,7 +191,7 @@ def get_team_id_by_name(org, team_name, debug=False):
 def eups2git_ref(eups_ref,
                  repo,
                  eupsbuild,
-                 versiondb='https://raw.githubusercontent.com/lsst/versiondb/master/manifests',  # NOQA
+                 versiondb='https://raw.githubusercontent.com/lsst/versiondb/master/manifests',  # NOQA pylint: disable=line-too-long
                  debug=None):
     """Provide the eups tag given a git SHA."""
     # Thought of trying to parse the eups tag for the ref, but given
@@ -197,7 +201,7 @@ def eups2git_ref(eups_ref,
     # eg. https://raw.githubusercontent.com/lsst/versiondb/master/manifests/b1108.txt  # NOQA
     shafile = versiondb + '/' + eupsbuild + '.txt'
     if debug:
-        print shafile
+        print(shafile)
 
     # Get the file tying shas to eups versions
     http = urllib3.poolmanager.PoolManager()
@@ -225,14 +229,16 @@ def eups2git_ref(eups_ref,
                                'not match manifest', eups_ref, eupsver)
         # get out if we find it
         if debug:
-            print eupspkg, sha, eupsver
-        break
+            print(eupspkg, sha, eupsver)
+
+        # break used to be here.  Suspect that means the sanity check
+        #  is broken, so I am commenting it out...
 
         # sanity check that our digest looks like a sha1
-        p = re.compile('\b[0-9a-f]{5,40}\b')
-        m = p.match(sha)
-        if not m:
-            raise RuntimeError('does not appear to be a sha1 digest', sha)
+        # pat = re.compile('\b[0-9a-f]{5,40}\b')
+        # mat = pat.match(sha)
+        # if not mat:
+        #    raise RuntimeError('does not appear to be a sha1 digest', sha)
 
     return sha
 
@@ -248,6 +254,7 @@ class TempDir(object):
         assert os.path.exists(temp_dir) is False
     """
 
+    # pylint: disable=too-few-public-methods
     def __init__(self):
         super(TempDir, self).__init__()
         self._temp_dir = tempfile.mkdtemp()
@@ -255,6 +262,6 @@ class TempDir(object):
     def __enter__(self):
         return self._temp_dir
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, ttype, value, traceback):
         shutil.rmtree(self._temp_dir)
         self._temp_dir = None

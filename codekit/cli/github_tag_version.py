@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 """
 Use URL to EUPS candidate tag file to git tag repos with official version
 """
@@ -16,21 +15,23 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # ----------
 # Yeah, the candidate logic is broken, will fix
 
-# import webbrowser
+
+from __future__ import print_function
+
 import logging
 import os
 import sys
 import argparse
 import textwrap
-# from time import sleep
+import string
 from datetime import datetime
 from getpass import getuser
-from string import maketrans
-from .. import codetools
 import urllib3
+from .. import codetools
 
 
 def parse_args():
+    """Parse command-line arguments"""
     user = getuser()
 
     parser = argparse.ArgumentParser(
@@ -64,7 +65,7 @@ def parse_args():
     parser.add_argument('manifest')
     parser.add_argument(
         '--org',
-        default=user+'-shadow')
+        default=user + '-shadow')
     parser.add_argument(
         '--team',
         action='append',
@@ -97,6 +98,10 @@ def parse_args():
 
 
 def main():
+    """Create the tag"""
+    # pylint: disable=too-many-locals,too-many-nested-blocks,too-many-branches
+    # pylint: disable=too-many-statements
+    # Although maybe that is a hint that we should break this up...
     args = parse_args()
 
     orgname = args.org
@@ -139,7 +144,7 @@ def main():
 
     # generate timestamp for github API
     now = datetime.utcnow()
-    timestamp = now.isoformat()[0:19]+'Z'
+    timestamp = now.isoformat()[0:19] + 'Z'
     if args.debug:
         print(timestamp)
 
@@ -150,33 +155,39 @@ def main():
     if args.debug:
         print(tagstuff)
 
-    gh = codetools.login_github(token_path=args.token_path, token=args.token)
+    ghb = codetools.login_github(token_path=args.token_path, token=args.token)
     if args.debug:
-        print(type(gh))
+        print(type(ghb))
 
-    # org = gh.organization(orgname)
     if args.debug:
         print("Tagging repos in ", orgname)
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
 
-    map = maketrans('.-', '__')
+    # Python 2/3 compatibility
+    try:
+        # Python 2
+        cmap = string.maketrans('.-', '__')
+    except AttributeError:
+        # Python 3
+        cmap = str.maketrans('.-', '__')  # pylint: disable=no-member
 
     # eups_version = version.translate(map)
-    eups_candidate = candidate.translate(map)
+    eups_candidate = candidate.translate(cmap)
 
     # construct url
     eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
                                 eups_candidate + '.list'))
     if args.debug:
-        print eupspkg_taglist
+        print(eupspkg_taglist)
 
     http = urllib3.poolmanager.PoolManager()
 
     # supress the certificate warning - technical debt
     urllib3.disable_warnings()  # NOQA
     if args.debug:
+        # pylint: disable=fixme
         # FIXME what's going on here? assigning a logger to a package?
         logging.getLogger('requests.packages.urllib3')  # NOQA
         stream_handler = logging.StreamHandler()
@@ -201,39 +212,39 @@ def main():
             continue
 
         # extract the repo and eups tag from the entry
-        (upstream, generic, eups_tag) = entry.split()
+        (upstream, _, eups_tag) = entry.split()
         if args.debug:
-            print upstream, eups_tag
+            print(upstream, eups_tag)
 
         # okay so we still have the data dirs on gitolite
         # for now, just skip them and record them.
         # question is should they be on different tagging scheme anyway?
         # at this point these are: afwdata, astrometry_net_data qserv_testdata
 
-        repo = gh.repository(orgname, upstream)
+        repo = ghb.repository(orgname, upstream)
 
         # if the repo is not in github skip it for now
         # see TD
         if not hasattr(repo, 'name'):
-            print '!!! SKIPPING', upstream, (60-len(upstream)) * '-'
+            print('!!! SKIPPING', upstream, (60 - len(upstream)) * '-')
             continue
 
         if not sum(1 for _ in repo.teams()):
-            print '!!! repo has NO teams -- SKIPPING', upstream, \
-                (45-len(upstream)) * '-'
+            print('!!! repo has NO teams -- SKIPPING', upstream,
+                  (45 - len(upstream)) * '-')
             continue
 
         for team in repo.teams():
             if team.name in args.team:
                 if args.debug or args.dry_run:
-                    print repo.name.ljust(40), 'found in', team.name
+                    print(repo.name.ljust(40), 'found in', team.name)
                 sha = codetools.eups2git_ref(eups_ref=eups_tag,
                                              repo=repo.name,
                                              eupsbuild=eupsbuild,
                                              debug=args.debug)
                 if args.debug or args.dry_run:
-                    print 'Will tag sha: {sha} as {v} (was {t})'.format(
-                        sha=sha, v=version, t=eups_tag)
+                    print('Will tag sha: {sha} as {v} (was {t})'.format(
+                        sha=sha, v=version, t=eups_tag))
 
                 if not args.dry_run:
                     try:
@@ -248,14 +259,15 @@ def main():
                         if tag is None:
                             raise RuntimeError('failed to create git tag')
 
-                    except Exception as e:
-                        print 'OOPS: -------------------'
-                        print str(e)
-                        print 'OOPS: -------------------'
+                    except Exception as exc:  # pylint: disable=broad-except
+                        print('OOPS: -------------------')
+                        print(str(exc))
+                        print('OOPS: -------------------')
 
             else:
                 if args.debug:
-                    print 'No action for', repo.name, 'belonging to', team.name
+                    print('No action for', repo.name,
+                          'belonging to', team.name)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Migrate LSST code to use a minimal style of inline boilerplate and
 refer to centralzed LICENSE and COPYRIGHT files.
 
@@ -45,6 +46,7 @@ non-compliant code has been added to the stack. lsst-bp is designed to
 be run multiple times without adverse effects to compliant code.
 """
 
+from __future__ import print_function
 import sys
 import argparse
 import textwrap
@@ -105,17 +107,19 @@ def main():
     """CLI entrypoint for lsst-bp executable."""
     args = parse_args()
 
-    gh = codetools.login_github(token_path=args.token_path)
-    org = gh.organization(args.orgname)
+    ghb = codetools.login_github(token_path=args.token_path)
+    org = ghb.organization(args.orgname)
 
+    # pylint: disable=redefined-variable-type
     if args.repo is None and args.ignore_teams is True:
         repo_iter = org.repositories()
     elif args.repo is None and args.ignore_teams is False:
         repo_iter = codetools.repos_for_team(org, args.team)
     else:
+        # This is actually a list, hence the Pylint disable above.
         repo_iter = [codetools.open_repo(org, args.repo)]
 
     for repo in repo_iter:
-        print "Upgrading {0}".format(repo.name)
+        print("Upgrading {0}".format(repo.name))
         with codetools.TempDir() as temp_dir:
-            licensing.upgrade_repo(gh, repo, args.branch, temp_dir)
+            licensing.upgrade_repo(ghb, repo, args.branch, temp_dir)

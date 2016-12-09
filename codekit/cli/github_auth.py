@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 """Generate a github auth token"""
-
+from __future__ import print_function
 # technical debt:
 # --------------
 # - add command line option to override default user
@@ -16,6 +17,7 @@ from .. import codetools
 
 
 def parse_args():
+    """Parse command line arguments"""
     parser = argparse.ArgumentParser(
         prog='github-auth',
         description=textwrap.dedent("""Generate a GitHub auth token.
@@ -52,13 +54,14 @@ def parse_args():
 
 
 def main():
+    """Log in and store credentials"""
     args = parse_args()
 
     appname = sys.argv[0]
     hostname = platform.node()
 
     if args.debug:
-        print args.user
+        print(args.user)
     password = ''
 
     if args.token_path is None and args.delete_role is True:
@@ -69,11 +72,11 @@ def main():
         cred_path = os.path.expandvars(os.path.expanduser(args.token_path))
 
     if not os.path.isfile(cred_path):
-        print """
+        print("""
         Type in your password to get an auth token from github
         It will be stored in {0}
         and used in subsequent occasions.
-        """.format(cred_path)
+        """.format(cred_path))
 
         while not password:
             password = getpass('Password for {0}: '.format(args.user))
@@ -94,16 +97,16 @@ def main():
             args.user, password, scopes, note, note_url,
             two_factor_callback=codetools.github_2fa_callback)
 
-        with open(cred_path, 'w') as fd:
-            fd.write(auth.token + '\n')
-            fd.write(str(auth.id))
+        with open(cred_path, 'w') as fdo:
+            fdo.write(auth.token + '\n')
+            fdo.write(str(auth.id))
 
-        print 'Token written to {0}'.format(cred_path)
+        print('Token written to {0}'.format(cred_path))
 
     else:
-        print "You already have an auth file: {0} ".format(cred_path)
-        print "Delete it if you want a new one and run again"
-        print "Remember to also remove the corresponding token on Github"
+        print("You already have an auth file: {0} ".format(cred_path))
+        print("Delete it if you want a new one and run again")
+        print("Remember to also remove the corresponding token on Github")
 
 
 if __name__ == '__main__':

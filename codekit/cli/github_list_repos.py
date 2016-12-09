@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 """List repositories on Github belonging to organisations, teams, etc.
 """
-
+from __future__ import print_function
 # Technical Debt
 # --------------
 
@@ -14,6 +15,7 @@ from .. import codetools
 
 
 def parse_args():
+    """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
         prog='github-list-repos',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -65,23 +67,24 @@ def parse_args():
 
 
 def main():
+    """List repos and teams"""
     args = parse_args()
-    gh = codetools.login_github(token_path=args.token_path)
+    ghb = codetools.login_github(token_path=args.token_path)
 
     if not args.hide:
         args.hide = []
 
-    org = gh.organization(args.organization)
+    org = ghb.organization(args.organization)
 
     for repo in org.repositories():
         teamnames = [t.name for t in repo.teams()
                      if t.name not in args.hide]
         maxt = args.maxt if (args.maxt >= 0) else len(teamnames)
         if args.debug:
-            print "MAXT=", maxt
+            print("MAXT=", maxt)
 
-        if (args.mint <= len(teamnames) <= maxt):
-            print repo.name.ljust(40) + args.delimiter.join(teamnames)
+        if args.mint <= len(teamnames) <= maxt:
+            print(repo.name.ljust(40) + args.delimiter.join(teamnames))
 
 
 if __name__ == '__main__':

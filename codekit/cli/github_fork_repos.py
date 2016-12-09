@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 """Fork LSST repos into a showow GitHub organization."""
-
+from __future__ import print_function
 
 import argparse
 import textwrap
@@ -10,6 +11,7 @@ from .. import codetools
 
 
 def parse_args():
+    """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
         prog='github-fork-repos',
         description=textwrap.dedent("""
@@ -39,41 +41,36 @@ def parse_args():
 
 
 def main():
+    """Fork all repos into shadow org"""
     args = parse_args()
 
     if args.debug:
-        print 'You are', args.user
+        print('You are', args.user)
 
-    gh = codetools.login_github(token_path=args.token_path)
+    ghb = codetools.login_github(token_path=args.token_path)
 
     # get the organization object
-    organization = gh.organization('lsst')
+    organization = ghb.organization('lsst')
 
     # list of all LSST repos
     repos = [g for g in organization.repositories()]
     repo_count = len(repos)
 
     if args.debug:
-        print repos
+        print(repos)
 
     widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
-    bar = progressbar.ProgressBar(
+    pbar = progressbar.ProgressBar(
         widgets=widgets, max_value=repo_count).start()
     repo_idx = 0
     for repo in repos:
         if args.debug:
-            print repo.name
+            print(repo.name)
 
-        forked_repo = repo.create_fork(args.shadow_org)  # NOQA
+        repo.create_fork(args.shadow_org)  # NOQA
         sleep(2)
-        bar.update(repo_idx)
-        repo_idx = repo_idx + 1
-
-        # forked_name = forked_repo.name
-        # Trap previous fork with dm_ prefix
-        # if not forked_name.startswith("dm_"):
-        #     newname = "dm_" + forked_name
-        #     forked_repo.edit(newname)
+        pbar.update(repo_idx)
+        repo_idx += 1
 
 if __name__ == '__main__':
     main()
