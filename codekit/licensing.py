@@ -164,8 +164,6 @@ def upgrade_repo(gh, github_repo, branch_name, clone_dir):
     clone_dir : str
         Directory to clone the repository into.
     """
-    # gh is not actually used.
-    gh = gh
     # Clone repo
     repo = git.Repo.clone_from(github_repo.clone_url, clone_dir)
 
