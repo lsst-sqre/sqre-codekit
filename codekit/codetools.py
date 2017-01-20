@@ -16,7 +16,7 @@ import gitconfig
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
            'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
-           'get_team_id_by_name']
+           'get_team_id_by_name', 'get_git_credential_helper']
 
 
 def login_github(token_path=None, token=None):
@@ -186,6 +186,37 @@ def get_team_id_by_name(org, team_name, debug=False):
     except StopIteration:
         raise NameError("No team '%s' in organization '%s'" % (team_name,
                                                                org.login))
+
+
+def get_git_credential_helper(username, token):
+    """Get a string suitable for inclusion in a git config as a credential
+    helper, allowing authenticated access without prompting for a password.
+
+    Useful for, e.g., doing a push to Github from a local repo.
+
+    Parameters
+    ----------
+    username: `str`
+        The GitHub username for the authenticated action.
+    token: `str`
+        The corresponding access token.
+
+    Returns
+    -------
+    helper : `str`
+        A string which is a runnable shell fragment for use in a git config.
+    """
+    # The initial bang tells git it's about to run a shell fragment.
+    #  The rest is a string, which will be evaluated in the shell (so don't
+    #  take unsanitized input from the outside world!)
+    # It defines a function to swallow any input and put username and password
+    #  on separate lines: it substitutes its parameter values into the
+    #  username/password values.
+    # This means it will work under `git credential fill`, which is the
+    #  entire point.
+    helper = '!"f() { cat > /dev/null ; echo username=' + username
+    helper += ' ; echo password=' + token + ' ; } ; f"'
+    return helper
 
 
 def eups2git_ref(eups_ref,

@@ -119,7 +119,13 @@ def main():
         # This is actually a list, hence the Pylint disable above.
         repo_iter = [codetools.open_repo(org, args.repo)]
 
+    token = ''
+    token_path = os.path.expandvars(os.path.expanduser(args.token_path))
+    with open(token_path, 'r') as fdo:
+        token = fdo.readline().strip()
+    git_helper = codetools.get_git_credential_helper(args.user, token)
+
     for repo in repo_iter:
         print("Upgrading {0}".format(repo.name))
         with codetools.TempDir() as temp_dir:
-            licensing.upgrade_repo(ghb, repo, args.branch, temp_dir)
+            licensing.upgrade_repo(repo, args.branch, temp_dir, git_helper)
