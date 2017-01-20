@@ -9,7 +9,7 @@ DESCRIPTION = 'LSST Data Management SQuaRE code management tools'
 AUTHOR = 'Frossie Economou'
 AUTHOR_EMAIL = 'frossie@lsst.org'
 URL = 'https://github.com/lsst-sqre/sqre-codekit'
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 LICENSE = 'MIT'
 
 
@@ -19,6 +19,7 @@ def read(filename):
         os.path.abspath(os.path.dirname(__file__)),
         filename)
     return codecs.open(full_filename, 'r', 'utf-8').read()
+
 
 long_description = read('README.md')  # pylint:disable=invalid-name
 
