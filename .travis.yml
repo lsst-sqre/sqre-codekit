@@ -36,6 +36,23 @@ matrix:
       else
         echo "Unable to test github-tag-version without travis secure env vars."
       fi
+  - env: TEST='py.test'
+    python: '3.6'
+    install:
+    - pip install -r requirements.txt
+    - pip install -e .
+    script: py.test
+  - env: TEST='github-tag-version --dry-run'
+    python: '3.6'
+    install:
+    - python setup.py sdist
+    - pip install dist/sqre-codekit-*.tar.gz
+    script: |
+      if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
+        github-tag-version --dry-run --token "$SQREADMIN_TOKEN" --org 'lsst' --team 'Data Management' --email 'sqre-admin@lists.lsst.org' --tagger 'sqreadmin' 'w.2016.49' 'b2510'
+      else
+        echo "Unable to test github-tag-version without travis secure env vars."
+      fi
 env:
   global:
   - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=

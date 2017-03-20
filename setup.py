@@ -9,7 +9,7 @@ DESCRIPTION = 'LSST Data Management SQuaRE code management tools'
 AUTHOR = 'Frossie Economou'
 AUTHOR_EMAIL = 'frossie@lsst.org'
 URL = 'https://github.com/lsst-sqre/sqre-codekit'
-VERSION = '2.0.2'
+VERSION = '2.0.3'
 LICENSE = 'MIT'
 
 
@@ -37,6 +37,7 @@ setup(
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'License :: OSI Approved :: MIT License',
     ],
     keywords='lsst',
