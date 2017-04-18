@@ -9,7 +9,7 @@ DESCRIPTION = 'LSST Data Management SQuaRE code management tools'
 AUTHOR = 'Frossie Economou'
 AUTHOR_EMAIL = 'frossie@lsst.org'
 URL = 'https://github.com/lsst-sqre/sqre-codekit'
-VERSION = '2.0.3'
+VERSION = '2.1.0'
 LICENSE = 'MIT'
 
 
@@ -43,13 +43,14 @@ setup(
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
-        'github3.py==1.0.0a4',
+        'sqre-github3.py==1.0.0a4',
         'uritemplate.py==2.0.0',
         'requests>=2.8.1,<3.0.0',
         'urllib3==1.12',
         'progressbar2==3.11.0',
         'GitPython==1.0.1',
-        'MapGitConfig==1.1'
+        'MapGitConfig==1.1',
+        'sqre-pytravisci==0.0.3'
     ],
     tests_require=['pytest'],
     # package_data={},

@@ -8,15 +8,18 @@ from __future__ import print_function
 import os
 import shutil
 import tempfile
-# import re # Only used in SHA-sanity-check unreachable code
-import urllib3
-from github3 import login
+
 import gitconfig
+from github3 import login
+from travisci import TravisCI
+from travisci.travisci import BackendError
+import urllib3
 
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
            'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
-           'get_team_id_by_name', 'get_git_credential_helper']
+           'get_team_id_by_name', 'get_git_credential_helper',
+           'enable_travisci', 'protect']
 
 
 def login_github(token_path=None, token=None):
@@ -161,7 +164,8 @@ def get_team_id_by_name(org, team_name, debug=False):
     Returns
     -------
     team_id : `int` or `None`
-        The team ID as an integer, or `None` if `team_name` is the empty string.
+        The team ID as an integer, or `None` if `team_name` is the empty
+        string.
 
     Raises
     ------
@@ -276,6 +280,44 @@ def eups2git_ref(eups_ref,
         #    raise RuntimeError('does not appear to be a sha1 digest', sha)
 
     return sha
+
+
+def enable_travisci(repo, token):
+    """Enable TravisCI web hook for the Repository, repo.
+
+    :param :class:`Repository <github3.repos.Repository>` repo: Instance
+    used to create a TravisCI webhook.
+    :param: str token: Literial GitHub token string.
+    :returns: bool
+    """
+    try:
+        tci = TravisCI(github_token=token)
+        owner_repo = '{0}/{1}'.format(repo.owner.login, repo.name)
+        tci.enable_travis_webhook(owner_repo)
+    except BackendError:
+        return False
+    return True
+
+
+def protect(repo, branch_name='master'):
+    """Protect the GitHub repository's branch, branch_name, using
+    LSST SQRE's default attributes.
+
+    :param :class:`Repository <github3.repos.Repository>` repo: Instance
+    used to protect the branch protection.
+    :param str branch_name: The name of the branch.
+
+    :returns: :class:`Protection <github3.repos.branch.Protection>` object.
+    """
+    branch = repo.branch(branch_name)
+    if branch:
+        required_status_checks = {
+            'include_admins': True,
+            'strict': True,
+            'contexts': ['continuous-integration/travis-ci']}
+        branch.protect(required_status_checks=required_status_checks,
+                       enforce_admins=True)
+        return branch.protection()
 
 
 class TempDir(object):
