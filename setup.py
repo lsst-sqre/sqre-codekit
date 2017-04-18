@@ -52,7 +52,10 @@ setup(
         'MapGitConfig==1.1',
         'sqre-pytravisci==0.0.3'
     ],
-    tests_require=['pytest'],
+    tests_require=[
+        'pytest==3.0.7',
+        'pytest-cov==2.4.0',
+        'pytest-flake8==0.8.1'],
     # package_data={},
     entry_points={
         'console_scripts': [
