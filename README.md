@@ -6,7 +6,7 @@ LSST DM SQuaRE misc. code management tools
 
 ## Installation
 
-sqre-codekit runs on Python 2.7 or 3.5. You can install it with
+sqre-codekit runs on Python 2.7, 3.5 and 3.6. You can install it with
 
 ```bash
 pip install sqre-codekit
