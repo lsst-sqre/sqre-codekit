@@ -140,7 +140,7 @@ def main():
     eupsbuild = args.manifest  # sadly we need to "just" know this
     message_template = 'Version {v} release from {c}/{b}'
     message = message_template.format(v=version, c=candidate, b=eupsbuild)
-    eupspkg_site = 'https://sw.lsstcorp.org/eupspkg/'
+    eupspkg_site = 'https://eups.lsst.codes/stack/src/'
 
     # generate timestamp for github API
     now = datetime.utcnow()
