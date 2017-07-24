@@ -46,7 +46,7 @@ setup(
         'github3.py==1.0.0a4',
         'uritemplate.py==2.0.0',
         'requests>=2.8.1,<3.0.0',
-        'urllib3==1.12',
+        'urllib3==1.22',
         'progressbar2==3.11.0',
         'GitPython==1.0.1',
         'MapGitConfig==1.1'
