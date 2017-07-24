@@ -9,7 +9,7 @@ DESCRIPTION = 'LSST Data Management SQuaRE code management tools'
 AUTHOR = 'Frossie Economou'
 AUTHOR_EMAIL = 'frossie@lsst.org'
 URL = 'https://github.com/lsst-sqre/sqre-codekit'
-VERSION = '2.0.3'
+VERSION = '3.0.0'
 LICENSE = 'MIT'
 
 
