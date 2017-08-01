@@ -92,6 +92,10 @@ def parse_args():
         action='store_true',
         help='Force moving pre-existing annotated git tags.')
     parser.add_argument(
+        '--fail-fast',
+        action='store_true',
+        help='Fail immediately on github API errors.')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -272,6 +276,8 @@ def main():
                         eprint(str(exc))
                         eprint('OOPS: -------------------')
 
+                        if args.fail_fast:
+                            raise
             else:
                 if args.debug:
                     print('No action for', repo.name,
