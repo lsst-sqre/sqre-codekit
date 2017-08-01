@@ -162,7 +162,8 @@ def get_team_id_by_name(org, team_name, debug=False):
     Returns
     -------
     team_id : `int` or `None`
-        The team ID as an integer, or `None` if `team_name` is the empty string.
+        The team ID as an integer, or `None` if `team_name` is the empty
+        string.
 
     Raises
     ------
