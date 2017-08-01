@@ -52,7 +52,8 @@ setup(
         'MapGitConfig==1.1'
     ],
     tests_require=[
-        'pytest>=3,<4'
+        'pytest>=3,<4',
+        'pytest-flake8>=0.8.1,<1'
     ],
     # package_data={},
     entry_points={
