@@ -28,6 +28,7 @@ from datetime import datetime
 from getpass import getuser
 import urllib3
 from .. import codetools
+from .. import eprint
 
 
 def parse_args():
@@ -210,6 +211,8 @@ def main():
 
     entries = manifest.data.splitlines()
 
+    tag_exceptions = []
+
     for entry in entries:
         # Python 2/3 accomodation
         if not isinstance(entry, str):
@@ -272,6 +275,8 @@ def main():
                             raise RuntimeError('failed to create git tag')
 
                     except Exception as exc:  # pylint: disable=broad-except
+                        tag_exceptions.append(exc)
+
                         eprint('OOPS: -------------------')
                         eprint(str(exc))
                         eprint('OOPS: -------------------')
@@ -282,6 +287,16 @@ def main():
                 if args.debug:
                     print('No action for', repo.name,
                           'belonging to', team.name)
+
+    lp_fires = len(tag_exceptions)
+    if lp_fires:
+        eprint("ERROR: {failed} tag failures".format(failed=str(lp_fires)))
+
+        if args.debug:
+            for e in tag_exceptions:
+                eprint(str(e))
+
+        sys.exit(lp_fires if lp_fires < 256 else 255)
 
 
 if __name__ == '__main__':
