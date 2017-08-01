@@ -9,7 +9,7 @@ matrix:
     - pip install -e .
     script: py.test
   - env: TEST='github-tag-version --dry-run'
-    python: '2.7'  
+    python: '2.7'
     install:
     - python setup.py sdist
     - pip install dist/sqre-codekit-*.tar.gz
@@ -26,7 +26,7 @@ matrix:
     - pip install -e .
     script: py.test
   - env: TEST='github-tag-version --dry-run'
-    python: '3.5'  
+    python: '3.5'
     install:
     - python setup.py sdist
     - pip install dist/sqre-codekit-*.tar.gz
