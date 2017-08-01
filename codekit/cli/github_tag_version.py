@@ -88,6 +88,10 @@ def parse_args():
         default=None,
         help='Literal github personal access token string')
     parser.add_argument(
+        '--force-tag',
+        action='store_true',
+        help='Force moving pre-existing annotated git tags.')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -258,7 +262,8 @@ def main():
                                               sha=sha,
                                               obj_type='commit',
                                               tagger=tagstuff,
-                                              lightweight=False)
+                                              lightweight=False,
+                                              update=args.force_tag)
                         if tag is None:
                             raise RuntimeError('failed to create git tag')
 
