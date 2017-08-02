@@ -51,7 +51,9 @@ setup(
         'GitPython==1.0.1',
         'MapGitConfig==1.1'
     ],
-    tests_require=['pytest'],
+    tests_require=[
+        'pytest>=3,<4'
+    ],
     # package_data={},
     entry_points={
         'console_scripts': [
