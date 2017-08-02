@@ -51,6 +51,9 @@ setup(
         'GitPython==1.0.1',
         'MapGitConfig==1.1'
     ],
+    setup_requires=[
+        'pytest-runner>=2.11.1,<3'
+    ],
     tests_require=[
         'pytest>=3,<4',
         'pytest-flake8>=0.8.1,<1'
