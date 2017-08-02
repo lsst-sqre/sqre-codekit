@@ -268,9 +268,9 @@ def main():
                             raise RuntimeError('failed to create git tag')
 
                     except Exception as exc:  # pylint: disable=broad-except
-                        print('OOPS: -------------------')
-                        print(str(exc))
-                        print('OOPS: -------------------')
+                        eprint('OOPS: -------------------')
+                        eprint(str(exc))
+                        eprint('OOPS: -------------------')
 
             else:
                 if args.debug:
