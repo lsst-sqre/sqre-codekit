@@ -43,7 +43,7 @@ setup(
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
-        'github3.py==1.0.0a4',
+        'sqre-codekit-github3.py==1.0.0a4',
         'uritemplate.py==2.0.0',
         'requests>=2.8.1,<3.0.0',
         'urllib3==1.22',
