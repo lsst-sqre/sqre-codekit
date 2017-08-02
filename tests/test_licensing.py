@@ -75,7 +75,7 @@ In the case of the assert functions, importing them makes them available in lsst
 \"\"\"
 import lsst.utils.tests
 import lsst.afw.geom as afwGeom
-"""
+"""  # noqa: E501
 
     # bad whitespace removed in expected output
     expected_result = """from __future__ import absolute_import, division
@@ -89,7 +89,7 @@ In the case of the assert functions, importing them makes them available in lsst
 \"\"\"
 import lsst.utils.tests
 import lsst.afw.geom as afwGeom
-"""
+"""  # noqa: E501
     return example_input, expected_result
 
 
