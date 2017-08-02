@@ -32,7 +32,7 @@ matrix:
       else
         echo "Unable to test github-tag-version without travis secure env vars."
       fi
-  - env: TEST='pytest'
+  - env: TEST='pytest' DEPLOYER=true
     python: '3.6'
     install: pip install --upgrade 'pip>=9'
     script: python setup.py test
@@ -50,3 +50,14 @@ matrix:
 env:
   global:
   - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
+deploy:
+  provider: pypi
+  user: sqre-admin
+  skip_upload_docs: true
+  distributions: sdist bdist_wheel
+  password:
+    secure: f88F6UgUAxe73pQuX5yGHdl96e/dcQIFClBc6mNgzAVDjxWXskQ/YRCcbO81yxdjsQRfBJsOiiQKcuM76k1iaOQTazQtdG2Wc/S29qzLlReBNTvo4iMBTg1TDSkT5RnDKrxG4omphlgJP2C9i+b0TjDcKJ26uh8t6m6eUs/Mffw=
+  on:
+    pags: true
+    condition: "$DEPLOYER = true"
+    repo: lsst-sqre/sqre-codekit
