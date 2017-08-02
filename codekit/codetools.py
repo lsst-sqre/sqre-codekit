@@ -6,6 +6,7 @@ from __future__ import print_function
 # - check explictly for github3 version
 
 import os
+import sys
 import shutil
 import tempfile
 # import re # Only used in SHA-sanity-check unreachable code
@@ -16,7 +17,7 @@ import gitconfig
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
            'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
-           'get_team_id_by_name', 'get_git_credential_helper']
+           'get_team_id_by_name', 'get_git_credential_helper', 'eprint']
 
 
 def login_github(token_path=None, token=None):
@@ -276,6 +277,12 @@ def eups2git_ref(eups_ref,
         #    raise RuntimeError('does not appear to be a sha1 digest', sha)
 
     return sha
+
+
+# https://stackoverflow.com/questions/5574702/how-to-print-to-stderr-in-python
+def eprint(*args, **kwargs):
+    """Print to stderr."""
+    print(*args, file=sys.stderr, **kwargs)
 
 
 class TempDir(object):

@@ -28,6 +28,7 @@ from datetime import datetime
 from getpass import getuser
 import urllib3
 from .. import codetools
+from .. import eprint
 
 
 def parse_args():
@@ -91,6 +92,10 @@ def parse_args():
         '--force-tag',
         action='store_true',
         help='Force moving pre-existing annotated git tags.')
+    parser.add_argument(
+        '--fail-fast',
+        action='store_true',
+        help='Fail immediately on github API errors.')
     parser.add_argument(
         '-d', '--debug',
         action='store_true',
@@ -206,6 +211,8 @@ def main():
 
     entries = manifest.data.splitlines()
 
+    tag_exceptions = []
+
     for entry in entries:
         # Python 2/3 accomodation
         if not isinstance(entry, str):
@@ -268,14 +275,28 @@ def main():
                             raise RuntimeError('failed to create git tag')
 
                     except Exception as exc:  # pylint: disable=broad-except
-                        print('OOPS: -------------------')
-                        print(str(exc))
-                        print('OOPS: -------------------')
+                        tag_exceptions.append(exc)
 
+                        eprint('OOPS: -------------------')
+                        eprint(str(exc))
+                        eprint('OOPS: -------------------')
+
+                        if args.fail_fast:
+                            raise
             else:
                 if args.debug:
                     print('No action for', repo.name,
                           'belonging to', team.name)
+
+    lp_fires = len(tag_exceptions)
+    if lp_fires:
+        eprint("ERROR: {failed} tag failures".format(failed=str(lp_fires)))
+
+        if args.debug:
+            for e in tag_exceptions:
+                eprint(str(e))
+
+        sys.exit(lp_fires if lp_fires < 256 else 255)
 
 
 if __name__ == '__main__':
