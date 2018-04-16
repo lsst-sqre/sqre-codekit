@@ -21,7 +21,6 @@ import os
 import sys
 import argparse
 import textwrap
-import string
 from datetime import datetime
 from getpass import getuser
 import urllib3
@@ -171,14 +170,7 @@ def main():
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
-
-    # Python 2/3 compatibility
-    try:
-        # Python 2
-        cmap = string.maketrans('.-', '__')
-    except AttributeError:
-        # Python 3
-        cmap = str.maketrans('.-', '__')  # pylint: disable=no-member
+    cmap = str.maketrans('.-', '__')  # pylint: disable=no-member
 
     # eups_version = version.translate(map)
     eups_candidate = candidate.translate(cmap)
@@ -212,7 +204,6 @@ def main():
     tag_exceptions = []
 
     for entry in entries:
-        # Python 2/3 accomodation
         if not isinstance(entry, str):
             entry = str(entry, 'utf-8')
         # skip commented out and blank lines
