@@ -29,6 +29,19 @@ matrix:
           docker run -ti -v$(pwd):$(pwd) -w $(pwd) \
             hadolint/hadolint hadolint "$f"
         done
+    - env: TEST=make
+      script: |
+        set -e
+        shopt -s globstar nullglob
+        CHECK=( **/Makefile )
+        [[ ${#CHECK[@]} -eq 0 ]] && exit
+        for f in "${CHECK[@]}"; do
+          ( set -e
+            cd $(dirname "$f")
+            echo "checking $f"
+            make --dry-run --warn-undefined-variables
+          )
+        done
 env:
   global:
   - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
