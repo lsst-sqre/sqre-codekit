@@ -31,3 +31,8 @@ deploy:
     pags: true
     condition: "$DEPLOYER = true"
     repo: lsst-sqre/sqre-codekit
+branches:
+  only:
+  - master
+notifications:
+  email: false
