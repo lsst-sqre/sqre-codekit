@@ -46,7 +46,6 @@ non-compliant code has been added to the stack. lsst-bp is designed to
 be run multiple times without adverse effects to compliant code.
 """
 
-from __future__ import print_function
 import sys
 import argparse
 import textwrap

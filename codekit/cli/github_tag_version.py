@@ -16,8 +16,6 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 
-from __future__ import print_function
-
 import logging
 import os
 import sys

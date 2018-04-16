@@ -1,5 +1,4 @@
 """Assorted codetools utility functions."""
-from __future__ import print_function
 # technical debt
 # --------------
 # - package

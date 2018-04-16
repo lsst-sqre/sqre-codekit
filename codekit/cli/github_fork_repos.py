@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 """Fork LSST repos into a showow GitHub organization."""
-from __future__ import print_function
 
 import argparse
 import textwrap

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 """Delete all repos in the Github <user>-shadow org."""
-from __future__ import print_function
 import textwrap
 import argparse
 import os

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """List repositories on Github belonging to organisations, teams, etc.
 """
-from __future__ import print_function
 # Technical Debt
 # --------------
 
