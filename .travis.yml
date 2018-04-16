@@ -17,6 +17,18 @@ matrix:
       else
         echo "Unable to test github-tag-version without travis secure env vars."
       fi
+    - env: TEST=hadolint
+      services:
+        - docker
+      script: |
+        set -e
+        shopt -s globstar nullglob
+        CHECK=( **/Dockerfile )
+        [[ ${#CHECK[@]} -eq 0 ]] && exit
+        for f in "${CHECK[@]}"; do
+          docker run -ti -v$(pwd):$(pwd) -w $(pwd) \
+            hadolint/hadolint hadolint "$f"
+        done
 env:
   global:
   - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
