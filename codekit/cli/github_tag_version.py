@@ -54,6 +54,16 @@ def lookup_tagger(args):
     return tagger
 
 
+def current_timestamp(args):
+    now = datetime.utcnow()
+    timestamp = now.isoformat()[0:19] + 'Z'
+
+    if args.debug:
+        print(timestamp)
+
+    return timestamp
+
+
 def parse_args():
     """Parse command-line arguments"""
     user = getuser()
@@ -151,7 +161,6 @@ def main():
     # for official releases, we don't want to publish until the git tag
     # goes down, because we want to eups publish the build that has the
     # official versions in the eups ref.
-
     if args.candidate:
         candidate = args.candidate
     else:
@@ -163,10 +172,7 @@ def main():
     eupspkg_site = 'https://eups.lsst.codes/stack/src/'
 
     # generate timestamp for github API
-    now = datetime.utcnow()
-    timestamp = now.isoformat()[0:19] + 'Z'
-    if args.debug:
-        print(timestamp)
+    timestamp = current_timestamp(args)
 
     tagstuff = dict(name=tagger,
                     email=email,
