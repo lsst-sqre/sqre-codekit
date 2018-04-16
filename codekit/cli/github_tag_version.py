@@ -161,10 +161,7 @@ def main():
     # for official releases, we don't want to publish until the git tag
     # goes down, because we want to eups publish the build that has the
     # official versions in the eups ref.
-    if args.candidate:
-        candidate = args.candidate
-    else:
-        candidate = args.tag
+    candidate = args.candidate if args.candidate else args.tag
 
     eupsbuild = args.manifest  # sadly we need to "just" know this
     message_template = 'Version {v} release from {c}/{b}'
