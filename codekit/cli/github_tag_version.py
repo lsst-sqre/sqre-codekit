@@ -27,6 +27,8 @@ import urllib3
 from .. import codetools
 from .. import eprint
 
+eupspkg_site = 'https://eups.lsst.codes/stack/src/'
+
 
 def lookup_email(args):
     email = args.email
@@ -62,6 +64,34 @@ def current_timestamp(args):
         print(timestamp)
 
     return timestamp
+
+
+def fetch_eups_tag(args, eups_candidate):
+    # construct url
+    eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
+                                eups_candidate + '.list'))
+    if args.debug:
+        print(eupspkg_taglist)
+
+    http = urllib3.poolmanager.PoolManager()
+
+    # supress the certificate warning - technical debt
+    urllib3.disable_warnings()  # NOQA
+    if args.debug:
+        # pylint: disable=fixme
+        # FIXME what's going on here? assigning a logger to a package?
+        logging.getLogger('requests.packages.urllib3')  # NOQA
+        stream_handler = logging.StreamHandler()
+        logger = logging.getLogger('github3')
+        logger.addHandler(stream_handler)
+        logger.setLevel(logging.DEBUG)
+
+    manifest = http.request('GET', eupspkg_taglist)
+
+    if manifest.status >= 300:
+        sys.exit("Failed GET")
+
+    return manifest.data.splitlines()
 
 
 def parse_args():
@@ -166,7 +196,6 @@ def main():
     eupsbuild = args.manifest  # sadly we need to "just" know this
     message_template = 'Version {v} release from {c}/{b}'
     message = message_template.format(v=version, c=candidate, b=eupsbuild)
-    eupspkg_site = 'https://eups.lsst.codes/stack/src/'
 
     # generate timestamp for github API
     timestamp = current_timestamp(args)
@@ -192,35 +221,9 @@ def main():
     # eups_version = version.translate(map)
     eups_candidate = candidate.translate(cmap)
 
-    # construct url
-    eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
-                                eups_candidate + '.list'))
-    if args.debug:
-        print(eupspkg_taglist)
-
-    http = urllib3.poolmanager.PoolManager()
-
-    # supress the certificate warning - technical debt
-    urllib3.disable_warnings()  # NOQA
-    if args.debug:
-        # pylint: disable=fixme
-        # FIXME what's going on here? assigning a logger to a package?
-        logging.getLogger('requests.packages.urllib3')  # NOQA
-        stream_handler = logging.StreamHandler()
-        logger = logging.getLogger('github3')
-        logger.addHandler(stream_handler)
-        logger.setLevel(logging.DEBUG)
-
-    manifest = http.request('GET', eupspkg_taglist)
-
-    if manifest.status >= 300:
-        sys.exit("Failed GET")
-
-    entries = manifest.data.splitlines()
-
     tag_exceptions = []
 
-    for entry in entries:
+    for entry in fetch_eups_tag(args, eups_candidate):
         if not isinstance(entry, str):
             entry = str(entry, 'utf-8')
         # skip commented out and blank lines
