@@ -239,11 +239,6 @@ def main():
         if args.debug:
             print(upstream, eups_tag)
 
-        # okay so we still have the data dirs on gitolite
-        # for now, just skip them and record them.
-        # question is should they be on different tagging scheme anyway?
-        # at this point these are: afwdata, astrometry_net_data qserv_testdata
-
         repo = ghb.repository(orgname, upstream)
 
         # if the repo is not in github skip it for now
