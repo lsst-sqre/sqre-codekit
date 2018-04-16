@@ -9,6 +9,7 @@ import sys
 import shutil
 import tempfile
 # import re # Only used in SHA-sanity-check unreachable code
+import certifi
 import urllib3
 from github3 import login
 import gitconfig
@@ -236,7 +237,11 @@ def eups2git_ref(eups_ref,
         print(shafile)
 
     # Get the file tying shas to eups versions
-    http = urllib3.poolmanager.PoolManager()
+    http = urllib3.PoolManager(
+        cert_reqs='CERT_REQUIRED',
+        ca_certs=certifi.where()
+    )
+
     refs = http.request('GET', shafile)
     if refs.status >= 300:
         raise RuntimeError('Failed GET with HTTP code', refs.status)

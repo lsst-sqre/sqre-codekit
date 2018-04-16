@@ -5,7 +5,6 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 
 # Technical Debt
 # --------------
-# - sort out the certificate so we don't have to supress warnings
 # - completely hide eups-specifics from this file
 # - skips non-github repos - can add repos.yaml knowhow to address this
 # - worth doing the smart thing for externals? (yes for Sims)
@@ -23,6 +22,7 @@ import argparse
 import textwrap
 from datetime import datetime
 from getpass import getuser
+import certifi
 import urllib3
 from .. import codetools
 from .. import eprint
@@ -73,14 +73,13 @@ def fetch_eups_tag(args, eups_candidate):
     if args.debug:
         print(eupspkg_taglist)
 
-    http = urllib3.poolmanager.PoolManager()
+    http = urllib3.PoolManager(
+        cert_reqs='CERT_REQUIRED',
+        ca_certs=certifi.where()
+    )
 
-    # supress the certificate warning - technical debt
-    urllib3.disable_warnings()  # NOQA
     if args.debug:
-        # pylint: disable=fixme
-        # FIXME what's going on here? assigning a logger to a package?
-        logging.getLogger('requests.packages.urllib3')  # NOQA
+        logging.getLogger('requests.packages.urllib3')
         stream_handler = logging.StreamHandler()
         logger = logging.getLogger('github3')
         logger.addHandler(stream_handler)
