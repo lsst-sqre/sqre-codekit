@@ -1,5 +1,4 @@
 FROM docker.io/python:3.6.3
-MAINTAINER sqre-admin
 
 ARG CODEKIT_VER=3.1.0
 
