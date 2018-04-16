@@ -28,6 +28,19 @@ from .. import codetools
 from .. import eprint
 
 
+def lookup_email(args):
+    email = args.email
+    if email is None:
+        email = codetools.gituseremail()
+        if email is None:
+            sys.exit("Specify --email option")
+
+    if args.debug:
+        print("email is " + email)
+
+    return email
+
+
 def parse_args():
     """Parse command-line arguments"""
     user = getuser()
@@ -114,13 +127,7 @@ def main():
     version = args.tag
 
     # if email not specified, try getting it from the gitconfig
-    email = args.email
-    if email is None:
-        email = codetools.gituseremail()
-        if email is None:
-            sys.exit("Specify --email option")
-    if args.debug:
-        print("email is " + email)
+    email = lookup_email(args)
     # ditto for the name of the tagger
     tagger = args.tagger
     if tagger is None:
