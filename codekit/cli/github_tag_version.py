@@ -41,6 +41,19 @@ def lookup_email(args):
     return email
 
 
+def lookup_tagger(args):
+    tagger = args.tagger
+    if tagger is None:
+        tagger = codetools.gitusername()
+        if tagger is None:
+            sys.exit("Specify --tagger option")
+
+    if args.debug:
+        print("tagger name is " + tagger)
+
+    return tagger
+
+
 def parse_args():
     """Parse command-line arguments"""
     user = getuser()
@@ -129,13 +142,7 @@ def main():
     # if email not specified, try getting it from the gitconfig
     email = lookup_email(args)
     # ditto for the name of the tagger
-    tagger = args.tagger
-    if tagger is None:
-        tagger = codetools.gitusername()
-        if tagger is None:
-            sys.exit("Specify --tagger option")
-    if args.debug:
-        print("tagger name is " + tagger)
+    tagger = lookup_tagger(args)
 
     # The candidate is assumed to be the requested EUPS tag unless
     # otherwise specified with the --candidate option The reason to
