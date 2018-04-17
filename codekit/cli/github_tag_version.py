@@ -24,6 +24,7 @@ from datetime import datetime
 from getpass import getuser
 import certifi
 import urllib3
+import copy
 from .. import codetools
 from .. import eprint
 
@@ -66,7 +67,7 @@ def current_timestamp(args):
     return timestamp
 
 
-def fetch_eups_tag(args, eups_candidate):
+def fetch_eups_tag_file(args, eups_candidate):
     # construct url
     eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
                                 eups_candidate + '.list'))
@@ -90,7 +91,72 @@ def fetch_eups_tag(args, eups_candidate):
     if manifest.status >= 300:
         sys.exit("Failed GET")
 
-    return manifest.data.splitlines()
+    return manifest.data
+
+
+def parse_eups_tag_file(data):
+    products = []
+
+    for line in data.splitlines():
+        if not isinstance(line, str):
+            line = str(line, 'utf-8')
+        # skip commented out and blank lines
+        if line.startswith('#'):
+            continue
+        if line.startswith('EUPS'):
+            continue
+        if line == '':
+            continue
+
+        # extract the repo and eups tag
+        (product, _, eups_version) = line.split()[0:3]
+
+        products.append({
+            'name': product,
+            'eups_version': eups_version,
+        })
+
+    return products
+
+
+def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
+    gh_repos = []
+
+    for prod in eups_products:
+        if args.debug:
+            print(prod['name'], prod['eups_version'])
+
+        repo = ghb.repository(orgname, prod['name'])
+
+        # if the repo is not in github skip it for now
+        # see TD
+        if not hasattr(repo, 'name'):
+            eprint("!!! unable to resolve github repo for product: {name}"
+                   .format(name=prod['name']))
+            continue
+
+        repo_teams = [t.name for t in repo.teams()]
+        if not any(x in repo_teams for x in args.team):
+            if args.debug:
+                print("No action for {repo}".format(repo=repo.name))
+                print("  has teams: {teams}".format(teams=repo_teams))
+                print("  does not belong to any of: {teams}"
+                      .format(teams=args.team))
+            continue
+
+        sha = codetools.eups2git_ref(eups_ref=prod['eups_version'],
+                                     repo=repo.name,
+                                     eupsbuild=eupsbuild,
+                                     debug=False)
+
+        gh_repos.append({
+            'repo': repo,
+            'product': prod['name'],
+            'eups_version': prod['eups_version'],
+            'sha': sha,
+        })
+
+    return gh_repos
 
 
 def parse_args():
@@ -181,7 +247,7 @@ def main():
     # if email not specified, try getting it from the gitconfig
     email = lookup_email(args)
     # ditto for the name of the tagger
-    tagger = lookup_tagger(args)
+    tagger_name = lookup_tagger(args)
 
     # The candidate is assumed to be the requested EUPS tag unless
     # otherwise specified with the --candidate option The reason to
@@ -199,12 +265,20 @@ def main():
     # generate timestamp for github API
     timestamp = current_timestamp(args)
 
-    tagstuff = dict(name=tagger,
-                    email=email,
-                    date=timestamp)
+    # all tags should be the same across repos -- just add the 'sha' key and
+    # stir
+    tag_template = {
+        'name': version,
+        'message': message,
+        'tagger': {
+            'name': tagger_name,
+            'email': email,
+            'date': timestamp,
+        }
+    }
 
     if args.debug:
-        print(tagstuff)
+        print(tag_template)
 
     ghb = codetools.login_github(token_path=args.token_path, token=args.token)
     if args.debug:
@@ -220,54 +294,24 @@ def main():
     # eups_version = version.translate(map)
     eups_candidate = candidate.translate(cmap)
 
+    manifest = fetch_eups_tag_file(args, eups_candidate)
+    eups_products = parse_eups_tag_file(manifest)
+
     tag_exceptions = []
-
-    for entry in fetch_eups_tag(args, eups_candidate):
-        if not isinstance(entry, str):
-            entry = str(entry, 'utf-8')
-        # skip commented out and blank lines
-        if entry.startswith('#'):
-            continue
-        if entry.startswith('EUPS'):
-            continue
-        if entry == '':
-            continue
-
-        # extract the repo and eups tag from the entry
-        (upstream, _, eups_tag) = entry.split()
-        if args.debug:
-            print(upstream, eups_tag)
-
-        repo = ghb.repository(orgname, upstream)
-
-        # if the repo is not in github skip it for now
-        # see TD
-        if not hasattr(repo, 'name'):
-            print('!!! SKIPPING', upstream, (60 - len(upstream)) * '-')
-            continue
-
-        if not sum(1 for _ in repo.teams()):
-            print('!!! repo has NO teams -- SKIPPING', upstream,
-                  (45 - len(upstream)) * '-')
-            continue
-
-        repo_teams = [t.name for t in repo.teams()]
-        if not any(x in repo_teams for x in args.team):
-            if args.debug:
-                print("No action for {repo}".format(repo=repo.name))
-                print("  has teams: {teams}".format(teams=repo_teams))
-                print("  does not belong to any of these teams: {teams}"
-                      .format(teams=args.team))
-            continue
-
-        sha = codetools.eups2git_ref(eups_ref=eups_tag,
-                                     repo=repo.name,
-                                     eupsbuild=eupsbuild,
-                                     debug=args.debug)
+    for repo in eups_products_to_gh_repos(
+        args,
+        ghb,
+        orgname,
+        eupsbuild,
+        eups_products
+    ):
+        # "target tag"
+        t_tag = copy.copy(tag_template)
+        t_tag['sha'] = repo['sha']
 
         if args.debug or args.dry_run:
-            print('Will tag sha: {sha} as {v} (was {t})'.format(
-                sha=sha, v=version, t=eups_tag))
+            print('Will tag sha: {sha} as {gt} (eups version: {et})'.format(
+                sha=t_tag['sha'], gt=t_tag['name'], et=repo['eups_version']))
 
         if args.dry_run:
             continue
@@ -275,13 +319,15 @@ def main():
         try:
             # create_tag() returns a Tag object on success or None
             # on failure
-            tag = repo.create_tag(tag=version,
-                                  message=message,
-                                  sha=sha,
-                                  obj_type='commit',
-                                  tagger=tagstuff,
-                                  lightweight=False,
-                                  update=args.force_tag)
+            tag = repo['repo'].create_tag(
+                tag=t_tag['name'],
+                message=t_tag['message'],
+                sha=t_tag['sha'],
+                obj_type='commit',
+                tagger=t_tag['tagger'],
+                lightweight=False,
+                update=args.force_tag
+            )
             if tag is None:
                 raise RuntimeError('failed to create git tag')
 
