@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Use URL to EUPS candidate tag file to git tag repos with official version
 """

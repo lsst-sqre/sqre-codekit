@@ -1,4 +1,4 @@
-# !/usr/bin/env python
+# !/usr/bin/env python3
 """Test the licensing conversion functions"""
 from __future__ import print_function
 try:

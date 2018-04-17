@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Test temporary directory context manager"""
 import os
 import codekit.codetools as codetools

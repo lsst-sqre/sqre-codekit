@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Moves a bunch of Github repos to a team"""
 # Technical Debt
 # -------------

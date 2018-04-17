@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Migrate LSST code to use a minimal style of inline boilerplate and
 refer to centralzed LICENSE and COPYRIGHT files.
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Delete all repos in the Github <user>-shadow org."""
 import textwrap
 import argparse

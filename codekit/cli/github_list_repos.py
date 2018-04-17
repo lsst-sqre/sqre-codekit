@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """List repositories on Github belonging to organisations, teams, etc.
 """
 # Technical Debt
