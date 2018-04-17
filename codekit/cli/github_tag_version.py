@@ -26,9 +26,28 @@ import certifi
 import urllib3
 import copy
 from .. import codetools
-from .. import eprint
+from .. import debug, warn, error
 
-eupspkg_site = 'https://eups.lsst.codes/stack/src/'
+logging.basicConfig()
+logger = logging.getLogger('codekit')
+eupspkg_site = 'https://eups.lsst.codes/stack/src'
+
+
+class CaughtGitError(Exception):
+    def __init__(self, repo, caught):
+        self.repo = repo
+        self.caught = caught
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Caught: {name}
+              In repo: {repo}
+              Message: {e}\
+            """.format(
+            name=type(self.caught),
+            repo=self.repo,
+            e=str(self.caught)
+        ))
 
 
 def lookup_email(args):
@@ -38,8 +57,7 @@ def lookup_email(args):
         if email is None:
             sys.exit("Specify --email option")
 
-    if args.debug:
-        print("email is " + email)
+    debug("email is " + email)
 
     return email
 
@@ -51,8 +69,7 @@ def lookup_tagger(args):
         if tagger is None:
             sys.exit("Specify --tagger option")
 
-    if args.debug:
-        print("tagger name is " + tagger)
+    debug("tagger name is " + tagger)
 
     return tagger
 
@@ -61,8 +78,7 @@ def current_timestamp(args):
     now = datetime.utcnow()
     timestamp = now.isoformat()[0:19] + 'Z'
 
-    if args.debug:
-        print(timestamp)
+    debug("generated timestamp: {now}".format(now=timestamp))
 
     return timestamp
 
@@ -71,20 +87,12 @@ def fetch_eups_tag_file(args, eups_candidate):
     # construct url
     eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
                                 eups_candidate + '.list'))
-    if args.debug:
-        print(eupspkg_taglist)
+    debug("fetching: {url}".format(url=eupspkg_taglist))
 
     http = urllib3.PoolManager(
         cert_reqs='CERT_REQUIRED',
         ca_certs=certifi.where()
     )
-
-    if args.debug:
-        logging.getLogger('requests.packages.urllib3')
-        stream_handler = logging.StreamHandler()
-        logger = logging.getLogger('github3')
-        logger.addHandler(stream_handler)
-        logger.setLevel(logging.DEBUG)
 
     manifest = http.request('GET', eupspkg_taglist)
 
@@ -123,25 +131,33 @@ def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
     gh_repos = []
 
     for prod in eups_products:
-        if args.debug:
-            print(prod['name'], prod['eups_version'])
+        debug("looking for git repo for: {prod} {ver}".format(
+            prod=prod['name'],
+            ver=prod['eups_version']
+        ))
 
         repo = ghb.repository(orgname, prod['name'])
 
         # if the repo is not in github skip it for now
         # see TD
         if not hasattr(repo, 'name'):
-            eprint("!!! unable to resolve github repo for product: {name}"
-                   .format(name=prod['name']))
+            error("!!! unable to resolve github repo for product: {name}"
+                  .format(name=prod['name']))
             continue
+
+        debug("  found: {slug}".format(slug=repo))
 
         repo_teams = [t.name for t in repo.teams()]
         if not any(x in repo_teams for x in args.team):
-            if args.debug:
-                print("No action for {repo}".format(repo=repo.name))
-                print("  has teams: {teams}".format(teams=repo_teams))
-                print("  does not belong to any of: {teams}"
-                      .format(teams=args.team))
+            warn(textwrap.dedent("""\
+                No action for {repo}
+                  has teams: {repo_teams}
+                  does not belong to any of: {tag_teams}\
+                """).format(
+                repo=repo,
+                repo_teams=repo_teams,
+                tag_teams=args.team,
+            ))
             continue
 
         sha = codetools.eups2git_ref(
@@ -243,6 +259,9 @@ def main():
     # Although maybe that is a hint that we should break this up...
     args = parse_args()
 
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+
     orgname = args.org
     version = args.tag
 
@@ -279,15 +298,11 @@ def main():
         }
     }
 
-    if args.debug:
-        print(tag_template)
+    debug(tag_template)
 
     ghb = codetools.login_github(token_path=args.token_path, token=args.token)
-    if args.debug:
-        print(type(ghb))
 
-    if args.debug:
-        print("Tagging repos in github org: {org}".format(org=orgname))
+    debug("Tagging repos in github org: {org}".format(org=orgname))
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
@@ -311,9 +326,16 @@ def main():
         t_tag = copy.copy(tag_template)
         t_tag['sha'] = repo['sha']
 
-        if args.debug or args.dry_run:
-            print('Will tag sha: {sha} as {gt} (eups version: {et})'.format(
-                sha=t_tag['sha'], gt=t_tag['name'], et=repo['eups_version']))
+        debug(textwrap.dedent("""\
+            tagging repo: {repo}
+              sha: {sha} as {gt}
+              (eups version: {et})\
+            """).format(
+            repo=repo['repo'],
+            sha=t_tag['sha'],
+            gt=t_tag['name'],
+            et=repo['eups_version']
+        ))
 
         if args.dry_run:
             continue
@@ -333,23 +355,20 @@ def main():
             if tag is None:
                 raise RuntimeError('failed to create git tag')
 
-        except Exception as exc:  # pylint: disable=broad-except
-            tag_exceptions.append(exc)
-
-            eprint('OOPS: -------------------')
-            eprint(str(exc))
-            eprint('OOPS: -------------------')
+        except Exception as e:  # pylint: disable=broad-except
+            yikes = CaughtGitError(repo['repo'], e)
+            tag_exceptions.append(yikes)
+            error(yikes)
 
             if args.fail_fast:
-                raise
+                raise yikes
 
     lp_fires = len(tag_exceptions)
     if lp_fires:
-        eprint("ERROR: {failed} tag failures".format(failed=str(lp_fires)))
+        error("ERROR: {failed} tag failures".format(failed=str(lp_fires)))
 
-        if args.debug:
-            for e in tag_exceptions:
-                eprint(str(e))
+        for e in tag_exceptions:
+            error(e)
 
         sys.exit(lp_fires if lp_fires < 256 else 255)
 

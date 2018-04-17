@@ -4,6 +4,7 @@
 # - package
 # - check explictly for github3 version
 
+import logging
 import os
 import sys
 import shutil
@@ -18,7 +19,11 @@ import functools
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
            'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
-           'get_team_id_by_name', 'get_git_credential_helper', 'eprint']
+           'get_team_id_by_name', 'get_git_credential_helper', 'eprint',
+           'debug', 'warn', 'error']
+
+logging.basicConfig()
+logger = logging.getLogger('codekit')
 
 
 def login_github(token_path=None, token=None):
@@ -230,8 +235,7 @@ def fetch_manifest_file(
 ):
     # eg. https://raw.githubusercontent.com/lsst/versiondb/master/manifests/b1108.txt  # NOQA
     shafile = versiondb + '/' + build_id + '.txt'
-    if debug:
-        print(shafile)
+    logger.debug("fetching: {url}".format(url=shafile))
 
     # Get the file tying shas to eups versions
     http = urllib3.PoolManager(
@@ -296,6 +300,18 @@ def eups2git_ref(
                 eups_version=eups_version
             )
         )
+
+
+def debug(*args):
+    logger.debug(*args)
+
+
+def warn(*args):
+    logger.warn(*args)
+
+
+def error(*args):
+    logger.error(*args)
 
 
 # https://stackoverflow.com/questions/5574702/how-to-print-to-stderr-in-python
