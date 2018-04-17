@@ -1,6 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Generate a github auth token"""
-from __future__ import print_function
 # technical debt:
 # --------------
 # - add command line option to override default user

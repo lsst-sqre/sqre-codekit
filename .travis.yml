@@ -2,36 +2,6 @@ sudo: false
 language: python
 matrix:
   include:
-  - env: TEST='pytest'
-    python: '2.7'
-    install: pip install --upgrade 'pip>=9' 'pytest>=3,<4'
-    script: python setup.py test
-  - env: TEST='github-tag-version --dry-run'
-    python: '2.7'
-    install:
-    - python setup.py sdist
-    - pip install dist/sqre-codekit-*.tar.gz
-    script: |
-      if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-        github-tag-version --dry-run --token "$SQREADMIN_TOKEN" --org 'lsst' --team 'Data Management' --email 'sqre-admin@lists.lsst.org' --tagger 'sqreadmin' 'w.2016.49' 'b2510'
-      else
-        echo "Unable to test github-tag-version without travis secure env vars."
-      fi
-  - env: TEST='pytest'
-    python: '3.5'
-    install: pip install --upgrade 'pip>=9'
-    script: python setup.py test
-  - env: TEST='github-tag-version --dry-run'
-    python: '3.5'
-    install:
-    - python setup.py sdist
-    - pip install dist/sqre-codekit-*.tar.gz
-    script: |
-      if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-        github-tag-version --dry-run --token "$SQREADMIN_TOKEN" --org 'lsst' --team 'Data Management' --email 'sqre-admin@lists.lsst.org' --tagger 'sqreadmin' 'w.2016.49' 'b2510'
-      else
-        echo "Unable to test github-tag-version without travis secure env vars."
-      fi
   - env: TEST='pytest' DEPLOYER=true
     python: '3.6'
     install: pip install --upgrade 'pip>=9'
@@ -47,6 +17,41 @@ matrix:
       else
         echo "Unable to test github-tag-version without travis secure env vars."
       fi
+    - env: TEST=hadolint
+      services:
+        - docker
+      script: |
+        set -e
+        shopt -s globstar nullglob
+        CHECK=( **/Dockerfile )
+        [[ ${#CHECK[@]} -eq 0 ]] && exit
+        for f in "${CHECK[@]}"; do
+          docker run -ti -v$(pwd):$(pwd) -w $(pwd) \
+            hadolint/hadolint hadolint "$f"
+        done
+    - env: TEST=make
+      script: |
+        set -e
+        shopt -s globstar nullglob
+        CHECK=( **/Makefile )
+        [[ ${#CHECK[@]} -eq 0 ]] && exit
+        for f in "${CHECK[@]}"; do
+          ( set -e
+            cd $(dirname "$f")
+            echo "checking $f"
+            make --dry-run --warn-undefined-variables
+          )
+        done
+    - env: TEST=markdownlint
+      services:
+        - docker
+      script: |
+        set -e
+        shopt -s globstar nullglob
+        CHECK=( **/*.md )
+        [[ ${#CHECK[@]} -eq 0 ]] && exit
+        docker run -ti -v $(pwd):$(pwd) -w $(pwd) \
+          mivok/markdownlint:0.4.0 "${CHECK[@]}"
 env:
   global:
   - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
@@ -61,3 +66,8 @@ deploy:
     pags: true
     condition: "$DEPLOYER = true"
     repo: lsst-sqre/sqre-codekit
+branches:
+  only:
+  - master
+notifications:
+  email: false

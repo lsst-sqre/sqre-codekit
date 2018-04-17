@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Migrate LSST code to use a minimal style of inline boilerplate and
 refer to centralzed LICENSE and COPYRIGHT files.
 
@@ -46,7 +46,6 @@ non-compliant code has been added to the stack. lsst-bp is designed to
 be run multiple times without adverse effects to compliant code.
 """
 
-from __future__ import print_function
 import sys
 import argparse
 import textwrap

@@ -1,11 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Use URL to EUPS candidate tag file to git tag repos with official version
 """
 
 # Technical Debt
 # --------------
-# - sort out the certificate so we don't have to supress warnings
 # - completely hide eups-specifics from this file
 # - skips non-github repos - can add repos.yaml knowhow to address this
 # - worth doing the smart thing for externals? (yes for Sims)
@@ -16,19 +15,82 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 
-from __future__ import print_function
-
 import logging
 import os
 import sys
 import argparse
 import textwrap
-import string
 from datetime import datetime
 from getpass import getuser
+import certifi
 import urllib3
 from .. import codetools
 from .. import eprint
+
+eupspkg_site = 'https://eups.lsst.codes/stack/src/'
+
+
+def lookup_email(args):
+    email = args.email
+    if email is None:
+        email = codetools.gituseremail()
+        if email is None:
+            sys.exit("Specify --email option")
+
+    if args.debug:
+        print("email is " + email)
+
+    return email
+
+
+def lookup_tagger(args):
+    tagger = args.tagger
+    if tagger is None:
+        tagger = codetools.gitusername()
+        if tagger is None:
+            sys.exit("Specify --tagger option")
+
+    if args.debug:
+        print("tagger name is " + tagger)
+
+    return tagger
+
+
+def current_timestamp(args):
+    now = datetime.utcnow()
+    timestamp = now.isoformat()[0:19] + 'Z'
+
+    if args.debug:
+        print(timestamp)
+
+    return timestamp
+
+
+def fetch_eups_tag(args, eups_candidate):
+    # construct url
+    eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
+                                eups_candidate + '.list'))
+    if args.debug:
+        print(eupspkg_taglist)
+
+    http = urllib3.PoolManager(
+        cert_reqs='CERT_REQUIRED',
+        ca_certs=certifi.where()
+    )
+
+    if args.debug:
+        logging.getLogger('requests.packages.urllib3')
+        stream_handler = logging.StreamHandler()
+        logger = logging.getLogger('github3')
+        logger.addHandler(stream_handler)
+        logger.setLevel(logging.DEBUG)
+
+    manifest = http.request('GET', eupspkg_taglist)
+
+    if manifest.status >= 300:
+        sys.exit("Failed GET")
+
+    return manifest.data.splitlines()
 
 
 def parse_args():
@@ -117,21 +179,9 @@ def main():
     version = args.tag
 
     # if email not specified, try getting it from the gitconfig
-    email = args.email
-    if email is None:
-        email = codetools.gituseremail()
-        if email is None:
-            sys.exit("Specify --email option")
-    if args.debug:
-        print("email is " + email)
+    email = lookup_email(args)
     # ditto for the name of the tagger
-    tagger = args.tagger
-    if tagger is None:
-        tagger = codetools.gitusername()
-        if tagger is None:
-            sys.exit("Specify --tagger option")
-    if args.debug:
-        print("tagger name is " + tagger)
+    tagger = lookup_tagger(args)
 
     # The candidate is assumed to be the requested EUPS tag unless
     # otherwise specified with the --candidate option The reason to
@@ -140,22 +190,14 @@ def main():
     # for official releases, we don't want to publish until the git tag
     # goes down, because we want to eups publish the build that has the
     # official versions in the eups ref.
-
-    if args.candidate:
-        candidate = args.candidate
-    else:
-        candidate = args.tag
+    candidate = args.candidate if args.candidate else args.tag
 
     eupsbuild = args.manifest  # sadly we need to "just" know this
     message_template = 'Version {v} release from {c}/{b}'
     message = message_template.format(v=version, c=candidate, b=eupsbuild)
-    eupspkg_site = 'https://eups.lsst.codes/stack/src/'
 
     # generate timestamp for github API
-    now = datetime.utcnow()
-    timestamp = now.isoformat()[0:19] + 'Z'
-    if args.debug:
-        print(timestamp)
+    timestamp = current_timestamp(args)
 
     tagstuff = dict(name=tagger,
                     email=email,
@@ -173,48 +215,14 @@ def main():
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
-
-    # Python 2/3 compatibility
-    try:
-        # Python 2
-        cmap = string.maketrans('.-', '__')
-    except AttributeError:
-        # Python 3
-        cmap = str.maketrans('.-', '__')  # pylint: disable=no-member
+    cmap = str.maketrans('.-', '__')  # pylint: disable=no-member
 
     # eups_version = version.translate(map)
     eups_candidate = candidate.translate(cmap)
 
-    # construct url
-    eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
-                                eups_candidate + '.list'))
-    if args.debug:
-        print(eupspkg_taglist)
-
-    http = urllib3.poolmanager.PoolManager()
-
-    # supress the certificate warning - technical debt
-    urllib3.disable_warnings()  # NOQA
-    if args.debug:
-        # pylint: disable=fixme
-        # FIXME what's going on here? assigning a logger to a package?
-        logging.getLogger('requests.packages.urllib3')  # NOQA
-        stream_handler = logging.StreamHandler()
-        logger = logging.getLogger('github3')
-        logger.addHandler(stream_handler)
-        logger.setLevel(logging.DEBUG)
-
-    manifest = http.request('GET', eupspkg_taglist)
-
-    if manifest.status >= 300:
-        sys.exit("Failed GET")
-
-    entries = manifest.data.splitlines()
-
     tag_exceptions = []
 
-    for entry in entries:
-        # Python 2/3 accomodation
+    for entry in fetch_eups_tag(args, eups_candidate):
         if not isinstance(entry, str):
             entry = str(entry, 'utf-8')
         # skip commented out and blank lines
@@ -230,11 +238,6 @@ def main():
         if args.debug:
             print(upstream, eups_tag)
 
-        # okay so we still have the data dirs on gitolite
-        # for now, just skip them and record them.
-        # question is should they be on different tagging scheme anyway?
-        # at this point these are: afwdata, astrometry_net_data qserv_testdata
-
         repo = ghb.repository(orgname, upstream)
 
         # if the repo is not in github skip it for now
@@ -249,44 +252,47 @@ def main():
             continue
 
         for team in repo.teams():
-            if team.name in args.team:
-                if args.debug or args.dry_run:
-                    print(repo.name.ljust(40), 'found in', team.name)
-                sha = codetools.eups2git_ref(eups_ref=eups_tag,
-                                             repo=repo.name,
-                                             eupsbuild=eupsbuild,
-                                             debug=args.debug)
-                if args.debug or args.dry_run:
-                    print('Will tag sha: {sha} as {v} (was {t})'.format(
-                        sha=sha, v=version, t=eups_tag))
-
-                if not args.dry_run:
-                    try:
-                        # create_tag() returns a Tag object on success or None
-                        # on failure
-                        tag = repo.create_tag(tag=version,
-                                              message=message,
-                                              sha=sha,
-                                              obj_type='commit',
-                                              tagger=tagstuff,
-                                              lightweight=False,
-                                              update=args.force_tag)
-                        if tag is None:
-                            raise RuntimeError('failed to create git tag')
-
-                    except Exception as exc:  # pylint: disable=broad-except
-                        tag_exceptions.append(exc)
-
-                        eprint('OOPS: -------------------')
-                        eprint(str(exc))
-                        eprint('OOPS: -------------------')
-
-                        if args.fail_fast:
-                            raise
-            else:
+            if team.name not in args.team:
                 if args.debug:
                     print('No action for', repo.name,
                           'belonging to', team.name)
+                continue
+
+            sha = codetools.eups2git_ref(eups_ref=eups_tag,
+                                         repo=repo.name,
+                                         eupsbuild=eupsbuild,
+                                         debug=args.debug)
+
+            if args.debug or args.dry_run:
+                print(repo.name.ljust(40), 'found in', team.name)
+                print('Will tag sha: {sha} as {v} (was {t})'.format(
+                    sha=sha, v=version, t=eups_tag))
+
+            if args.dry_run:
+                continue
+
+            try:
+                # create_tag() returns a Tag object on success or None
+                # on failure
+                tag = repo.create_tag(tag=version,
+                                      message=message,
+                                      sha=sha,
+                                      obj_type='commit',
+                                      tagger=tagstuff,
+                                      lightweight=False,
+                                      update=args.force_tag)
+                if tag is None:
+                    raise RuntimeError('failed to create git tag')
+
+            except Exception as exc:  # pylint: disable=broad-except
+                tag_exceptions.append(exc)
+
+                eprint('OOPS: -------------------')
+                eprint(str(exc))
+                eprint('OOPS: -------------------')
+
+                if args.fail_fast:
+                    raise
 
     lp_fires = len(tag_exceptions)
     if lp_fires:

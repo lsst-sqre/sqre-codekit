@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Utilities for maintaining and asserting LICENSE and COPYRIGHT in
 LSST DM repos.
 """

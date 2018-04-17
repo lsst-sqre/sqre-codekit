@@ -1,6 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Moves a bunch of Github repos to a team"""
-from __future__ import print_function
 # Technical Debt
 # -------------
 # - will need updating to be new permissions model aware

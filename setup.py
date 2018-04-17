@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Setup Tools Script"""
 import os
 import codecs
@@ -35,8 +35,6 @@ setup(
     license=LICENSE,
     classifiers=[
         'Development Status :: 4 - Beta',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'License :: OSI Approved :: MIT License',
     ],
@@ -46,7 +44,7 @@ setup(
         'sqre-codekit-github3.py==1.0.0a4',
         'uritemplate.py==2.0.0',
         'requests>=2.8.1,<3.0.0',
-        'urllib3==1.22',
+        'urllib3[secure]==1.22',
         'progressbar2==3.11.0',
         'GitPython==1.0.1',
         'MapGitConfig==1.1'
