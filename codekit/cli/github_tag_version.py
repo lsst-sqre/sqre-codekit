@@ -144,10 +144,12 @@ def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
                       .format(teams=args.team))
             continue
 
-        sha = codetools.eups2git_ref(eups_ref=prod['eups_version'],
-                                     repo=repo.name,
-                                     eupsbuild=eupsbuild,
-                                     debug=False)
+        sha = codetools.eups2git_ref(
+            product=repo.name,
+            eups_version=prod['eups_version'],
+            build_id=eupsbuild,
+            debug=args.debug
+        )
 
         gh_repos.append({
             'repo': repo,

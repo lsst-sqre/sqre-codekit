@@ -13,6 +13,7 @@ import certifi
 import urllib3
 from github3 import login
 import gitconfig
+import functools
 
 
 __all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
@@ -221,18 +222,14 @@ def get_git_credential_helper(username, token):
     return helper
 
 
-def eups2git_ref(eups_ref,
-                 repo,
-                 eupsbuild,
-                 versiondb='https://raw.githubusercontent.com/lsst/versiondb/master/manifests',  # NOQA pylint: disable=line-too-long
-                 debug=None):
-    """Provide the eups tag given a git SHA."""
-    # Thought of trying to parse the eups tag for the ref, but given
-    # that doesn't help with the tag-based versions, might as well
-    # look up versiondb for everything
-
+@functools.lru_cache(maxsize=1024)
+def fetch_manifest_file(
+    build_id,
+    versiondb='https://raw.githubusercontent.com/lsst/versiondb/master/manifests',  # NOQA pylint: disable=line-too-long
+    debug=False
+):
     # eg. https://raw.githubusercontent.com/lsst/versiondb/master/manifests/b1108.txt  # NOQA
-    shafile = versiondb + '/' + eupsbuild + '.txt'
+    shafile = versiondb + '/' + build_id + '.txt'
     if debug:
         print(shafile)
 
@@ -242,46 +239,63 @@ def eups2git_ref(eups_ref,
         ca_certs=certifi.where()
     )
 
-    refs = http.request('GET', shafile)
-    if refs.status >= 300:
-        raise RuntimeError('Failed GET with HTTP code', refs.status)
-    reflines = refs.data.splitlines()
+    manifest = http.request('GET', shafile)
+    if manifest.status >= 300:
+        raise RuntimeError('Failed GET with HTTP code', manifest.status)
 
-    for entry in reflines:
-        # Python 2/3 accomodation
-        if not isinstance(entry, str):
-            entry = str(entry, 'utf-8')
+    return manifest.data
+
+
+@functools.lru_cache(maxsize=1024)
+def parse_manifest_file(data):
+    products = {}
+
+    for line in data.splitlines():
+        if not isinstance(line, str):
+            line = str(line, 'utf-8')
         # skip commented out and blank lines
-        if entry.startswith('#'):
+        if line.startswith('#'):
             continue
-        if entry.startswith('BUILD'):
+        if line.startswith('BUILD'):
             continue
-        if entry == '':
+        if line == '':
             continue
 
-        elements = entry.split()
-        eupspkg, sha, eupsver = elements[0:3]
-        if eupspkg != repo:
-            continue
-        # sanity check
-        if eupsver != eups_ref:
-            raise RuntimeError('Something has gone wrong, release file does '
-                               'not match manifest', eups_ref, eupsver)
-        # get out if we find it
-        if debug:
-            print(eupspkg, sha, eupsver)
+        (product, sha, eups_version) = line.split()[0:3]
 
-        break
+        products[product] = {
+            'name': product,
+            'sha': sha,
+            'eups_version': eups_version,
+        }
 
-        # We never reach this sanity check, so I am commenting it out.
+    return products
 
-        # sanity check that our digest looks like a sha1
-        # pat = re.compile('\b[0-9a-f]{5,40}\b')
-        # mat = pat.match(sha)
-        # if not mat:
-        #    raise RuntimeError('does not appear to be a sha1 digest', sha)
 
-    return sha
+@functools.lru_cache(maxsize=1024)
+def eups2git_ref(
+    product,
+    eups_version,
+    build_id,
+    debug=False
+):
+    """Provide the sha1 for an EUPS product."""
+
+    manifest = fetch_manifest_file(build_id, debug=debug)
+    products = parse_manifest_file(manifest)
+
+    entry = products[product]
+    if entry['eups_version'] == eups_version:
+        return entry['sha']
+    else:
+        raise RuntimeError(
+            "failed to find record in manifest {build_id} for:\n"
+            "  {name} {version}".format(
+                build_id=build_id,
+                product=product,
+                eups_version=eups_version
+            )
+        )
 
 
 # https://stackoverflow.com/questions/5574702/how-to-print-to-stderr-in-python
