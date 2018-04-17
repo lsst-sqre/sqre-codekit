@@ -211,7 +211,7 @@ def main():
         print(type(ghb))
 
     if args.debug:
-        print("Tagging repos in ", orgname)
+        print("Tagging repos in github org: {org}".format(org=orgname))
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
