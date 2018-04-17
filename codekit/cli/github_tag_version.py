@@ -251,48 +251,49 @@ def main():
                   (45 - len(upstream)) * '-')
             continue
 
-        for team in repo.teams():
-            if team.name not in args.team:
-                if args.debug:
-                    print('No action for', repo.name,
-                          'belonging to', team.name)
-                continue
+        repo_teams = [t.name for t in repo.teams()]
+        if not any(x in repo_teams for x in args.team):
+            if args.debug:
+                print("No action for {repo}".format(repo=repo.name))
+                print("  has teams: {teams}".format(teams=repo_teams))
+                print("  does not belong to any of these teams: {teams}"
+                      .format(teams=args.team))
+            continue
 
-            sha = codetools.eups2git_ref(eups_ref=eups_tag,
-                                         repo=repo.name,
-                                         eupsbuild=eupsbuild,
-                                         debug=args.debug)
+        sha = codetools.eups2git_ref(eups_ref=eups_tag,
+                                     repo=repo.name,
+                                     eupsbuild=eupsbuild,
+                                     debug=args.debug)
 
-            if args.debug or args.dry_run:
-                print(repo.name.ljust(40), 'found in', team.name)
-                print('Will tag sha: {sha} as {v} (was {t})'.format(
-                    sha=sha, v=version, t=eups_tag))
+        if args.debug or args.dry_run:
+            print('Will tag sha: {sha} as {v} (was {t})'.format(
+                sha=sha, v=version, t=eups_tag))
 
-            if args.dry_run:
-                continue
+        if args.dry_run:
+            continue
 
-            try:
-                # create_tag() returns a Tag object on success or None
-                # on failure
-                tag = repo.create_tag(tag=version,
-                                      message=message,
-                                      sha=sha,
-                                      obj_type='commit',
-                                      tagger=tagstuff,
-                                      lightweight=False,
-                                      update=args.force_tag)
-                if tag is None:
-                    raise RuntimeError('failed to create git tag')
+        try:
+            # create_tag() returns a Tag object on success or None
+            # on failure
+            tag = repo.create_tag(tag=version,
+                                  message=message,
+                                  sha=sha,
+                                  obj_type='commit',
+                                  tagger=tagstuff,
+                                  lightweight=False,
+                                  update=args.force_tag)
+            if tag is None:
+                raise RuntimeError('failed to create git tag')
 
-            except Exception as exc:  # pylint: disable=broad-except
-                tag_exceptions.append(exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            tag_exceptions.append(exc)
 
-                eprint('OOPS: -------------------')
-                eprint(str(exc))
-                eprint('OOPS: -------------------')
+            eprint('OOPS: -------------------')
+            eprint(str(exc))
+            eprint('OOPS: -------------------')
 
-                if args.fail_fast:
-                    raise
+            if args.fail_fast:
+                raise
 
     lp_fires = len(tag_exceptions)
     if lp_fires:
