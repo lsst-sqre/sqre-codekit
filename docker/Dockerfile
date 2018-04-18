@@ -1,6 +1,6 @@
 FROM docker.io/python:3.6.3
 
-ARG CODEKIT_VER=3.1.0
+ARG CODEKIT_VER=4.0.0
 
 USER root
 RUN pip install sqre-codekit=="$CODEKIT_VER" --no-cache-dir
