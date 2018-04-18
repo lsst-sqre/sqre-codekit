@@ -66,7 +66,6 @@ def gitusername():
     """
     Returns the user's name from .gitconfig if available
     """
-    # pylint: disable=bare-except
     try:
         mygitconfig = gitconfig.GitConfig()
         return mygitconfig['user.name']
@@ -79,7 +78,6 @@ def gituseremail():
     Returns the user's email from .gitconfig if available
     """
 
-    # pylint: disable=bare-except
     try:
         mygitconfig = gitconfig.GitConfig()
         return mygitconfig['user.email']
@@ -230,7 +228,8 @@ def get_git_credential_helper(username, token):
 @functools.lru_cache(maxsize=1024)
 def fetch_manifest_file(
     build_id,
-    versiondb='https://raw.githubusercontent.com/lsst/versiondb/master/manifests',  # NOQA pylint: disable=line-too-long
+    versiondb='https://raw.githubusercontent.com'
+              '/lsst/versiondb/master/manifests',
     debug=False
 ):
     # eg. https://raw.githubusercontent.com/lsst/versiondb/master/manifests/b1108.txt  # NOQA
@@ -331,7 +330,6 @@ class TempDir(object):
         assert os.path.exists(temp_dir) is False
     """
 
-    # pylint: disable=too-few-public-methods
     def __init__(self):
         super(TempDir, self).__init__()
         self._temp_dir = tempfile.mkdtemp()

@@ -213,7 +213,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
             if tag is None:
                 raise RuntimeError('failed to create git tag')
 
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             yikes = CaughtGitError(repo['repo'], e)
             tag_exceptions.append(yikes)
             error(yikes)
@@ -358,7 +358,7 @@ def main():
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
-    cmap = str.maketrans('.-', '__')  # pylint: disable=no-member
+    cmap = str.maketrans('.-', '__')
     eups_candidate = candidate.translate(cmap)
 
     manifest = fetch_eups_tag_file(args, eups_candidate)
