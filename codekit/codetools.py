@@ -293,7 +293,7 @@ def eups2git_ref(
     else:
         raise RuntimeError(
             "failed to find record in manifest {build_id} for:\n"
-            "  {name} {version}".format(
+            "  {product} {eups_version}".format(
                 build_id=build_id,
                 product=product,
                 eups_version=eups_version
