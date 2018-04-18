@@ -109,13 +109,12 @@ def main():
     ghb = codetools.login_github(token_path=args.token_path)
     org = ghb.organization(args.orgname)
 
-    # pylint: disable=redefined-variable-type
     if args.repo is None and args.ignore_teams is True:
         repo_iter = org.repositories()
     elif args.repo is None and args.ignore_teams is False:
         repo_iter = codetools.repos_for_team(org, args.team)
     else:
-        # This is actually a list, hence the Pylint disable above.
+        # This is actually a list
         repo_iter = [codetools.open_repo(org, args.repo)]
 
     token = ''

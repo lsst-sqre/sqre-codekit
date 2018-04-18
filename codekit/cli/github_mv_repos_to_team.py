@@ -59,7 +59,6 @@ def parse_args():
 
 def main():
     """Move the repos"""
-    # pylint: disable=too-many-branches
     args = parse_args()
 
     if args.debug:

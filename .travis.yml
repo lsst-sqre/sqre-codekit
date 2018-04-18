@@ -2,21 +2,21 @@ sudo: false
 language: python
 matrix:
   include:
-  - env: TEST='pytest' DEPLOYER=true
-    python: '3.6'
-    install: pip install --upgrade 'pip>=9'
-    script: python setup.py test
-  - env: TEST='github-tag-version --dry-run'
-    python: '3.6'
-    install:
-    - python setup.py sdist
-    - pip install dist/sqre-codekit-*.tar.gz
-    script: |
-      if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-        github-tag-version --dry-run --token "$SQREADMIN_TOKEN" --org 'lsst' --team 'Data Management' --email 'sqre-admin@lists.lsst.org' --tagger 'sqreadmin' 'w.2016.49' 'b2510'
-      else
-        echo "Unable to test github-tag-version without travis secure env vars."
-      fi
+    - env: TEST='pytest' DEPLOYER=true
+      python: '3.6'
+      install: pip install --upgrade 'pip>=9'
+      script: python setup.py test
+    - env: TEST='github-tag-version --dry-run'
+      python: '3.6'
+      install:
+      - python setup.py sdist
+      - pip install dist/sqre-codekit-*.tar.gz
+      script: |
+        if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
+          github-tag-version --dry-run --token "$SQREADMIN_TOKEN" --org 'lsst' --team 'Data Management' --email 'sqre-admin@lists.lsst.org' --tagger 'sqreadmin' 'w.2016.49' 'b2510'
+        else
+          echo "Unable to test github-tag-version without travis secure env vars."
+        fi
     - env: TEST=hadolint
       services:
         - docker

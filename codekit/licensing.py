@@ -11,7 +11,6 @@ import time
 import requests
 import git
 
-# pylint: disable=anomalous-backslash-in-string, invalid-name
 
 comment_pattern = re.compile(
     '(?P<comment_flag>^[#* ]*)(?P<content>[\d\w\s<]*)')
