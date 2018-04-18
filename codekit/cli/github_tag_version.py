@@ -177,6 +177,60 @@ def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
     return gh_repos
 
 
+def tag_gh_repos(gh_repos, args, tag_template):
+    tag_exceptions = []
+    for repo in gh_repos:
+        # "target tag"
+        t_tag = copy.copy(tag_template)
+        t_tag['sha'] = repo['sha']
+
+        debug(textwrap.dedent("""\
+            tagging repo: {repo}
+              sha: {sha} as {gt}
+              (eups version: {et})\
+            """).format(
+            repo=repo['repo'],
+            sha=t_tag['sha'],
+            gt=t_tag['name'],
+            et=repo['eups_version']
+        ))
+
+        if args.dry_run:
+            continue
+
+        try:
+            # create_tag() returns a Tag object on success or None
+            # on failure
+            tag = repo['repo'].create_tag(
+                tag=t_tag['name'],
+                message=t_tag['message'],
+                sha=t_tag['sha'],
+                obj_type='commit',
+                tagger=t_tag['tagger'],
+                lightweight=False,
+                update=args.force_tag
+            )
+            if tag is None:
+                raise RuntimeError('failed to create git tag')
+
+        except Exception as e:  # pylint: disable=broad-except
+            yikes = CaughtGitError(repo['repo'], e)
+            tag_exceptions.append(yikes)
+            error(yikes)
+
+            if args.fail_fast:
+                raise yikes
+
+    lp_fires = len(tag_exceptions)
+    if lp_fires:
+        error("ERROR: {failed} tag failures".format(failed=str(lp_fires)))
+
+        for e in tag_exceptions:
+            error(e)
+
+        sys.exit(lp_fires if lp_fires < 256 else 255)
+
+
 def parse_args():
     """Parse command-line arguments"""
     user = getuser()
@@ -254,9 +308,7 @@ def parse_args():
 
 def main():
     """Create the tag"""
-    # pylint: disable=too-many-locals,too-many-nested-blocks,too-many-branches
-    # pylint: disable=too-many-statements
-    # Although maybe that is a hint that we should break this up...
+
     args = parse_args()
 
     if args.debug:
@@ -307,70 +359,18 @@ def main():
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
     cmap = str.maketrans('.-', '__')  # pylint: disable=no-member
-
-    # eups_version = version.translate(map)
     eups_candidate = candidate.translate(cmap)
 
     manifest = fetch_eups_tag_file(args, eups_candidate)
     eups_products = parse_eups_tag_file(manifest)
-
-    tag_exceptions = []
-    for repo in eups_products_to_gh_repos(
+    gh_repos = eups_products_to_gh_repos(
         args,
         ghb,
         orgname,
         eupsbuild,
         eups_products
-    ):
-        # "target tag"
-        t_tag = copy.copy(tag_template)
-        t_tag['sha'] = repo['sha']
-
-        debug(textwrap.dedent("""\
-            tagging repo: {repo}
-              sha: {sha} as {gt}
-              (eups version: {et})\
-            """).format(
-            repo=repo['repo'],
-            sha=t_tag['sha'],
-            gt=t_tag['name'],
-            et=repo['eups_version']
-        ))
-
-        if args.dry_run:
-            continue
-
-        try:
-            # create_tag() returns a Tag object on success or None
-            # on failure
-            tag = repo['repo'].create_tag(
-                tag=t_tag['name'],
-                message=t_tag['message'],
-                sha=t_tag['sha'],
-                obj_type='commit',
-                tagger=t_tag['tagger'],
-                lightweight=False,
-                update=args.force_tag
-            )
-            if tag is None:
-                raise RuntimeError('failed to create git tag')
-
-        except Exception as e:  # pylint: disable=broad-except
-            yikes = CaughtGitError(repo['repo'], e)
-            tag_exceptions.append(yikes)
-            error(yikes)
-
-            if args.fail_fast:
-                raise yikes
-
-    lp_fires = len(tag_exceptions)
-    if lp_fires:
-        error("ERROR: {failed} tag failures".format(failed=str(lp_fires)))
-
-        for e in tag_exceptions:
-            error(e)
-
-        sys.exit(lp_fires if lp_fires < 256 else 255)
+    )
+    tag_gh_repos(gh_repos, args, tag_template)
 
 
 if __name__ == '__main__':
