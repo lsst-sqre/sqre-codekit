@@ -6,7 +6,7 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Technical Debt
 # --------------
 # - completely hide eups-specifics from this file
-# - skips non-github repos - can add repos.yaml knowhow to address this
+# - support repos.yaml for github repo resolution
 # - worth doing the smart thing for externals? (yes for Sims)
 # - deal with authentication version
 # - github api v4 is comming -- when it is stable, switch over and drop usage
@@ -151,12 +151,12 @@ def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
 
         repo = ghb.repository(orgname, prod['name'])
 
-        # if the repo is not in github skip it for now
-        # see TD
+        # hard stop if a github repo can not be found
         if not hasattr(repo, 'name'):
-            error("!!! unable to resolve github repo for product: {name}"
-                  .format(name=prod['name']))
-            continue
+            raise RuntimeError(
+                "unable to resolve github repo for product: {name}"
+                .format(name=prod['name'])
+            )
 
         debug("  found: {slug}".format(slug=repo))
 
