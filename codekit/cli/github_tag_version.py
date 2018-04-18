@@ -6,7 +6,7 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Technical Debt
 # --------------
 # - completely hide eups-specifics from this file
-# - skips non-github repos - can add repos.yaml knowhow to address this
+# - support repos.yaml for github repo resolution
 # - worth doing the smart thing for externals? (yes for Sims)
 # - deal with authentication version
 # - github api v4 is comming -- when it is stable, switch over and drop usage
@@ -50,6 +50,17 @@ class CaughtGitError(Exception):
             repo=self.repo,
             e=str(self.caught)
         ))
+
+
+class GitTagExistsError(Exception):
+    pass
+
+
+def cmp_dict(d1, d2, ignore_keys=[]):
+    """Compare dicts ignoring select keys"""
+    # https://stackoverflow.com/questions/10480806/compare-dictionaries-ignoring-specific-keys
+    return {k: v for k, v in d1.items() if k not in ignore_keys} \
+        == {k: v for k, v in d2.items() if k not in ignore_keys}
 
 
 def lookup_email(args):
@@ -140,12 +151,12 @@ def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
 
         repo = ghb.repository(orgname, prod['name'])
 
-        # if the repo is not in github skip it for now
-        # see TD
+        # hard stop if a github repo can not be found
         if not hasattr(repo, 'name'):
-            error("!!! unable to resolve github repo for product: {name}"
-                  .format(name=prod['name']))
-            continue
+            raise RuntimeError(
+                "unable to resolve github repo for product: {name}"
+                .format(name=prod['name'])
+            )
 
         debug("  found: {slug}".format(slug=repo))
 
@@ -179,12 +190,88 @@ def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
     return gh_repos
 
 
+def cmp_existing_git_tag(t_tag, e_tag):
+    # ignore date when comparing tag objects
+    if t_tag['sha'] == e_tag.object.sha or \
+       t_tag['message'] == e_tag.message or \
+       (cmp_dict(t_tag['tagger'], e_tag.tagger, ['date'])):
+        return True
+
+    return False
+
+
+def check_existing_git_tag(repo, t_tag):
+    """
+    Check for a pre-existng tag in the github repo.
+
+    Parameters
+    ----------
+    repo : dict
+        dict representing a target github repo
+    t_tag: dict
+        dict repesenting a target git tag
+
+    Returns
+    -------
+    insync : `bool`
+        True if tag exists and is in sync. False if tag does not exist.
+
+    Raises
+    ------
+    GitTagExistsError
+        If tag exists but is not in sync.
+    """
+
+    debug("looking for existing tag: {tag}"
+          .format(tag=t_tag['name']))
+
+    # find ref/tag by name
+    tagfmt = "tags/{ref}".format(ref=t_tag['name'])
+    e_ref = repo['repo'].ref(tagfmt)
+
+    if not e_ref:
+        return False
+
+    # find tag object pointed to by the ref
+    e_tag = repo['repo'].tag(e_ref.object.sha)
+    debug("  found existing tag: {tag}".format(tag=e_tag))
+
+    if cmp_existing_git_tag(t_tag, e_tag):
+        return True
+
+    warn(textwrap.dedent("""\
+        tag {tag} already exists with conflicting values:
+          existing:
+            sha: {e_sha}
+            message: {e_message}
+            tagger: {e_tagger}
+          target:
+            sha: {t_sha}
+            message: {t_message}
+            tagger: {t_tagger}\
+    """).format(
+        tag=t_tag['name'],
+        e_sha=e_tag['sha'],
+        e_message=e_tag['message'],
+        e_tagger=e_tag['tagger'],
+        t_sha=t_tag['sha'],
+        t_message=t_tag['message'],
+        t_tagger=t_tag['tagger'],
+    ))
+
+    raise GitTagExistsError("tag {tag} alreaday exists"
+                            .format(tag=e_tag))
+
+
 def tag_gh_repos(gh_repos, args, tag_template):
     tag_exceptions = []
     for repo in gh_repos:
         # "target tag"
         t_tag = copy.copy(tag_template)
         t_tag['sha'] = repo['sha']
+
+        # control whether to create a new tag or update an existing one
+        update_tag = False
 
         debug(textwrap.dedent("""\
             tagging repo: {repo}
@@ -197,6 +284,30 @@ def tag_gh_repos(gh_repos, args, tag_template):
             et=repo['eups_version']
         ))
 
+        try:
+            # if the existing tag is in sync, do nothing
+            if check_existing_git_tag(repo, t_tag):
+                warn(textwrap.dedent("""\
+                    No action for {repo}
+                      existing tag: {tag} is already in sync\
+                    """).format(
+                    repo=repo['repo'],
+                    tag=t_tag['name'],
+                ))
+
+                continue
+        except GitTagExistsError as e:
+            yikes = CaughtGitError(repo['repo'], e)
+
+            if args.force_tag:
+                update_tag = True
+            elif args.fail_fast:
+                raise yikes
+            else:
+                tag_exceptions.append(yikes)
+                continue
+
+        # tags are created/updated past this point
         if args.dry_run:
             continue
 
@@ -210,7 +321,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
                 obj_type='commit',
                 tagger=t_tag['tagger'],
                 lightweight=False,
-                update=args.force_tag
+                update=update_tag
             )
             if tag is None:
                 raise RuntimeError('failed to create git tag')
