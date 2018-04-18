@@ -9,6 +9,8 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # - skips non-github repos - can add repos.yaml knowhow to address this
 # - worth doing the smart thing for externals? (yes for Sims)
 # - deal with authentication version
+# - github api v4 is comming -- when it is stable, switch over and drop usage
+#    of github3.py
 
 # Known Bugs
 # ----------
