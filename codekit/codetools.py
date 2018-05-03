@@ -21,7 +21,7 @@ from datetime import datetime
 __all__ = ['github_token', 'login_github', 'eups2git_ref', 'repos_for_team',
            'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
            'get_team_id_by_name', 'get_git_credential_helper', 'eprint',
-           'debug', 'warn', 'error',
+           'info', 'debug', 'warn', 'error',
            'current_timestamp']
 
 logging.basicConfig()
@@ -324,6 +324,10 @@ def eups2git_ref(
                 eups_version=eups_version
             )
         )
+
+
+def info(*args):
+    logger.info(*args)
 
 
 def debug(*args):
