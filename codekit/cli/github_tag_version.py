@@ -22,7 +22,6 @@ import os
 import sys
 import argparse
 import textwrap
-from datetime import datetime
 from getpass import getuser
 import certifi
 import urllib3
@@ -85,15 +84,6 @@ def lookup_tagger(args):
     debug("tagger name is " + tagger)
 
     return tagger
-
-
-def current_timestamp(args):
-    now = datetime.utcnow()
-    timestamp = now.isoformat()[0:19] + 'Z'
-
-    debug("generated timestamp: {now}".format(now=timestamp))
-
-    return timestamp
 
 
 def fetch_eups_tag_file(args, eups_candidate):
@@ -449,7 +439,7 @@ def main():
     message = message_template.format(v=version, c=candidate, b=eupsbuild)
 
     # generate timestamp for github API
-    timestamp = current_timestamp(args)
+    timestamp = codetools.current_timestamp(args)
 
     # all tags should be the same across repos -- just add the 'sha' key and
     # stir
