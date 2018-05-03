@@ -439,7 +439,7 @@ def main():
     message = message_template.format(v=version, c=candidate, b=eupsbuild)
 
     # generate timestamp for github API
-    timestamp = codetools.current_timestamp(args)
+    timestamp = codetools.current_timestamp()
 
     # all tags should be the same across repos -- just add the 'sha' key and
     # stir
