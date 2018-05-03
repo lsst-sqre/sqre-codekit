@@ -15,12 +15,14 @@ import urllib3
 from github3 import login
 import gitconfig
 import functools
+from datetime import datetime
 
 
 __all__ = ['github_token', 'login_github', 'eups2git_ref', 'repos_for_team',
            'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
            'get_team_id_by_name', 'get_git_credential_helper', 'eprint',
-           'debug', 'warn', 'error']
+           'debug', 'warn', 'error',
+           'current_timestamp']
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
@@ -363,3 +365,13 @@ class TempDir(object):
     def __exit__(self, ttype, value, traceback):
         shutil.rmtree(self._temp_dir)
         self._temp_dir = None
+
+
+def current_timestamp():
+    """Returns current time as ISO8601 formatted string in the Zulu TZ"""
+    now = datetime.utcnow()
+    timestamp = now.isoformat()[0:19] + 'Z'
+
+    debug("generated timestamp: {now}".format(now=timestamp))
+
+    return timestamp
