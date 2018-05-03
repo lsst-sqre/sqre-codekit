@@ -47,7 +47,8 @@ setup(
         'urllib3[secure]==1.22',
         'progressbar2==3.11.0',
         'GitPython==1.0.1',
-        'MapGitConfig==1.1'
+        'MapGitConfig==1.1',
+        'pygithub'
     ],
     setup_requires=[
         'pytest-runner>=2.11.1,<3'
@@ -66,6 +67,7 @@ setup(
             'github-mv-repos-to-team = codekit.cli.github_mv_repos_to_team:main',  # NOQA
             'github-tag-version = codekit.cli.github_tag_version:main',
             'lsst-bp = codekit.cli.lsst_bp:main',
+            'github-tag-teams = codekit.cli.github_tag_teams:main',
         ]
     }
 )
