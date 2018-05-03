@@ -15,15 +15,53 @@ import urllib3
 from github3 import login
 import gitconfig
 import functools
+from datetime import datetime
 
 
-__all__ = ['login_github', 'eups2git_ref', 'repos_for_team',
+__all__ = ['github_token', 'login_github', 'eups2git_ref', 'repos_for_team',
            'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
            'get_team_id_by_name', 'get_git_credential_helper', 'eprint',
-           'debug', 'warn', 'error']
+           'info', 'debug', 'warn', 'error',
+           'current_timestamp']
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
+
+
+def github_token(token_path=None, token=None):
+    """Return a github oauth token as a string.  If `token` is defined, it is
+    has precendece.  If `token` and `token_path` are `None`,
+    `~/.sq_github_token` looked for as a fallback.
+
+    Parameters
+    ----------
+    token_path : str, optional
+        Path to the token file. The default token is used otherwise.
+
+    token: str, optional
+        Literial token string. If specifified, this value is used instead of
+        reading from the token_path file.
+
+    Returns
+    -------
+    token : `string`
+        Hopefully, a valid github oauth token.
+    """
+    if token is None:
+        if token_path is None:
+            # Try the default token
+            token_path = '~/.sq_github_token'
+        token_path = os.path.expandvars(os.path.expanduser(token_path))
+
+        if not os.path.isfile(token_path):
+            print("You don't have a token in {0} ".format(token_path))
+            print("Have you run github-auth?")
+            raise EnvironmentError("No token in %s" % token_path)
+
+        with open(token_path, 'r') as fdo:
+            token = fdo.readline().strip()
+
+    return token
 
 
 def login_github(token_path=None, token=None):
@@ -43,20 +81,7 @@ def login_github(token_path=None, token=None):
     gh : :class:`github3.GitHub` instance
         A GitHub login instance.
     """
-    if token is None:
-        if token_path is None:
-            # Try the default token
-            token_path = '~/.sq_github_token'
-        token_path = os.path.expandvars(os.path.expanduser(token_path))
-
-        if not os.path.isfile(token_path):
-            print("You don't have a token in {0} ".format(token_path))
-            print("Have you run github-auth?")
-            raise EnvironmentError("No token in %s" % token_path)
-
-        with open(token_path, 'r') as fdo:
-            token = fdo.readline().strip()
-
+    token = github_token(token_path=token_path, token=token)
     ghb = login(token=token, two_factor_callback=github_2fa_callback)
 
     return ghb
@@ -301,6 +326,10 @@ def eups2git_ref(
         )
 
 
+def info(*args):
+    logger.info(*args)
+
+
 def debug(*args):
     logger.debug(*args)
 
@@ -340,3 +369,13 @@ class TempDir(object):
     def __exit__(self, ttype, value, traceback):
         shutil.rmtree(self._temp_dir)
         self._temp_dir = None
+
+
+def current_timestamp():
+    """Returns current time as ISO8601 formatted string in the Zulu TZ"""
+    now = datetime.utcnow()
+    timestamp = now.isoformat()[0:19] + 'Z'
+
+    debug("generated timestamp: {now}".format(now=timestamp))
+
+    return timestamp
