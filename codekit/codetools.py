@@ -4,6 +4,7 @@
 # - package
 # - check explictly for github3 version
 
+import argparse
 import logging
 import os
 import sys
@@ -17,10 +18,38 @@ import gitconfig
 import functools
 from datetime import datetime
 from public import public
+from pkg_resources import get_distribution
 
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
+
+
+# based on _VersionAction() from:
+# https://github.com/python/cpython/blob/3.6/Lib/argparse.py
+class ScmVersionAction(argparse.Action):
+    """Print --version string as `<command> <version>` where `version` is the
+    distirubtion version."""
+    def __init__(self,
+                 option_strings,
+                 version=None,
+                 dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS,
+                 help="show program's version number and exit"):
+        super(ScmVersionAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help)
+        self.version = version
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        version = get_distribution('sqre-codekit').version
+        formatter = parser._get_formatter()
+        formatter.add_text("%(prog)s {v}".format(v=version))
+        parser._print_message(formatter.format_help(), sys.stdout)
+        parser.exit()
 
 
 @public
