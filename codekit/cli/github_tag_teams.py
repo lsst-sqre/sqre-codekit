@@ -79,18 +79,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def lookup_email(args):
-    email = args.email
-    if email is None:
-        email = codetools.gituseremail()
-        if email is None:
-            sys.exit('Specify --email option')
-
-    debug('email is ' + email)
-
-    return email
-
-
 def lookup_tagger(args):
     tagger = args.tagger
     if tagger is None:
@@ -223,7 +211,7 @@ def main():
     gh_org_name = args.org
     tags = args.tag
 
-    tagger_email = lookup_email(args)
+    tagger_email = codetools.lookup_email(args)
     tagger_name = lookup_tagger(args)
 
     tagger = github.InputGitAuthor(

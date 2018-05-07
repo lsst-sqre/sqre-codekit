@@ -62,18 +62,6 @@ def cmp_dict(d1, d2, ignore_keys=[]):
         == {k: v for k, v in d2.items() if k not in ignore_keys}
 
 
-def lookup_email(args):
-    email = args.email
-    if email is None:
-        email = codetools.gituseremail()
-        if email is None:
-            sys.exit("Specify --email option")
-
-    debug("email is " + email)
-
-    return email
-
-
 def lookup_tagger(args):
     tagger = args.tagger
     if tagger is None:
@@ -421,7 +409,7 @@ def main():
     version = args.tag
 
     # if email not specified, try getting it from the gitconfig
-    email = lookup_email(args)
+    email = codetools.lookup_email(args)
     # ditto for the name of the tagger
     tagger_name = lookup_tagger(args)
 
