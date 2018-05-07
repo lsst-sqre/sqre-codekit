@@ -49,7 +49,7 @@ def lookup_email(args):
 
 
 @public
-def lookup_tagger(args):
+def lookup_user(args):
     """Return the user name to use when creating git objects or exit
     program.
 
@@ -59,18 +59,20 @@ def lookup_tagger(args):
 
     Returns
     -------
-    tagger: `string`
+    user: `string`
         git user name
     """
-    tagger = args.tagger
-    if tagger is None:
-        tagger = gitusername()
-        if tagger is None:
-            sys.exit("Specify --tagger option")
+    user = args.user
+    if user is None:
+        user = gitusername()
 
-    debug("tagger name is " + tagger)
+    if user is None:
+        error('unable to determine a git user name')
+        sys.exit("Specify --user option")
 
-    return tagger
+    debug("user name is {user}".format(user=user))
+
+    return user
 
 
 @public

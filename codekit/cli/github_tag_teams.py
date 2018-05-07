@@ -57,7 +57,7 @@ def parse_args():
         help="team whose repos may be tagged (can specify several times")
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
-        '--tagger',
+        '--user',
         help='Name of person making the tag - defaults to gitconfig value')
     parser.add_argument(
         '--email',
@@ -200,10 +200,10 @@ def main():
     tags = args.tag
 
     tagger_email = codetools.lookup_email(args)
-    tagger_name = codetools.lookup_tagger(args)
+    git_user = codetools.lookup_user(args)
 
     tagger = github.InputGitAuthor(
-        tagger_name,
+        git_user,
         tagger_email,
         codetools.current_timestamp()
     )

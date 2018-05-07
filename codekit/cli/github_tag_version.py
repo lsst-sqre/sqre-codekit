@@ -99,7 +99,7 @@ def parse_args():
     parser.add_argument('--candidate')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
-        '--tagger',
+        '--user',
         help='Name of person making the tag - defaults to gitconfig value')
     parser.add_argument(
         '--email',
@@ -398,8 +398,8 @@ def main():
 
     # if email not specified, try getting it from the gitconfig
     email = codetools.lookup_email(args)
-    # ditto for the name of the tagger
-    tagger_name = codetools.lookup_tagger(args)
+    # ditto for the name of the git user
+    git_user = codetools.lookup_user(args)
 
     # The candidate is assumed to be the requested EUPS tag unless
     # otherwise specified with the --candidate option The reason to
@@ -423,7 +423,7 @@ def main():
         'name': version,
         'message': message,
         'tagger': {
-            'name': tagger_name,
+            'name': git_user,
             'email': email,
             'date': timestamp,
         }
