@@ -8,9 +8,9 @@ import github
 import itertools
 import re
 from getpass import getuser
-from github import Github
 from .. import codetools
 from .. import info, debug
+from codekit import pygithub
 
 logger = logging.getLogger('codekit')
 logging.basicConfig()
@@ -144,12 +144,6 @@ def find_repo_teams(repo):
     return teams
 
 
-def login_github(token_path=None, token=None):
-    """pygithub equiv of codetools.login_github()"""
-    token = codetools.github_token(token_path=token_path, token=token)
-    return Github(token)
-
-
 def tag_repo(repo, tags, tagger, dry_run=False):
     # tag the head of the designated "default branch"
     # XXX this probably should be resolved via repos.yaml
@@ -208,7 +202,7 @@ def main():
     )
     debug(tagger)
 
-    g = login_github(token=args.token)
+    g = pygithub.login_github(token=args.token)
     org = g.get_organization(gh_org_name)
 
     teams = org.get_teams()
