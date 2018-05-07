@@ -10,7 +10,6 @@ import os
 import sys
 import shutil
 import tempfile
-# import re # Only used in SHA-sanity-check unreachable code
 import certifi
 import urllib3
 from github3 import login
