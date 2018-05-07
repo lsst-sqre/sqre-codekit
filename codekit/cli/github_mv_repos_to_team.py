@@ -53,6 +53,7 @@ def parse_args():
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode')
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
 
     return parser.parse_args()
 
