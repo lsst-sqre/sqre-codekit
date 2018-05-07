@@ -49,6 +49,31 @@ def lookup_email(args):
 
 
 @public
+def lookup_tagger(args):
+    """Return the user name to use when creating git objects or exit
+    program.
+
+    Parameters
+    ----------
+    args: parser.parse_args()
+
+    Returns
+    -------
+    tagger: `string`
+        git user name
+    """
+    tagger = args.tagger
+    if tagger is None:
+        tagger = gitusername()
+        if tagger is None:
+            sys.exit("Specify --tagger option")
+
+    debug("tagger name is " + tagger)
+
+    return tagger
+
+
+@public
 def github_token(token_path=None, token=None):
     """Return a github oauth token as a string.  If `token` is defined, it is
     has precendece.  If `token` and `token_path` are `None`,
