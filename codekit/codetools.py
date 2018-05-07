@@ -24,6 +24,31 @@ logger = logging.getLogger('codekit')
 
 
 @public
+def lookup_email(args):
+    """Return the email address to use when creating git objects or exit
+    program.
+
+    Parameters
+    ----------
+    args: parser.parse_args()
+
+    Returns
+    -------
+    email : `string`
+        git user email address
+    """
+    email = args.email
+    if email is None:
+        email = gituseremail()
+        if email is None:
+            sys.exit('Specify --email option')
+
+    debug('email is ' + email)
+
+    return email
+
+
+@public
 def github_token(token_path=None, token=None):
     """Return a github oauth token as a string.  If `token` is defined, it is
     has precendece.  If `token` and `token_path` are `None`,
