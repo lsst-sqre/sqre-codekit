@@ -62,18 +62,6 @@ def cmp_dict(d1, d2, ignore_keys=[]):
         == {k: v for k, v in d2.items() if k not in ignore_keys}
 
 
-def lookup_tagger(args):
-    tagger = args.tagger
-    if tagger is None:
-        tagger = codetools.gitusername()
-        if tagger is None:
-            sys.exit("Specify --tagger option")
-
-    debug("tagger name is " + tagger)
-
-    return tagger
-
-
 def fetch_eups_tag_file(args, eups_candidate):
     # construct url
     eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
@@ -411,7 +399,7 @@ def main():
     # if email not specified, try getting it from the gitconfig
     email = codetools.lookup_email(args)
     # ditto for the name of the tagger
-    tagger_name = lookup_tagger(args)
+    tagger_name = codetools.lookup_tagger(args)
 
     # The candidate is assumed to be the requested EUPS tag unless
     # otherwise specified with the --candidate option The reason to

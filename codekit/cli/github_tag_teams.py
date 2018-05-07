@@ -79,18 +79,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def lookup_tagger(args):
-    tagger = args.tagger
-    if tagger is None:
-        tagger = codetools.gitusername()
-        if tagger is None:
-            sys.exit('Specify --tagger option')
-
-    debug('tagger name is ' + tagger)
-
-    return tagger
-
-
 def find_tag_by_name(repo, tag_name):
     tagfmt = 'tags/{ref}'.format(ref=tag_name)
 
@@ -212,7 +200,7 @@ def main():
     tags = args.tag
 
     tagger_email = codetools.lookup_email(args)
-    tagger_name = lookup_tagger(args)
+    tagger_name = codetools.lookup_tagger(args)
 
     tagger = github.InputGitAuthor(
         tagger_name,
