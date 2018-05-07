@@ -40,10 +40,12 @@ def lookup_email(args):
     email = args.email
     if email is None:
         email = gituseremail()
-        if email is None:
-            sys.exit('Specify --email option')
 
-    debug('email is ' + email)
+    if email is None:
+        error('unable to determine a git email')
+        sys.exit('Specify --email option')
+
+    debug("email is {email}".format(email=email))
 
     return email
 

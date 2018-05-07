@@ -199,12 +199,12 @@ def main():
     gh_org_name = args.org
     tags = args.tag
 
-    tagger_email = codetools.lookup_email(args)
+    git_email = codetools.lookup_email(args)
     git_user = codetools.lookup_user(args)
 
     tagger = github.InputGitAuthor(
         git_user,
-        tagger_email,
+        git_email,
         codetools.current_timestamp()
     )
     debug(tagger)

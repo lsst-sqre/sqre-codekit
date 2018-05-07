@@ -397,7 +397,7 @@ def main():
     version = args.tag
 
     # if email not specified, try getting it from the gitconfig
-    email = codetools.lookup_email(args)
+    git_email = codetools.lookup_email(args)
     # ditto for the name of the git user
     git_user = codetools.lookup_user(args)
 
@@ -424,7 +424,7 @@ def main():
         'message': message,
         'tagger': {
             'name': git_user,
-            'email': email,
+            'email': git_email,
             'date': timestamp,
         }
     }
