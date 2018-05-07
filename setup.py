@@ -41,14 +41,15 @@ setup(
     keywords='lsst',
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
-        'sqre-codekit-github3.py==1.0.0a4',
-        'uritemplate.py==2.0.0',
-        'requests>=2.8.1,<3.0.0',
-        'urllib3[secure]==1.22',
-        'progressbar2==3.11.0',
         'GitPython==1.0.1',
         'MapGitConfig==1.1',
-        'pygithub'
+        'progressbar2==3.11.0',
+        'public==1.0',
+        'pygithub',
+        'requests>=2.8.1,<3.0.0',
+        'sqre-codekit-github3.py==1.0.0a4',
+        'uritemplate.py==2.0.0',
+        'urllib3[secure]==1.22',
     ],
     setup_requires=[
         'pytest-runner>=2.11.1,<3'
