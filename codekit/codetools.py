@@ -435,13 +435,6 @@ def error(*args):
     logger.error(*args)
 
 
-# https://stackoverflow.com/questions/5574702/how-to-print-to-stderr-in-python
-@public
-def eprint(*args, **kwargs):
-    """Print to stderr."""
-    print(*args, file=sys.stderr, **kwargs)
-
-
 @public
 class TempDir(object):
     """ContextManager for temporary directories.
