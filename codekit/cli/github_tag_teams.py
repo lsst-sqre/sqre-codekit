@@ -78,19 +78,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def find_tag_by_name(repo, tag_name):
-    tagfmt = 'tags/{ref}'.format(ref=tag_name)
-
-    try:
-        ref = repo.get_git_ref(tagfmt)
-        if ref and ref.ref:
-            return ref
-    except github.GithubException as e:
-        pass
-
-    return None
-
-
 def find_repos_missing_tags(repos, tags):
     debug("looking for repos WITHOUT {tags}".format(tags=tags))
     need = {}
@@ -118,7 +105,7 @@ def find_tags_in_repo(repo, tags):
     ))
     found_tags = []
     for t in tags:
-        ref = find_tag_by_name(repo, t)
+        ref = pygithub.find_tag_by_name(repo, t)
         if ref and ref.ref:
             debug("  found: {tag}".format(tag=t))
             found_tags.append(re.sub(r'^refs/tags/', '', ref.ref))
