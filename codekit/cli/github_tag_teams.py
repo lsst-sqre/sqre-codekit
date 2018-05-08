@@ -8,9 +8,9 @@ import github
 import itertools
 import re
 from getpass import getuser
-from github import Github
 from .. import codetools
 from .. import info, debug
+from codekit import pygithub
 
 logger = logging.getLogger('codekit')
 logging.basicConfig()
@@ -78,19 +78,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def find_tag_by_name(repo, tag_name):
-    tagfmt = 'tags/{ref}'.format(ref=tag_name)
-
-    try:
-        ref = repo.get_git_ref(tagfmt)
-        if ref and ref.ref:
-            return ref
-    except github.GithubException as e:
-        pass
-
-    return None
-
-
 def find_repos_missing_tags(repos, tags):
     debug("looking for repos WITHOUT {tags}".format(tags=tags))
     need = {}
@@ -118,7 +105,7 @@ def find_tags_in_repo(repo, tags):
     ))
     found_tags = []
     for t in tags:
-        ref = find_tag_by_name(repo, t)
+        ref = pygithub.find_tag_by_name(repo, t)
         if ref and ref.ref:
             debug("  found: {tag}".format(tag=t))
             found_tags.append(re.sub(r'^refs/tags/', '', ref.ref))
@@ -142,12 +129,6 @@ def find_repo_teams(repo):
     cached_teams[repo.full_name] = teams
 
     return teams
-
-
-def login_github(token_path=None, token=None):
-    """pygithub equiv of codetools.login_github()"""
-    token = codetools.github_token(token_path=token_path, token=token)
-    return Github(token)
 
 
 def tag_repo(repo, tags, tagger, dry_run=False):
@@ -208,7 +189,7 @@ def main():
     )
     debug(tagger)
 
-    g = login_github(token=args.token)
+    g = pygithub.login_github(token=args.token)
     org = g.get_organization(gh_org_name)
 
     teams = org.get_teams()
