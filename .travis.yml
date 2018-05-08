@@ -26,6 +26,29 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+    - env: TEST='github-tag-teams --dry-run'
+      python: '3.6'
+      install:
+      - python setup.py sdist
+      - pip install dist/sqre-codekit-*.tar.gz
+      script: |
+        if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
+          github-tag-teams \
+            --dry-run \
+            --org 'lsst' \
+            --team 'DM Auxilliaries' \
+            --token "$SQREADMIN_TOKEN" \
+            --user 'sqreadmin' \
+            --email 'sqre-admin@lists.lsst.org' \
+            --debug \
+            --tag 'foo' \
+            --tag '13.0' \
+            --tag '14.0' \
+            --tag '15.0' \
+            --tag 'w.2018.18'
+        else
+          echo "Unable to test without travis secure env vars."
+        fi
     - env: TEST=hadolint
       services:
         - docker
