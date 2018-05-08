@@ -189,7 +189,7 @@ def main():
     )
     debug(tagger)
 
-    g = pygithub.login_github(token=args.token)
+    g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(gh_org_name)
 
     teams = org.get_teams()
