@@ -28,6 +28,10 @@ def parse_args():
         default='~/.sq_github_token',
         help='Use a token (made with github-auth) in a non-standard location')
     parser.add_argument(
+        '--token',
+        default=None,
+        help='Literal github personal access token string')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -40,7 +44,7 @@ def main():
     """Fork all repos into shadow org"""
     args = parse_args()
 
-    ghb = codetools.login_github(token_path=args.token_path)
+    ghb = codetools.login_github(token_path=args.token_path, token=args.token)
 
     # get the organization object
     organization = ghb.organization('lsst')
