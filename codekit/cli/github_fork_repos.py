@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Fork LSST repos into a showow GitHub organization."""
 
-import argparse
-import textwrap
-import os
-from time import sleep
-import progressbar
 from .. import codetools
+import argparse
+import codekit.pygithub as pygithub
+import os
+import progressbar
+import textwrap
 
 
 def parse_args():
@@ -44,28 +44,27 @@ def main():
     """Fork all repos into shadow org"""
     args = parse_args()
 
-    ghb = codetools.login_github(token_path=args.token_path, token=args.token)
+    g = pygithub.login_github(token_path=args.token_path, token=args.token)
 
-    # get the organization object
-    organization = ghb.organization('lsst')
+    src_org = g.get_organization('lsst')
+    dst_org = g.get_organization(args.shadow_org)
 
     # list of all LSST repos
-    repos = [g for g in organization.repositories()]
-    repo_count = len(repos)
+    src_repos = list(src_org.get_repos())
+    repo_count = len(src_repos)
 
     if args.debug:
-        print(repos)
+        print(src_repos)
 
     widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
     pbar = progressbar.ProgressBar(
         widgets=widgets, max_value=repo_count).start()
     repo_idx = 0
-    for repo in repos:
+    for r in src_repos:
         if args.debug:
-            print(repo.name)
+            print(r.name)
 
-        repo.create_fork(args.shadow_org)  # NOQA
-        sleep(2)
+        dst_org.create_fork(r)
         pbar.update(repo_idx)
         repo_idx += 1
 
