@@ -9,7 +9,6 @@ DESCRIPTION = 'LSST Data Management SQuaRE code management tools'
 AUTHOR = 'Frossie Economou'
 AUTHOR_EMAIL = 'frossie@lsst.org'
 URL = 'https://github.com/lsst-sqre/sqre-codekit'
-VERSION = '4.1.1'
 LICENSE = 'MIT'
 
 
@@ -26,7 +25,6 @@ long_description = read('README.md')  # pylint:disable=invalid-name
 
 setup(
     name=PACKAGENAME,
-    version=VERSION,
     description=DESCRIPTION,
     long_description=long_description,
     url=URL,
@@ -39,19 +37,22 @@ setup(
         'License :: OSI Approved :: MIT License',
     ],
     keywords='lsst',
+    use_scm_version=True,
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
-        'sqre-codekit-github3.py==1.0.0a4',
-        'uritemplate.py==2.0.0',
-        'requests>=2.8.1,<3.0.0',
-        'urllib3[secure]==1.22',
-        'progressbar2==3.11.0',
         'GitPython==1.0.1',
         'MapGitConfig==1.1',
-        'pygithub'
+        'progressbar2==3.11.0',
+        'public==1.0',
+        'pygithub',
+        'requests>=2.8.1,<3.0.0',
+        'sqre-codekit-github3.py==1.0.0a4',
+        'uritemplate.py==2.0.0',
+        'urllib3[secure]==1.22',
     ],
     setup_requires=[
         'pytest-runner>=2.11.1,<3'
+        'setuptools_scm',
     ],
     tests_require=[
         'pytest>=3,<4',

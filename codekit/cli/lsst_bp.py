@@ -99,6 +99,7 @@ def parse_args():
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode')
+    parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
     return parser.parse_args()
 
 

@@ -4,30 +4,108 @@
 # - package
 # - check explictly for github3 version
 
+import argparse
 import logging
 import os
 import sys
 import shutil
 import tempfile
-# import re # Only used in SHA-sanity-check unreachable code
 import certifi
 import urllib3
 from github3 import login
 import gitconfig
 import functools
 from datetime import datetime
+from public import public
+from pkg_resources import get_distribution
 
-
-__all__ = ['github_token', 'login_github', 'eups2git_ref', 'repos_for_team',
-           'github_2fa_callback', 'TempDir', 'gitusername', 'gituseremail',
-           'get_team_id_by_name', 'get_git_credential_helper', 'eprint',
-           'info', 'debug', 'warn', 'error',
-           'current_timestamp']
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
 
 
+# based on _VersionAction() from:
+# https://github.com/python/cpython/blob/3.6/Lib/argparse.py
+class ScmVersionAction(argparse.Action):
+    """Print --version string as `<command> <version>` where `version` is the
+    distirubtion version."""
+    def __init__(self,
+                 option_strings,
+                 version=None,
+                 dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS,
+                 help="show program's version number and exit"):
+        super(ScmVersionAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help)
+        self.version = version
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        version = get_distribution('sqre-codekit').version
+        formatter = parser._get_formatter()
+        formatter.add_text("%(prog)s {v}".format(v=version))
+        parser._print_message(formatter.format_help(), sys.stdout)
+        parser.exit()
+
+
+@public
+def lookup_email(args):
+    """Return the email address to use when creating git objects or exit
+    program.
+
+    Parameters
+    ----------
+    args: parser.parse_args()
+
+    Returns
+    -------
+    email : `string`
+        git user email address
+    """
+    email = args.email
+    if email is None:
+        email = gituseremail()
+
+    if email is None:
+        error('unable to determine a git email')
+        sys.exit('Specify --email option')
+
+    debug("email is {email}".format(email=email))
+
+    return email
+
+
+@public
+def lookup_user(args):
+    """Return the user name to use when creating git objects or exit
+    program.
+
+    Parameters
+    ----------
+    args: parser.parse_args()
+
+    Returns
+    -------
+    user: `string`
+        git user name
+    """
+    user = args.user
+    if user is None:
+        user = gitusername()
+
+    if user is None:
+        error('unable to determine a git user name')
+        sys.exit("Specify --user option")
+
+    debug("user name is {user}".format(user=user))
+
+    return user
+
+
+@public
 def github_token(token_path=None, token=None):
     """Return a github oauth token as a string.  If `token` is defined, it is
     has precendece.  If `token` and `token_path` are `None`,
@@ -64,6 +142,7 @@ def github_token(token_path=None, token=None):
     return token
 
 
+@public
 def login_github(token_path=None, token=None):
     """Log into GitHub using an existing token.
 
@@ -87,6 +166,7 @@ def login_github(token_path=None, token=None):
     return ghb
 
 
+@public
 def gitusername():
     """
     Returns the user's name from .gitconfig if available
@@ -98,6 +178,7 @@ def gitusername():
         return None
 
 
+@public
 def gituseremail():
     """
     Returns the user's email from .gitconfig if available
@@ -110,6 +191,7 @@ def gituseremail():
         return None
 
 
+@public
 def github_2fa_callback():
     """
     Prompt for two-factor code
@@ -123,6 +205,7 @@ def github_2fa_callback():
     return code
 
 
+@public
 def repos_for_team(org, teams=None):
     """Iterate over repos in a GitHub organization that are in the given
     set of teams.
@@ -152,6 +235,7 @@ def repos_for_team(org, teams=None):
             yield repo
 
 
+@public
 def open_repo(org, repo_name):
     """Open a :class:`github3.repos.repo.Repository` instance by name
     in a GitHub organization.
@@ -175,6 +259,7 @@ def open_repo(org, repo_name):
             return repo
 
 
+@public
 def get_team_id_by_name(org, team_name, debug=False):
     """Get the ID of a team in a GitHub organization.
 
@@ -219,6 +304,7 @@ def get_team_id_by_name(org, team_name, debug=False):
                                                                org.login))
 
 
+@public
 def get_git_credential_helper(username, token):
     """Get a string suitable for inclusion in a git config as a credential
     helper, allowing authenticated access without prompting for a password.
@@ -251,6 +337,7 @@ def get_git_credential_helper(username, token):
 
 
 @functools.lru_cache(maxsize=1024)
+@public
 def fetch_manifest_file(
     build_id,
     versiondb='https://raw.githubusercontent.com'
@@ -275,6 +362,7 @@ def fetch_manifest_file(
 
 
 @functools.lru_cache(maxsize=1024)
+@public
 def parse_manifest_file(data):
     products = {}
 
@@ -301,6 +389,7 @@ def parse_manifest_file(data):
 
 
 @functools.lru_cache(maxsize=1024)
+@public
 def eups2git_ref(
     product,
     eups_version,
@@ -326,28 +415,27 @@ def eups2git_ref(
         )
 
 
+@public
 def info(*args):
     logger.info(*args)
 
 
+@public
 def debug(*args):
     logger.debug(*args)
 
 
+@public
 def warn(*args):
     logger.warn(*args)
 
 
+@public
 def error(*args):
     logger.error(*args)
 
 
-# https://stackoverflow.com/questions/5574702/how-to-print-to-stderr-in-python
-def eprint(*args, **kwargs):
-    """Print to stderr."""
-    print(*args, file=sys.stderr, **kwargs)
-
-
+@public
 class TempDir(object):
     """ContextManager for temporary directories.
 
@@ -371,6 +459,7 @@ class TempDir(object):
         self._temp_dir = None
 
 
+@public
 def current_timestamp():
     """Returns current time as ISO8601 formatted string in the Zulu TZ"""
     now = datetime.utcnow()

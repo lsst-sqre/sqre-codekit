@@ -57,7 +57,7 @@ def parse_args():
         help="team whose repos may be tagged (can specify several times")
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
-        '--tagger',
+        '--user',
         help='Name of person making the tag - defaults to gitconfig value')
     parser.add_argument(
         '--email',
@@ -74,33 +74,8 @@ def parse_args():
         '-d', '--debug',
         action='store_true',
         help='Debug mode')
-    parser.add_argument('-v', '--version',
-                        action='version', version='%(prog)s 0.5')
+    parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
     return parser.parse_args()
-
-
-def lookup_email(args):
-    email = args.email
-    if email is None:
-        email = codetools.gituseremail()
-        if email is None:
-            sys.exit('Specify --email option')
-
-    debug('email is ' + email)
-
-    return email
-
-
-def lookup_tagger(args):
-    tagger = args.tagger
-    if tagger is None:
-        tagger = codetools.gitusername()
-        if tagger is None:
-            sys.exit('Specify --tagger option')
-
-    debug('tagger name is ' + tagger)
-
-    return tagger
 
 
 def find_tag_by_name(repo, tag_name):
@@ -223,12 +198,12 @@ def main():
     gh_org_name = args.org
     tags = args.tag
 
-    tagger_email = lookup_email(args)
-    tagger_name = lookup_tagger(args)
+    git_email = codetools.lookup_email(args)
+    git_user = codetools.lookup_user(args)
 
     tagger = github.InputGitAuthor(
-        tagger_name,
-        tagger_email,
+        git_user,
+        git_email,
         codetools.current_timestamp()
     )
     debug(tagger)

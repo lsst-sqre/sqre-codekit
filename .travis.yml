@@ -13,7 +13,7 @@ matrix:
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-          github-tag-version --dry-run --token "$SQREADMIN_TOKEN" --org 'lsst' --team 'Data Management' --email 'sqre-admin@lists.lsst.org' --tagger 'sqreadmin' 'w.2016.49' 'b2510'
+          github-tag-version --dry-run --token "$SQREADMIN_TOKEN" --org 'lsst' --team 'Data Management' --email 'sqre-admin@lists.lsst.org' --user 'sqreadmin' 'w.2016.49' 'b2510'
         else
           echo "Unable to test github-tag-version without travis secure env vars."
         fi
