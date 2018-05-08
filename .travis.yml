@@ -104,5 +104,7 @@ deploy:
 branches:
   only:
   - master
+  # also matched against tag pushes
+  - /^\d+\.\d+\.\d+$/
 notifications:
   email: false
