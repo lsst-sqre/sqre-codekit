@@ -9,25 +9,25 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # - support repos.yaml for github repo resolution
 # - worth doing the smart thing for externals? (yes for Sims)
 # - deal with authentication version
-# - github api v4 is comming -- when it is stable, switch over and drop usage
-#    of github3.py
 
 # Known Bugs
 # ----------
 # Yeah, the candidate logic is broken, will fix
 
 
+from getpass import getuser
+from .. import codetools
+from .. import debug, warn, error
+import argparse
+import certifi
+import codekit.pygithub as pygithub
+import copy
+import github
 import logging
 import os
 import sys
-import argparse
 import textwrap
-from getpass import getuser
-import certifi
 import urllib3
-import copy
-from .. import codetools
-from .. import debug, warn, error
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
@@ -180,36 +180,35 @@ def parse_eups_tag_file(data):
     return products
 
 
-def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
+def eups_products_to_gh_repos(
+    org,
+    teams,
+    eupsbuild,
+    eups_products,
+    debug=False
+):
     gh_repos = []
 
     for prod in eups_products:
-        debug("looking for git repo for: {prod} {ver}".format(
+        codetools.debug("looking for git repo for: {prod} [{ver}]".format(
             prod=prod['name'],
             ver=prod['eups_version']
         ))
 
-        repo = ghb.repository(orgname, prod['name'])
+        repo = org.get_repo(prod['name'])
 
-        # hard stop if a github repo can not be found
-        if not hasattr(repo, 'name'):
-            raise RuntimeError(
-                "unable to resolve github repo for product: {name}"
-                .format(name=prod['name'])
-            )
+        codetools.debug("  found: {slug}".format(slug=repo.full_name))
 
-        debug("  found: {slug}".format(slug=repo))
-
-        repo_teams = [t.name for t in repo.teams()]
-        if not any(x in repo_teams for x in args.team):
+        repo_teams = [t.name for t in repo.get_teams()]
+        if not any(x in repo_teams for x in teams):
             warn(textwrap.dedent("""\
                 No action for {repo}
                   has teams: {repo_teams}
                   does not belong to any of: {tag_teams}\
                 """).format(
-                repo=repo,
+                repo=repo.full_name,
                 repo_teams=repo_teams,
-                tag_teams=args.team,
+                tag_teams=teams,
             ))
             continue
 
@@ -217,7 +216,7 @@ def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
             product=repo.name,
             eups_version=prod['eups_version'],
             build_id=eupsbuild,
-            debug=args.debug
+            debug=debug
         )
 
         gh_repos.append({
@@ -230,11 +229,39 @@ def eups_products_to_gh_repos(args, ghb, orgname, eupsbuild, eups_products):
     return gh_repos
 
 
+def author_to_dict(obj):
+    """Who needs a switch/case statement when you can instead use this easy to
+    comprehend drivel?
+    """
+    def default():
+        raise RuntimeError("unsupported type {t}".format(t=type(obj).__name__))
+
+    # a more pythonic way to handle this would be several try blocks to catch
+    # missing attributes
+    return {
+        # GitAuthor has name,email,date properties
+        'GitAuthor': lambda x: {'name': x.name, 'email': x.email},
+        # InputGitAuthor only has _identity, which returns a dict
+        'InputGitAuthor': lambda x: x._identity,
+    }.get(type(obj).__name__, lambda x: default())(obj)
+
+
+def cmp_gitauthor(a, b):
+    # ignore date
+    if cmp_dict(author_to_dict(a), author_to_dict(b), ['date']):
+        return True
+
+    return False
+
+
 def cmp_existing_git_tag(t_tag, e_tag):
+    assert isinstance(t_tag, dict)
+    assert isinstance(e_tag, github.GitTag.GitTag)
+
     # ignore date when comparing tag objects
-    if t_tag['sha'] == e_tag.object.sha or \
-       t_tag['message'] == e_tag.message or \
-       (cmp_dict(t_tag['tagger'], e_tag.tagger, ['date'])):
+    if t_tag['sha'] == e_tag.object.sha and \
+       t_tag['message'] == e_tag.message and \
+       cmp_gitauthor(t_tag['tagger'], e_tag.tagger):
         return True
 
     return False
@@ -266,14 +293,13 @@ def check_existing_git_tag(repo, t_tag):
           .format(tag=t_tag['name']))
 
     # find ref/tag by name
-    tagfmt = "tags/{ref}".format(ref=t_tag['name'])
-    e_ref = repo['repo'].ref(tagfmt)
-
+    e_ref = pygithub.find_tag_by_name(repo['repo'], t_tag['name'])
     if not e_ref:
+        debug("  not found: {tag}".format(tag=t_tag['name']))
         return False
 
     # find tag object pointed to by the ref
-    e_tag = repo['repo'].tag(e_ref.object.sha)
+    e_tag = repo['repo'].get_git_tag(e_ref.object.sha)
     debug("  found existing tag: {tag}".format(tag=e_tag))
 
     if cmp_existing_git_tag(t_tag, e_tag):
@@ -318,7 +344,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
               sha: {sha} as {gt}
               (eups version: {et})\
             """).format(
-            repo=repo['repo'],
+            repo=repo['repo'].full_name,
             sha=t_tag['sha'],
             gt=t_tag['name'],
             et=repo['eups_version']
@@ -331,7 +357,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
                     No action for {repo}
                       existing tag: {tag} is already in sync\
                     """).format(
-                    repo=repo['repo'],
+                    repo=repo['repo'].full_name,
                     tag=t_tag['name'],
                 ))
 
@@ -354,18 +380,29 @@ def tag_gh_repos(gh_repos, args, tag_template):
         try:
             # create_tag() returns a Tag object on success or None
             # on failure
-            tag = repo['repo'].create_tag(
-                tag=t_tag['name'],
-                message=t_tag['message'],
-                sha=t_tag['sha'],
-                obj_type='commit',
+            tag_obj = repo['repo'].create_git_tag(
+                t_tag['name'],
+                t_tag['message'],
+                t_tag['sha'],
+                'commit',
                 tagger=t_tag['tagger'],
-                lightweight=False,
-                update=update_tag
             )
-            if tag is None:
-                raise RuntimeError('failed to create git tag')
+            debug("  created tag object {tag_obj}".format(tag_obj=tag_obj))
 
+            if update_tag:
+                ref = pygithub.find_tag_by_name(
+                    repo['repo'],
+                    t_tag['name'],
+                    safe=False
+                )
+                ref.edit(tag_obj.sha, force=True)
+                debug("  updated existing ref: {ref}".format(ref=ref))
+            else:
+                ref = repo.create_git_ref(
+                    "refs/tags/{t}".format(t=t_tag['name']),
+                    tag_obj.sha
+                )
+                debug("  created ref: {ref}".format(ref=ref))
         except Exception as e:
             yikes = CaughtGitError(repo['repo'], e)
             tag_exceptions.append(yikes)
@@ -413,24 +450,24 @@ def main():
     message_template = 'Version {v} release from {c}/{b}'
     message = message_template.format(v=version, c=candidate, b=eupsbuild)
 
-    # generate timestamp for github API
-    timestamp = codetools.current_timestamp()
+    tagger = github.InputGitAuthor(
+        git_user,
+        git_email,
+        codetools.current_timestamp()
+    )
+    debug(tagger)
 
     # all tags should be the same across repos -- just add the 'sha' key and
     # stir
     tag_template = {
         'name': version,
         'message': message,
-        'tagger': {
-            'name': git_user,
-            'email': git_email,
-            'date': timestamp,
-        }
+        'tagger': tagger,
     }
 
     debug(tag_template)
 
-    ghb = codetools.login_github(token_path=args.token_path, token=args.token)
+    g = pygithub.login_github(token_path=args.token_path, token=args.token)
 
     debug("Tagging repos in github org: {org}".format(org=orgname))
 
@@ -441,12 +478,14 @@ def main():
 
     manifest = fetch_eups_tag_file(args, eups_candidate)
     eups_products = parse_eups_tag_file(manifest)
+    org = g.get_organization(orgname)
+
     gh_repos = eups_products_to_gh_repos(
-        args,
-        ghb,
-        orgname,
+        org,
+        args.team,
         eupsbuild,
-        eups_products
+        eups_products,
+        args.debug
     )
     tag_gh_repos(gh_repos, args, tag_template)
 
