@@ -19,10 +19,6 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
-        '-u', '--user',
-        required=True,
-        help='GitHub username')
-    parser.add_argument(
         '-o', '--org',
         dest='shadow_org',
         required=True,
@@ -43,9 +39,6 @@ def parse_args():
 def main():
     """Fork all repos into shadow org"""
     args = parse_args()
-
-    if args.debug:
-        print('You are', args.user)
 
     ghb = codetools.login_github(token_path=args.token_path)
 
