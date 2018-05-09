@@ -26,10 +26,9 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
-        '-u', '--user',
-        help='GitHub username',
-        dest='user',
-        required=True)
+        '--org',
+        required=True,
+        help='GitHub Organization')
     parser.add_argument(
         '--token-path',
         default='~/.sq_github_token_delete',
@@ -60,8 +59,7 @@ def countdown_timer():
 def main():
     """Delete Github shadow org"""
     args = parse_args()
-    # Deliberately hardcoding the -shadow part due to cowardice
-    orgname = '{user}-shadow'.format(user=args.user)
+    orgname = args.org
 
     if args.debug:
         print('org:', orgname)
