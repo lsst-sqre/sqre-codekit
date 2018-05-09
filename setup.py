@@ -46,7 +46,6 @@ setup(
         'public==1.0',
         'pygithub',
         'requests>=2.8.1,<3.0.0',
-        'sqre-codekit-github3.py==1.0.0a4',
         'uritemplate.py==2.0.0',
         'urllib3[secure]==1.22',
     ],
