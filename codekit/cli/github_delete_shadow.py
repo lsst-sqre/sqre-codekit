@@ -38,6 +38,11 @@ def parse_args():
         default=None,
         help='Literal github personal access token string')
     parser.add_argument(
+        '--limit',
+        default=None,
+        type=int,
+        help='Maximum number of repos to delete')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -67,7 +72,7 @@ def main():
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(orgname)
     # get all the repos
-    repos = list(org.get_repos())
+    repos = list(org.get_repos())[0:args.limit]
 
     print('Deleting all repos in', orgname)
     print('Now is the time to panic and Ctrl-C')
