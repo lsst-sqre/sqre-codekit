@@ -81,12 +81,18 @@ def main():
         while not password:
             password = getpass('Password for {0}: '.format(args.user))
 
-        note_template = '{app} via bored opossums on {host} by {user} {creds}'
-        note = note_template.format(app=appname,
-                                    host=hostname,
-                                    user=args.user,
-                                    creds=cred_path)
-        note_url = 'https://lsst.org/'
+        note = textwrap.dedent("""\
+            {app} via bored^H^H^H^H^H terrified opossums[1]
+            on {host}
+            by {user} {creds}
+            [1] https://youtu.be/ZtLrn2zPTxQ?t=1m10s
+            """).format(
+            app=appname,
+            host=hostname,
+            user=args.user,
+            creds=cred_path
+        )
+        note_url = 'https://www.youtube.com/watch?v=cFvijBpzD_Y'
 
         if args.delete_role:
             scopes = ['repo', 'user', 'delete_repo', 'admin:org']
