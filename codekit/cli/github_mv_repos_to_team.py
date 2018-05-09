@@ -4,12 +4,18 @@
 # -------------
 # - will need updating to be new permissions model aware
 
-import os
-import logging
-import argparse
-import textwrap
-from time import sleep
+from codekit import pygithub
 from .. import codetools
+from codekit.codetools import info, debug, warn, error
+import argparse
+import github
+import logging
+import os
+import sys
+import textwrap
+
+logger = logging.getLogger('codekit')
+logging.basicConfig()
 
 
 def parse_args():
@@ -30,13 +36,18 @@ def parse_args():
     )
 
     parser.add_argument(
-        'repos', nargs='+',
+        'repos',
+        nargs='+',
         help='Names of repos to move')
     parser.add_argument(
-        '--from', required=True, dest='oldteam',
+        '--from',
+        required=True,
+        dest='oldteam',
         help='Original team name')
     parser.add_argument(
-        '--to', required=True, dest='newteam',
+        '--to',
+        required=True,
+        dest='newteam',
         help='Destination team name')
     parser.add_argument(
         '-o', '--org',
@@ -62,70 +73,75 @@ def parse_args():
     return parser.parse_args()
 
 
+def find_team(teams, name):
+    assert isinstance(teams, list)
+    assert isinstance(name, str) \
+        or isinstance(name, list)
+
+    t = [t for t in teams if t.name in name]
+    if not t:
+        error("unable to find team {team}".format(team=name))
+        sys.exit(1)
+
+    return t
+
+
 def main():
     """Move the repos"""
     args = parse_args()
 
     if args.debug:
-        print(args)
-        logging.getLogger('requests.packages.urllib3')  # NOQA
-        stream_handler = logging.StreamHandler()
-        logger = logging.getLogger('github3')
-        logger.addHandler(stream_handler)
         logger.setLevel(logging.DEBUG)
 
-    ghb = codetools.login_github(token_path=args.token_path, token=args.token)
-    if args.debug:
-        print(type(ghb))
+    g = pygithub.login_github(token_path=args.token_path, token=args.token)
+    org = g.organization(args.org)
 
-    org = ghb.organization(args.org)
-
-    newteamid = codetools.get_team_id_by_name(org, args.newteam, args.debug)
-    oldteamid = codetools.get_team_id_by_name(org, args.oldteam, args.debug)
+    # only iterate over all teams once
+    teams = list(org.get_teams())
+    old_team = find_team(teams, args.oldteam)
+    new_team = find_team(teams, args.newteam)
 
     move_me = args.repos
-    if args.debug:
-        print(len(move_me), 'repos to be moved')
+    debug(len(move_me), 'repos to be moved')
 
-    status = 0
-    status2 = 0
+    added = []
+    removed = []
+    for name in move_me:
+        r = org.get_repo(name)
 
-    for rnm in move_me:
-        repo = args.org + '/' + rnm.rstrip()
-        if newteamid:
-            # Add team to the repo
-            if args.debug or args.dry_run:
-                print('Adding', repo, 'to', args.newteam, '...',)
+        # Add team to the repo
+        debug("Adding {repo} to {team} ...".format(
+            repo=r.full_name,
+            team=args.newteam
+        ))
 
-            if not args.dry_run:
-                status += org.add_repository(repo, newteamid)
-                if status:
-                    print('ok')
-                else:
-                    print('FAILED')
+        if not args.dry_run:
+            try:
+                new_team.add_to_repos(r)
+                added += r.full_name
+                debug('  ok')
+            except github.GithubException as e:
+                debug('  FAILED')
 
-        # remove repo from old team
-        # you cannot move out of Owners
+        if old_team.name in 'Owners':
+            warn("Removing repo {repo} from team 'Owners' is not allowed"
+                 .format(repo=r.full_name))
 
-        if oldteamid and args.oldteam != 'Owners':
-            if args.debug or args.dry_run:
-                print('Removing', repo, 'from', args.oldteam, '...',)
+        debug("Removing {repo} from {team} ...".format(
+            repo=r.full_name,
+            team=args.oldteam
+        ))
 
-            if not args.dry_run:
-                status2 += org.remove_repository(repo, oldteamid)
+        if not args.dry_run:
+            try:
+                old_team.remove_from_repos(r)
+                removed += r.full_name
+                debug('  ok')
+            except github.GithubException as e:
+                debug('  FAILED')
 
-                if status2:
-                    print('ok')
-                else:
-                    print('FAILED')
-
-        # give the API a rest (*snicker*) we don't want to get throttled
-        sleep(1)
-
-    if args.debug:
-        print(' ')
-        print('Added:', status)
-        print('Removed:', status2)
+    info('Added:', added)
+    info('Removed:', removed)
 
 
 if __name__ == '__main__':
