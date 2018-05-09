@@ -48,6 +48,10 @@ def parse_args():
         default='~/.sq_github_token',
         help='Use a token (made with github-auth) in a non-standard location')
     parser.add_argument(
+        '--token',
+        default=None,
+        help='Literal github personal access token string')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -70,7 +74,7 @@ def main():
         logger.addHandler(stream_handler)
         logger.setLevel(logging.DEBUG)
 
-    ghb = codetools.login_github(token_path=args.token_path)
+    ghb = codetools.login_github(token_path=args.token_path, token=args.token)
     if args.debug:
         print(type(ghb))
 
