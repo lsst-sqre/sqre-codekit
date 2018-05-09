@@ -1,6 +1,5 @@
 """
-pygithub based functions intended to replace the github3.py based functions in
-codetools.
+pygithub based help functions for interacting with the github api.
 """
 
 from github import Github
