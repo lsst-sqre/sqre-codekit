@@ -67,7 +67,6 @@ setup(
             'github-list-repos = codekit.cli.github_list_repos:main',
             'github-mv-repos-to-team = codekit.cli.github_mv_repos_to_team:main',  # NOQA
             'github-tag-version = codekit.cli.github_tag_version:main',
-            'lsst-bp = codekit.cli.lsst_bp:main',
             'github-tag-teams = codekit.cli.github_tag_teams:main',
         ]
     }
