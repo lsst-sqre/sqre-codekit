@@ -2,7 +2,6 @@
 # technical debt
 # --------------
 # - package
-# - check explictly for github3 version
 
 import argparse
 import logging
@@ -12,7 +11,6 @@ import shutil
 import tempfile
 import certifi
 import urllib3
-from github3 import login
 import gitconfig
 import functools
 from datetime import datetime
@@ -143,30 +141,6 @@ def github_token(token_path=None, token=None):
 
 
 @public
-def login_github(token_path=None, token=None):
-    """Log into GitHub using an existing token.
-
-    Parameters
-    ----------
-    token_path : str, optional
-        Path to the token file. The default token is used otherwise.
-
-    token: str, optional
-        Literial token string. If specifified, this value is used instead of
-        reading from the token_path file.
-
-    Returns
-    -------
-    gh : :class:`github3.GitHub` instance
-        A GitHub login instance.
-    """
-    token = github_token(token_path=token_path, token=token)
-    ghb = login(token=token, two_factor_callback=github_2fa_callback)
-
-    return ghb
-
-
-@public
 def gitusername():
     """
     Returns the user's name from .gitconfig if available
@@ -196,7 +170,6 @@ def github_2fa_callback():
     """
     Prompt for two-factor code
     """
-    # http://github3py.readthedocs.org/en/master/examples/two_factor_auth.html
     code = ''
     while not code:
         # The user could accidentally press Enter before being ready,
