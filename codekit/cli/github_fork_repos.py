@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fork LSST repos into a showow GitHub organization."""
 
-from codekit.codetools import debug
+from codekit.codetools import debug, error
 from .. import codetools
 import argparse
 import codekit.pygithub as pygithub
@@ -10,6 +10,7 @@ import logging
 import os
 import progressbar
 import textwrap
+import github
 
 progressbar.streams.wrap_stderr()
 logging.basicConfig()
@@ -52,6 +53,111 @@ def parse_args():
     return parser.parse_args()
 
 
+def find_teams_by_repos(src_repos):
+    assert isinstance(src_repos, list), type(src_repos)
+
+    # length of longest repo name
+    max_name_len = len(max([r.full_name for r in src_repos], key=len))
+
+    src_rt = {}
+    for r in src_repos:
+        teams = r.get_teams()
+        team_names = [t.name for t in teams]
+        debug("  {repo: >{w}} {teams}".format(
+            repo=r.full_name,
+            w=max_name_len,
+            teams=team_names
+        ))
+        src_rt[r.full_name] = {'repo': r, 'teams': teams}
+
+    return src_rt
+
+
+def find_used_teams(src_rt):
+    assert isinstance(src_rt, dict), type(src_rt)
+
+    # extract an index of team names from all repos being forked, with the repo
+    # objects as value(s)
+    used_teams = {}
+    for k, v in src_rt.items():
+        for name in [t.name for t in v['teams']]:
+            if name not in used_teams:
+                used_teams[name] = [v['repo']]
+            else:
+                used_teams[name].append(v['repo'])
+
+    return used_teams
+
+
+def create_teams(org, teams):
+    assert isinstance(org, github.Organization.Organization), type(org)
+    assert isinstance(teams, dict), type(teams)
+
+    # it would be fewer api calls to create team(s) with an explicit list of
+    # members after all repos have been forked but I suspect that would cause
+    # trouble if the team already exists
+
+    # index of team objects keyed by name
+    created = {}
+    for name in teams.keys():
+        debug("creating team {t} in {org}".format(t=name, org=org))
+
+        new_team = None
+        try:
+            new_team = org.create_team(name)
+        except github.GithubException as e:
+            error("  {m}".format(m=e.data['message']))
+            for oops in e.data['errors']:
+                msg = oops['message']
+                error("    {m}".format(m=msg))
+                # if the error is for any cause other than the team already
+                # existing, puke.
+                if 'Name has already been taken' not in msg:
+                    raise e
+
+        # there was a non-fatal exception bu we still need to find and return
+        # the team object
+        if not new_team:
+            new_team = next(t for t in org.get_teams() if t.name in name)
+
+        created[new_team.name] = new_team
+
+    return created
+
+
+def create_forks(dst_org, src_rt, dst_teams):
+    assert isinstance(dst_org, github.Organization.Organization),\
+        type(dst_org)
+    assert isinstance(src_rt, dict), type(src_rt)
+    assert isinstance(dst_teams, dict), type(dst_teams)
+
+    repo_count = len(src_rt)
+
+    widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
+
+    # XXX progressbar is not playing nicely with debug output and the advice in
+    # the docs for working with logging don't have any effect.
+    with progressbar.ProgressBar(
+            widgets=widgets,
+            max_value=repo_count) as pbar:
+
+        repo_idx = 0
+        for _, data in src_rt.items():
+            r = data['repo']
+
+            debug("forking {r}".format(r=r.full_name))
+            fork = dst_org.create_fork(r)
+
+            for t in data['teams']:
+                debug("  adding to team '{t}'".format(t=t.name))
+                # find team object
+                dst_t = dst_teams[t.name]
+                dst_t.add_to_repos(fork)
+
+            pbar.update(repo_idx)
+            repo_idx += 1
+
+
 def main():
     """Fork all repos into shadow org"""
     args = parse_args()
@@ -63,9 +169,11 @@ def main():
 
     src_org = g.get_organization('lsst')
     dst_org = g.get_organization(args.shadow_org)
+    # print full Org object as non-visible orgs will have a name of `None`
     debug("forking repos from: {org}".format(org=src_org))
     debug("                to: {org}".format(org=dst_org))
 
+    debug('looking for repos -- this can take a while for large orgs...')
     src_repos = list(itertools.islice(src_org.get_repos(), args.limit))
     repo_count = len(src_repos)
     debug("found {n} repos in {src_org}".format(n=repo_count, src_org=src_org))
@@ -73,21 +181,22 @@ def main():
     debug('repos to be forked:')
     [debug("  {r}".format(r=r.full_name)) for r in src_repos]
 
-    widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
+    debug('checking source repo team membership...')
+    # dict of repo and team objects, keyed by repo name
+    src_rt = find_teams_by_repos(src_repos)
 
-    # XXX progressbar is not playing nicely with debug output and the advice in
-    # the docs for working with logging don't have any effect.
-    with progressbar.ProgressBar(
-            widgets=widgets,
-            max_value=repo_count) as pbar:
+    # extract a non-duplicated list of team names from all repos being forked
+    src_teams = find_used_teams(src_rt)
 
-        repo_idx = 0
-        for r in src_repos:
-            debug("forking {r}".format(r=r.full_name))
+    debug('teams used by repos in source org')
+    [debug("  '{t}'".format(t=t)) for t in src_teams.keys()]
 
-            dst_org.create_fork(r)
-            pbar.update(repo_idx)
-            repo_idx += 1
+    debug('creating teams in destination org...')
+    # dict of dst org teams keyed by name (str) with team object as value
+    dst_teams = create_teams(dst_org, src_teams)
+
+    debug('there is no spoon...')
+    create_forks(dst_org, src_rt, dst_teams)
 
 
 if __name__ == '__main__':
