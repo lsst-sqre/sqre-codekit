@@ -89,22 +89,33 @@ def find_used_teams(src_rt):
     return used_teams
 
 
-def create_teams(org, teams):
+def create_teams(org, teams, with_repos=False, ignore_existing=False):
     assert isinstance(org, github.Organization.Organization), type(org)
     assert isinstance(teams, dict), type(teams)
 
-    # it would be fewer api calls to create team(s) with an explicit list of
-    # members after all repos have been forked but I suspect that would cause
-    # trouble if the team already exists
+    # it takes fewer api calls to create team(s) with an explicit list of
+    # members after all repos have been forked but this blows up if the team
+    # already exists.
 
-    # index of team objects keyed by name
-    created = {}
-    for name in teams.keys():
-        debug("creating team {t} in {org}".format(t=name, org=org))
+    debug("creating teams in {org}".format(org=org))
 
-        new_team = None
+    # dict of dst org teams keyed by name (str) with team object as value
+    dst_teams = {}
+    for name, repos in teams.items():
+
+        dst_t = None
         try:
-            new_team = org.create_team(name)
+            if with_repos:
+                # need full qualified list of repos in the new org
+                dst_repo_names = ['/'.join([org.name, r.name]) for r in repos]
+
+                debug("creating team {t} with members:".format(
+                    t=name, org=org))
+                [debug("  {r}".format(r=r)) for r in dst_repo_names]
+                dst_t = org.create_team(name, repo_names=dst_repo_names)
+            else:
+                debug("creating team {t}".format(t=name, org=org))
+                dst_t = org.create_team(name)
         except github.GithubException as e:
             error("  {m}".format(m=e.data['message']))
             for oops in e.data['errors']:
@@ -112,24 +123,22 @@ def create_teams(org, teams):
                 error("    {m}".format(m=msg))
                 # if the error is for any cause other than the team already
                 # existing, puke.
-                if 'Name has already been taken' not in msg:
+                if not\
+                   (ignore_existing and 'Name has already been taken' in msg):
                     raise e
 
-        # there was a non-fatal exception bu we still need to find and return
-        # the team object
-        if not new_team:
-            new_team = next(t for t in org.get_teams() if t.name in name)
+            dst_t = next(t for t in org.get_teams() if t.name in name)
 
-        created[new_team.name] = new_team
+        dst_teams[dst_t.name] = dst_t
 
-    return created
+    return dst_teams
 
 
-def create_forks(dst_org, src_rt, dst_teams):
+def create_forks(dst_org, src_rt, dst_teams=None):
     assert isinstance(dst_org, github.Organization.Organization),\
         type(dst_org)
     assert isinstance(src_rt, dict), type(src_rt)
-    assert isinstance(dst_teams, dict), type(dst_teams)
+    assert isinstance(dst_teams, (dict, type(None))), type(dst_teams)
 
     repo_count = len(src_rt)
 
@@ -148,11 +157,13 @@ def create_forks(dst_org, src_rt, dst_teams):
             debug("forking {r}".format(r=r.full_name))
             fork = dst_org.create_fork(r)
 
-            for t in data['teams']:
-                debug("  adding to team '{t}'".format(t=t.name))
-                # find team object
-                dst_t = dst_teams[t.name]
-                dst_t.add_to_repos(fork)
+            # add new fork to teams, if we have a list of team objects
+            if dst_teams:
+                for t in data['teams']:
+                    debug("  adding to team '{t}'".format(t=t.name))
+                    # find team object
+                    dst_t = dst_teams[t.name]
+                    dst_t.add_to_repos(fork)
 
             pbar.update(repo_idx)
             repo_idx += 1
@@ -188,15 +199,14 @@ def main():
     # extract a non-duplicated list of team names from all repos being forked
     src_teams = find_used_teams(src_rt)
 
-    debug('teams used by repos in source org')
+    debug("found {n} teams with repo members".format(n=len(src_teams)))
+    debug('teams in use within source org:')
     [debug("  '{t}'".format(t=t)) for t in src_teams.keys()]
 
-    debug('creating teams in destination org...')
-    # dict of dst org teams keyed by name (str) with team object as value
-    dst_teams = create_teams(dst_org, src_teams)
-
     debug('there is no spoon...')
-    create_forks(dst_org, src_rt, dst_teams)
+    create_forks(dst_org, src_rt)
+
+    create_teams(dst_org, src_teams)
 
 
 if __name__ == '__main__':
