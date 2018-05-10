@@ -4,13 +4,13 @@ matrix:
     - env: TEST='pytest' DEPLOYER=true
       language: python
       python: '3.6'
-      install: pip install --upgrade 'pip>=9' setuptools_scm
+      install: pip install --upgrade 'pip>=10' setuptools_scm
       script: python setup.py test
     - env: TEST='github-tag-version --dry-run'
       language: python
       python: '3.6'
       install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
+      - pip install --upgrade 'pip>=10' setuptools_scm
       - python setup.py sdist
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
@@ -32,7 +32,7 @@ matrix:
       language: python
       python: '3.6'
       install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
+      - pip install --upgrade 'pip>=10' setuptools_scm
       - python setup.py sdist
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
