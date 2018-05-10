@@ -41,7 +41,7 @@ setup(
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
         'MapGitConfig==1.1',
-        'progressbar2==3.11.0',
+        'progressbar2==3.37.1',
         'public==1.0',
         'pygithub',
         'requests>=2.8.1,<3.0.0',
