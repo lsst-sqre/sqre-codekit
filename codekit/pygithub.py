@@ -1,16 +1,36 @@
 """
-pygithub based functions intended to replace the github3.py based functions in
-codetools.
+pygithub based help functions for interacting with the github api.
 """
 
-import logging
-import github
-import codekit.codetools as codetools
-from public import public
 from github import Github
+from public import public
+import codekit.codetools as codetools
+import github
+import logging
+import textwrap
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
+
+
+class CaughtGitError(Exception):
+    """Simple exception class intended to bundle together a github.Repository
+    object and a thrown exception
+    """
+    def __init__(self, repo, caught):
+        self.repo = repo
+        self.caught = caught
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Caught: {name}
+              In repo: {repo}
+              Message: {e}\
+            """.format(
+            name=type(self.caught),
+            repo=self.repo.full_name,
+            e=str(self.caught)
+        ))
 
 
 @public

@@ -34,23 +34,6 @@ logger = logging.getLogger('codekit')
 eupspkg_site = 'https://eups.lsst.codes/stack/src'
 
 
-class CaughtGitError(Exception):
-    def __init__(self, repo, caught):
-        self.repo = repo
-        self.caught = caught
-
-    def __str__(self):
-        return textwrap.dedent("""\
-            Caught: {name}
-              In repo: {repo}
-              Message: {e}\
-            """.format(
-            name=type(self.caught),
-            repo=self.repo,
-            e=str(self.caught)
-        ))
-
-
 class GitTagExistsError(Exception):
     pass
 
@@ -363,7 +346,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
 
                 continue
         except GitTagExistsError as e:
-            yikes = CaughtGitError(repo['repo'], e)
+            yikes = pygithub.CaughtGitError(repo['repo'], e)
 
             if args.force_tag:
                 update_tag = True
@@ -404,7 +387,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
                 )
                 debug("  created ref: {ref}".format(ref=ref))
         except Exception as e:
-            yikes = CaughtGitError(repo['repo'], e)
+            yikes = pygithub.CaughtGitError(repo['repo'], e)
             tag_exceptions.append(yikes)
             error(yikes)
 

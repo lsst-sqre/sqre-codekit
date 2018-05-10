@@ -2,7 +2,6 @@
 # technical debt
 # --------------
 # - package
-# - check explictly for github3 version
 
 import argparse
 import logging
@@ -12,7 +11,6 @@ import shutil
 import tempfile
 import certifi
 import urllib3
-from github3 import login
 import gitconfig
 import functools
 from datetime import datetime
@@ -143,30 +141,6 @@ def github_token(token_path=None, token=None):
 
 
 @public
-def login_github(token_path=None, token=None):
-    """Log into GitHub using an existing token.
-
-    Parameters
-    ----------
-    token_path : str, optional
-        Path to the token file. The default token is used otherwise.
-
-    token: str, optional
-        Literial token string. If specifified, this value is used instead of
-        reading from the token_path file.
-
-    Returns
-    -------
-    gh : :class:`github3.GitHub` instance
-        A GitHub login instance.
-    """
-    token = github_token(token_path=token_path, token=token)
-    ghb = login(token=token, two_factor_callback=github_2fa_callback)
-
-    return ghb
-
-
-@public
 def gitusername():
     """
     Returns the user's name from .gitconfig if available
@@ -196,144 +170,12 @@ def github_2fa_callback():
     """
     Prompt for two-factor code
     """
-    # http://github3py.readthedocs.org/en/master/examples/two_factor_auth.html
     code = ''
     while not code:
         # The user could accidentally press Enter before being ready,
         # let's protect them from doing that.
         code = input('Enter 2FA code: ')
     return code
-
-
-@public
-def repos_for_team(org, teams=None):
-    """Iterate over repos in a GitHub organization that are in the given
-    set of teams.
-
-    Parameters
-    ----------
-    org : class:`github3.github3.orgs.Organization` instance
-        The GitHub organization to operate in. Usually created with the
-        :meth:`github3.GitHub.organization` method.
-    teams : iterable
-        A sequence of team names (as strings). If `None` (default) then
-        team identity will be ignored and all repos in the organization
-        will be iterated over.
-
-    Yields
-    ------
-    repo : :class:`github3.repos.repo.Repository`
-        Yields repositiory instances that pass organization and team criteria.
-    """
-    if teams is not None:
-        teams = set(teams)
-    for repo in org.repositories():
-        repo_teams = set([t.name for t in repo.teams()])
-        if teams is None:
-            yield repo
-        elif repo_teams.isdisjoint(teams) is False:
-            yield repo
-
-
-@public
-def open_repo(org, repo_name):
-    """Open a :class:`github3.repos.repo.Repository` instance by name
-    in a GitHub organization.
-
-    Parameters
-    ----------
-    org : class:`github3.github3.orgs.Organization` instance
-        The GitHub organization to operate in. Usually created with the
-        :meth:`github3.GitHub.organization` method.
-    repo_name : str
-        Name of the repository (without the organization namespace).
-        E.g. `'afw'`.
-
-    Returns
-    -------
-    repo : :class:`github3.repos.repo.Repository`
-        The repository instance.
-    """
-    for repo in org.repositories():
-        if repo.name == repo_name:
-            return repo
-
-
-@public
-def get_team_id_by_name(org, team_name, debug=False):
-    """Get the ID of a team in a GitHub organization.
-
-    Parameters
-    ----------
-    org : class:`github3.github3.orgs.Organization` instance
-        The GitHub organization to operate in. Usually created with the
-        :meth:`github3.GitHub.organization` method.
-    team_name : `str`
-        Name of the team to find
-    debug : `bool`, optional
-        Enable debug output.
-
-    Returns
-    -------
-    team_id : `int` or `None`
-        The team ID as an integer, or `None` if `team_name` is the empty
-        string.
-
-    Raises
-    ------
-    `NameError`
-        If there is no team with the given name in the supplied organization.
-    """
-
-    if team_name == '':
-        if debug:
-            print("Searching for empty teamname -> None")
-        return None  # Special case for empty teams
-    teams = org.teams()
-    try:
-        while True:
-            team = teams.next()
-            if debug:
-                print("Considering team %s with ID %i" % (team.name, team.id))
-            if team.name == team_name:
-                if debug:
-                    print("Match found.")
-                return team.id
-    except StopIteration:
-        raise NameError("No team '%s' in organization '%s'" % (team_name,
-                                                               org.login))
-
-
-@public
-def get_git_credential_helper(username, token):
-    """Get a string suitable for inclusion in a git config as a credential
-    helper, allowing authenticated access without prompting for a password.
-
-    Useful for, e.g., doing a push to Github from a local repo.
-
-    Parameters
-    ----------
-    username: `str`
-        The GitHub username for the authenticated action.
-    token: `str`
-        The corresponding access token.
-
-    Returns
-    -------
-    helper : `str`
-        A string which is a runnable shell fragment for use in a git config.
-    """
-    # The initial bang tells git it's about to run a shell fragment.
-    #  The rest is a string, which will be evaluated in the shell (so don't
-    #  take unsanitized input from the outside world!)
-    # It defines a function to swallow any input and put username and password
-    #  on separate lines: it substitutes its parameter values into the
-    #  username/password values.
-    # This means it will work under `git credential fill`, which is the
-    #  entire point.
-    helper = '!"f() { cat > /dev/null ; echo username=' + username
-    helper += ' ; echo password=' + token + ' ; } ; f"'
-    return helper
 
 
 @functools.lru_cache(maxsize=1024)

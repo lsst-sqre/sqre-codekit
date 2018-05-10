@@ -7,10 +7,11 @@
 # Known Bugs
 # ----------
 
-import argparse
-import textwrap
-import os
 from .. import codetools
+import argparse
+import codekit.pygithub as pygithub
+import os
+import textwrap
 
 
 def parse_args():
@@ -58,6 +59,10 @@ def parse_args():
         default='~/.sq_github_token',
         help='Use a token (made with github-auth) in a non-standard loction')
     parser.add_argument(
+        '--token',
+        default=None,
+        help='Literal github personal access token string')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -69,15 +74,15 @@ def parse_args():
 def main():
     """List repos and teams"""
     args = parse_args()
-    ghb = codetools.login_github(token_path=args.token_path)
+    g = pygithub.login_github(token_path=args.token_path, token=args.token)
 
     if not args.hide:
         args.hide = []
 
-    org = ghb.organization(args.organization)
+    org = g.get_organization(args.organization)
 
-    for repo in org.repositories():
-        teamnames = [t.name for t in repo.teams()
+    for r in org.get_repos():
+        teamnames = [t.name for t in r.get_teams()
                      if t.name not in args.hide]
         maxt = args.maxt if (args.maxt is not None and
                              args.maxt >= 0) else len(teamnames)
@@ -85,7 +90,7 @@ def main():
             print("MAXT=", maxt)
 
         if args.mint <= len(teamnames) <= maxt:
-            print(repo.name.ljust(40) + args.delimiter.join(teamnames))
+            print(r.name.ljust(40) + args.delimiter.join(teamnames))
 
 
 if __name__ == '__main__':
