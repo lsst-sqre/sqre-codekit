@@ -10,9 +10,8 @@ matrix:
       language: python
       python: '3.6'
       install:
-      - pip install --upgrade 'pip>=10' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      - pip install --upgrade 'pip>=10'
+      - pip install .
       script: |
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           github-tag-version \
@@ -32,9 +31,8 @@ matrix:
       language: python
       python: '3.6'
       install:
-      - pip install --upgrade 'pip>=10' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      - pip install --upgrade 'pip>=10'
+      - pip install .
       script: |
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           github-tag-teams \
