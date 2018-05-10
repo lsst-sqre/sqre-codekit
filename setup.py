@@ -45,7 +45,6 @@ setup(
         'public==1.0',
         'pygithub',
         'requests>=2.8.1,<3.0.0',
-        'urllib3[secure]==1.22',
     ],
     setup_requires=[
         'pytest-runner>=2.11.1,<3'

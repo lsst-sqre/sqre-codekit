@@ -3,19 +3,18 @@
 # --------------
 # - package
 
+from datetime import datetime
+from pkg_resources import get_distribution
+from public import public
 import argparse
+import functools
+import gitconfig
 import logging
 import os
-import sys
+import requests
 import shutil
+import sys
 import tempfile
-import certifi
-import urllib3
-import gitconfig
-import functools
-from datetime import datetime
-from public import public
-from pkg_resources import get_distribution
 
 
 logging.basicConfig()
@@ -191,16 +190,10 @@ def fetch_manifest_file(
     logger.debug("fetching: {url}".format(url=shafile))
 
     # Get the file tying shas to eups versions
-    http = urllib3.PoolManager(
-        cert_reqs='CERT_REQUIRED',
-        ca_certs=certifi.where()
-    )
+    r = requests.get(shafile)
+    r.raise_for_status()
 
-    manifest = http.request('GET', shafile)
-    if manifest.status >= 300:
-        raise RuntimeError('Failed GET with HTTP code', manifest.status)
-
-    return manifest.data
+    return r.text
 
 
 @functools.lru_cache(maxsize=1024)

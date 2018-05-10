@@ -19,15 +19,14 @@ from getpass import getuser
 from .. import codetools
 from .. import debug, warn, error
 import argparse
-import certifi
 import codekit.pygithub as pygithub
 import copy
 import github
 import logging
 import os
+import requests
 import sys
 import textwrap
-import urllib3
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
@@ -125,17 +124,10 @@ def fetch_eups_tag_file(args, eups_candidate):
                                 eups_candidate + '.list'))
     debug("fetching: {url}".format(url=eupspkg_taglist))
 
-    http = urllib3.PoolManager(
-        cert_reqs='CERT_REQUIRED',
-        ca_certs=certifi.where()
-    )
+    r = requests.get(eupspkg_taglist)
+    r.raise_for_status()
 
-    manifest = http.request('GET', eupspkg_taglist)
-
-    if manifest.status >= 300:
-        sys.exit("Failed GET")
-
-    return manifest.data
+    return r.text
 
 
 def parse_eups_tag_file(data):
