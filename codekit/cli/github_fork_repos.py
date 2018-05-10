@@ -5,6 +5,7 @@ from codekit.codetools import debug
 from .. import codetools
 import argparse
 import codekit.pygithub as pygithub
+import itertools
 import logging
 import os
 import progressbar
@@ -38,6 +39,11 @@ def parse_args():
         default=None,
         help='Literal github personal access token string')
     parser.add_argument(
+        '--limit',
+        default=None,
+        type=int,
+        help='Maximum number of repos to fork')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -60,7 +66,7 @@ def main():
     debug("forking repos from: {org}".format(org=src_org))
     debug("                to: {org}".format(org=dst_org))
 
-    src_repos = list(src_org.get_repos())
+    src_repos = list(itertools.islice(src_org.get_repos(), args.limit))
     repo_count = len(src_repos)
     debug("found {n} repos in {src_org}".format(n=repo_count, src_org=src_org))
 
