@@ -1,12 +1,13 @@
 sudo: false
-language: python
 matrix:
   include:
     - env: TEST='pytest' DEPLOYER=true
+      language: python
       python: '3.6'
       install: pip install --upgrade 'pip>=9' setuptools_scm
       script: python setup.py test
     - env: TEST='github-tag-version --dry-run'
+      language: python
       python: '3.6'
       install:
       - pip install --upgrade 'pip>=9' setuptools_scm
@@ -28,6 +29,7 @@ matrix:
           echo "Unable to test without travis secure env vars."
         fi
     - env: TEST='github-tag-teams --dry-run'
+      language: python
       python: '3.6'
       install:
       - pip install --upgrade 'pip>=9' setuptools_scm
@@ -52,6 +54,7 @@ matrix:
           echo "Unable to test without travis secure env vars."
         fi
     - env: TEST=hadolint
+      language: c
       services:
         - docker
       script: |
@@ -64,6 +67,7 @@ matrix:
             hadolint/hadolint hadolint "$f"
         done
     - env: TEST=make
+      language: c
       script: |
         set -e
         shopt -s globstar nullglob
@@ -77,6 +81,7 @@ matrix:
           )
         done
     - env: TEST=markdownlint
+      language: c
       services:
         - docker
       script: |
