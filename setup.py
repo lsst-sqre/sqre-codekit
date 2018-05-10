@@ -40,13 +40,11 @@ setup(
     use_scm_version=True,
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
-        'GitPython==1.0.1',
         'MapGitConfig==1.1',
         'progressbar2==3.11.0',
         'public==1.0',
         'pygithub',
         'requests>=2.8.1,<3.0.0',
-        'uritemplate.py==2.0.0',
         'urllib3[secure]==1.22',
     ],
     setup_requires=[
