@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Delete all repos in the Github <user>-shadow org."""
 
-from codekit.codetools import error
+from codekit.codetools import debug, error, info, warn
 from codekit import codetools
 from codekit import pygithub
 from time import sleep
@@ -62,34 +62,34 @@ def countdown_timer():
 
 
 def main():
-    """Delete Github shadow org"""
     args = parse_args()
-    orgname = args.org
 
     if args.debug:
-        print('org:', orgname)
+        logger.setLevel(logging.DEBUG)
 
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
-    org = g.get_organization(orgname)
+    org = g.get_organization(args.org)
+
     # get all the repos
     repos = list(org.get_repos())[0:args.limit]
 
-    print('Deleting all repos in', orgname)
-    print('Now is the time to panic and Ctrl-C')
+    # print full Org object as non-visible orgs will have a name of `None`
+    warn("Deleting all repos in {org}".format(org=org))
+    warn('Now is the time to panic and Ctrl-C')
 
     countdown_timer()
 
-    print('Here goes:')
+    info('Here goes:')
 
     if args.debug:
         delay = 5
-        print(delay, 'second gap between deletions')
+        debug("using a {d} second gap between deletions".format(d=delay))
 
     work = 0
     nowork = 0
     problems = []
     for r in repos:
-        print('Next deleting:', r.full_name, '...',)
+        info("deleting: {r}".format(r=r.full_name))
 
         if args.debug:
             sleep(delay)
@@ -97,14 +97,14 @@ def main():
         try:
             r.delete()
             work += 1
-            print('ok')
+            info('ok')
         except github.GithubException as e:
             yikes = pygithub.CaughtGitError(r, e)
             problems.append(yikes)
             nowork += 1
-            print('FAILED - does your token have delete_repo scope?')
+            error('FAILED - does your token have delete_repo scope?')
 
-    print('Done - Succeed:', work, 'Failed:', nowork)
+    info("Done - Succeed: {s} Failed: {n}".format(s=work, n=nowork))
     if problems:
         error("ERROR: {n} failures".format(n=str(len(problems))))
 
@@ -114,7 +114,8 @@ def main():
         sys.exit(1)
 
     if work:
-        print('Consider deleting your privileged auth token', args.token_path)
+        info("Consider deleting your privileged auth token @ {path}".format(
+            path=args.token_path))
 
 
 if __name__ == '__main__':
