@@ -7,6 +7,7 @@ from codekit import pygithub
 from time import sleep
 import argparse
 import github
+import itertools
 import logging
 import os
 import progressbar
@@ -71,7 +72,7 @@ def main():
     org = g.get_organization(args.org)
 
     # get all the repos
-    repos = list(org.get_repos())[0:args.limit]
+    repos = list(itertools.islice(org.get_repos(), args.limit))
 
     # print full Org object as non-visible orgs will have a name of `None`
     warn("Deleting all repos in {org}".format(org=org))
