@@ -40,7 +40,6 @@ setup(
     use_scm_version=True,
     packages=find_packages(exclude=['docs', 'tests*']),
     install_requires=[
-        'GitPython==1.0.1',
         'MapGitConfig==1.1',
         'progressbar2==3.11.0',
         'public==1.0',
