@@ -50,6 +50,10 @@ def parse_args():
         type=int,
         help='Maximum number of repos to fork')
     parser.add_argument(
+        '--copy-teams',
+        action='store_true',
+        help='Recreate team membership on forked repos')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -199,9 +203,10 @@ def main():
     debug('repos to be forked:')
     [debug("  {r}".format(r=r.full_name)) for r in src_repos]
 
-    debug('checking source repo team membership...')
-    # dict of repo and team objects, keyed by repo name
-    src_rt = find_teams_by_repos(src_repos)
+    if args.copy_teams:
+        debug('checking source repo team membership...')
+        # dict of repo and team objects, keyed by repo name
+        src_rt = find_teams_by_repos(src_repos)
 
     # extract a non-duplicated list of team names from all repos being forked
     src_teams = find_used_teams(src_rt)
@@ -213,7 +218,8 @@ def main():
     debug('there is no spoon...')
     create_forks(dst_org, src_rt)
 
-    create_teams(dst_org, src_teams)
+    if args.copy_teams:
+        create_teams(dst_org, src_teams)
 
 
 if __name__ == '__main__':
