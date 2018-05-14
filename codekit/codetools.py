@@ -303,3 +303,21 @@ def current_timestamp():
     debug("generated timestamp: {now}".format(now=timestamp))
 
     return timestamp
+
+
+@public
+def validate_org(org):
+    """Check that organization name is 'safe' to use for possibly destructive
+    operations.
+
+    Parameters
+    ----------
+    org: str
+        Name of github organization
+
+    Raises
+    ------
+    AssertionError
+        To chicken out on org name
+    """
+    assert 'lsst' not in org, '"lsst" not allowed in org name.'
