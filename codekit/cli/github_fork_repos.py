@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Fork LSST repos into a showow GitHub organization."""
 
-from codekit.codetools import debug, error
+from codekit.codetools import debug, error, warn
 from .. import codetools
 import argparse
 import codekit.pygithub as pygithub
+import datetime
+import github
 import itertools
 import logging
 import os
 import progressbar
+import sys
 import textwrap
-import github
 
 progressbar.streams.wrap_stderr()
 logging.basicConfig()
@@ -22,7 +23,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-fork-repos',
         description=textwrap.dedent("""
-        Fork LSST into a shadow GitHub organization.
+        Fork LSST repos into a showow GitHub organization.
         """),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
@@ -36,6 +37,12 @@ def parse_args():
         dest='dst_org',
         required=True,
         help='Organization to fork repos *into*')
+    parser.add_argument(
+        '--team',
+        action='append',
+        required=True,
+        help='Filter repos to fork by team membership'
+             ' (can specify several times')
     parser.add_argument(
         '--token-path',
         default='~/.sq_github_token',
@@ -52,7 +59,11 @@ def parse_args():
     parser.add_argument(
         '--copy-teams',
         action='store_true',
-        help='Recreate team membership on forked repos')
+        help=textwrap.dedent("""\
+            Recreate team membership on forked repos.  This will copy *all*
+            teams a repo is a member of, reguardless if they were specified as
+            a selection "--team" or not.\
+        """))
     parser.add_argument(
         '-d', '--debug',
         action='store_true',
@@ -160,15 +171,23 @@ def create_forks(dst_org, src_repos):
 
         repo_idx = 0
         for r in src_repos:
+            now = datetime.datetime.now()
+
             debug("forking {r}".format(r=r.full_name))
-            dst_org.create_fork(r)
+            fork = dst_org.create_fork(r)
+            debug("  -> {r}".format(r=fork.full_name))
+
+            if fork.created_at < now:
+                warn("fork of {r} already exists\n  created_at {ctime}".format(
+                    r=fork.full_name,
+                    ctime=fork.created_at
+                ))
 
             pbar.update(repo_idx)
             repo_idx += 1
 
 
 def main():
-    """Fork all repos into shadow org"""
     args = parse_args()
 
     if args.debug:
@@ -185,9 +204,22 @@ def main():
     debug("                to: {org}".format(org=dst_org))
 
     debug('looking for repos -- this can take a while for large orgs...')
-    src_repos = list(itertools.islice(src_org.get_repos(), args.limit))
+    if args.team:
+        debug('selecting repos by membership in team(s):')
+        fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
+        [debug("  {t}".format(t=t.name)) for t in fork_teams]
+        fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
+        repos = pygithub.get_repos_by_team(fork_teams)
+    else:
+        repos = pygithub.get_repos_by_team(fork_teams)
+
+    src_repos = list(itertools.islice(repos, args.limit))
+
     repo_count = len(src_repos)
     debug("found {n} repos in {src_org}".format(n=repo_count, src_org=src_org))
+    if not repo_count:
+        debug('nothing to do -- exiting')
+        sys.exit(0)
 
     debug('repos to be forked:')
     [debug("  {r}".format(r=r.full_name)) for r in src_repos]
