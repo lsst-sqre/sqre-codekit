@@ -18,6 +18,9 @@ class CaughtGitError(Exception):
     object and a thrown exception
     """
     def __init__(self, repo, caught):
+        assert isinstance(repo, github.Repository.Repository), type(repo)
+        assert isinstance(caught, Exception)
+
         self.repo = repo
         self.caught = caught
 
