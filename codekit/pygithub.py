@@ -40,12 +40,10 @@ class CaughtTeamError(Exception):
     """Simple exception class intended to bundle together a github.Repository
     object and a thrown exception
     """
-    def __init__(self, org, team, caught):
-        assert isinstance(org, github.Organization.Organization), type(org)
+    def __init__(self, team, caught):
         assert isinstance(team, github.Team.Team), type(team)
         assert isinstance(caught, Exception)
 
-        self.org = org
         self.team = team
         self.caught = caught
 
@@ -56,8 +54,8 @@ class CaughtTeamError(Exception):
               Message: {e}\
             """.format(
             name=type(self.caught),
-            team=self.team.name,
-            org=self.org.name,
+            team=self.team.slug,
+            org=self.team.organization.name,
             e=str(self.caught)
         ))
 

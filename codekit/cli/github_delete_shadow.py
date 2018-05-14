@@ -44,6 +44,10 @@ def parse_args():
         type=int,
         help='Maximum number of repos to delete')
     parser.add_argument(
+        '--delete-teams',
+        action='store_true',
+        help='Delete *ALL* teams in org in addition to removing repos')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -60,6 +64,44 @@ def countdown_timer():
         pbar.update(i)
         sleep(0.1)
     pbar.finish()
+
+
+def delete_all_teams(org, **kwargs):
+    assert isinstance(org, github.Organization.Organization), type(org)
+    limit = kwargs.pop('limit', None)
+
+    teams = list(itertools.islice(org.get_teams(), limit))
+    # print full Org object as non-visible orgs will have a name of `None`
+    info("found {n} teams in {org}".format(n=len(teams), org=org))
+    [debug("  {t}".format(t=t)) for t in teams]
+
+    return delete_teams(teams, **kwargs)
+
+
+def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
+    assert isinstance(teams, list), type(teams)
+
+    problems = []
+    for t in teams:
+        if delay:
+            sleep(delay)
+
+        try:
+            info("deleting team: {t}".format(t=t.name))
+            if dry_run:
+                debug('  (noop)')
+                continue
+            t.delete()
+            info('OK')
+        except github.GithubException as e:
+            yikes = pygithub.CaughtTeamError(t, e)
+            problems.append(yikes)
+            error(yikes)
+
+            if fail_fast:
+                raise
+
+    return problems
 
 
 def main():
@@ -104,8 +146,13 @@ def main():
             problems.append(yikes)
             nowork += 1
             error('FAILED - does your token have delete_repo scope?')
+            error(yikes)
 
     info("Done - Succeed: {s} Failed: {n}".format(s=work, n=nowork))
+
+    if args.delete_teams:
+        problems += delete_all_teams(org)
+
     if problems:
         error("ERROR: {n} failures".format(n=str(len(problems))))
 
