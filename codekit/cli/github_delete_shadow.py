@@ -174,6 +174,10 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
     return problems
 
 
+def validate_org(org):
+    assert 'lsst' not in org, '"lsst" not allowed in org name.'
+
+
 def main():
     args = parse_args()
 
@@ -181,6 +185,7 @@ def main():
         logger.setLevel(logging.DEBUG)
 
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
+    validate_org(args.org)
     org = g.get_organization(args.org)
 
     # list of exceptions
