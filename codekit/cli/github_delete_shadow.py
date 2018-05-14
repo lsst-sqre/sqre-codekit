@@ -6,6 +6,7 @@ from codekit import codetools
 from codekit import pygithub
 from time import sleep
 import argparse
+import functools
 import github
 import itertools
 import logging
@@ -66,6 +67,61 @@ def countdown_timer():
     pbar.finish()
 
 
+def wait_for_user_panic():
+    warn('Now is the time to panic and Ctrl-C')
+    countdown_timer()
+
+
+@functools.lru_cache()
+def wait_for_user_panic_once():
+    wait_for_user_panic()
+
+
+def delete_all_repos(org, **kwargs):
+    assert isinstance(org, github.Organization.Organization), type(org)
+    limit = kwargs.pop('limit', None)
+
+    repos = list(itertools.islice(org.get_repos(), limit))
+    # print full Org object as non-visible orgs will have a name of `None`
+    info("found {n} repos in {org}".format(n=len(repos), org=org))
+    [debug("  {r}".format(r=r)) for r in repos]
+
+    if repos:
+        warn("Deleting all repos in {org}".format(org=org))
+        wait_for_user_panic_once()
+
+    return delete_repos(repos, **kwargs)
+
+
+def delete_repos(repos, fail_fast=False, dry_run=False, delay=0):
+    assert isinstance(repos, list), type(repos)
+
+    problems = []
+    for r in repos:
+        assert isinstance(r, github.Repository.Repository), type(r)
+
+        if delay:
+            sleep(delay)
+
+        try:
+            info("deleting: {r}".format(r=r.full_name))
+            if dry_run:
+                info('  (noop)')
+                continue
+            r.delete()
+            info('OK')
+        except github.GithubException as e:
+            yikes = pygithub.CaughtGitError(r, e)
+            problems.append(yikes)
+            error('FAILED - does your token have delete_repo scope?')
+            error(yikes)
+
+            if fail_fast:
+                raise
+
+    return problems
+
+
 def delete_all_teams(org, **kwargs):
     assert isinstance(org, github.Organization.Organization), type(org)
     limit = kwargs.pop('limit', None)
@@ -74,6 +130,10 @@ def delete_all_teams(org, **kwargs):
     # print full Org object as non-visible orgs will have a name of `None`
     info("found {n} teams in {org}".format(n=len(teams), org=org))
     [debug("  {t}".format(t=t)) for t in teams]
+
+    if teams:
+        warn("Deleting all teams in {org}".format(org=org))
+        wait_for_user_panic_once()
 
     return delete_teams(teams, **kwargs)
 
@@ -113,42 +173,8 @@ def main():
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(args.org)
 
-    # get all the repos
-    repos = list(itertools.islice(org.get_repos(), args.limit))
-
-    # print full Org object as non-visible orgs will have a name of `None`
-    warn("Deleting all repos in {org}".format(org=org))
-    warn('Now is the time to panic and Ctrl-C')
-
-    countdown_timer()
-
-    info('Here goes:')
-
-    if args.debug:
-        delay = 5
-        debug("using a {d} second gap between deletions".format(d=delay))
-
-    work = 0
-    nowork = 0
     problems = []
-    for r in repos:
-        info("deleting: {r}".format(r=r.full_name))
-
-        if args.debug:
-            sleep(delay)
-
-        try:
-            r.delete()
-            work += 1
-            info('ok')
-        except github.GithubException as e:
-            yikes = pygithub.CaughtGitError(r, e)
-            problems.append(yikes)
-            nowork += 1
-            error('FAILED - does your token have delete_repo scope?')
-            error(yikes)
-
-    info("Done - Succeed: {s} Failed: {n}".format(s=work, n=nowork))
+    problems += delete_all_repos(org, limit=args.limit)
 
     if args.delete_teams:
         problems += delete_all_teams(org)
@@ -161,9 +187,8 @@ def main():
 
         sys.exit(1)
 
-    if work:
-        info("Consider deleting your privileged auth token @ {path}".format(
-            path=args.token_path))
+    info("Consider deleting your privileged auth token @ {path}".format(
+        path=args.token_path))
 
 
 if __name__ == '__main__':
