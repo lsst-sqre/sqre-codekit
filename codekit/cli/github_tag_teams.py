@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
-import sys
-import logging
-import argparse
-import textwrap
-import github
-import itertools
-import re
+from codekit import pygithub
 from getpass import getuser
 from .. import codetools
 from .. import info, debug
-from codekit import pygithub
+import argparse
+import github
+import logging
+import re
+import sys
+import textwrap
 
 logger = logging.getLogger('codekit')
 logging.basicConfig()
@@ -201,14 +200,8 @@ def main():
     if not tag_teams:
         raise RuntimeError('No teams found')
 
-    # get_repos() returns an iterator
-    target_repos = itertools.chain.from_iterable(
-        t.get_repos() for t in tag_teams
-    )
-
-    # flatten iterator now for debugging output; otherwise, the iterator
-    # might end up left at the wrong index
-    target_repos = list(target_repos)
+    # flatten generator to list so it can be itererated over multiple times
+    target_repos = list(pygithub.get_repos_by_team(tag_teams))
 
     # find length of longest repo name to nicely format output
     names = [r.full_name for r in target_repos]
