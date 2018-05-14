@@ -6,6 +6,7 @@ from github import Github
 from public import public
 import codekit.codetools as codetools
 import github
+import itertools
 import logging
 import textwrap
 
@@ -118,3 +119,26 @@ def find_tag_by_name(repo, tag_name, safe=True):
             raise
 
     return None
+
+
+@public
+def get_repos_by_team(teams):
+    """Find repos by membership in github team(s).
+
+    Parameters
+    ----------
+    teams: list(github.Team.Team)
+        list of Team objects
+
+    Returns
+    -------
+    generator of github.Repository.Repository objects
+
+    Raises
+    ------
+    github.GithubException
+        Upon error from github api
+    """
+    return itertools.chain.from_iterable(
+        t.get_repos() for t in teams
+    )
