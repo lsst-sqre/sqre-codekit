@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Delete all repos in the Github <user>-shadow org."""
 
 from codekit.codetools import debug, error, info, warn
 from codekit import codetools
@@ -23,8 +22,9 @@ def parse_args():
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
         prog='github-delete-shadow',
-        description=textwrap.dedent("""Delete all repos in the GitHub
-            <username>-shadow org"""),
+        description=textwrap.dedent("""\
+            Delete all repos (and optionally teams) in a GitHub organization.\
+        """),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
