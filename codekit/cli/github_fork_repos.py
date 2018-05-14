@@ -27,10 +27,15 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
+        '--src-org',
+        dest='src_org',
+        required=True,
+        help='Organization to fork repos *from*')
+    parser.add_argument(
         '--dst-org',
         dest='dst_org',
         required=True,
-        help='Organization to fork repos into')
+        help='Organization to fork repos *into*')
     parser.add_argument(
         '--token-path',
         default='~/.sq_github_token',
@@ -178,7 +183,9 @@ def main():
 
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
 
-    src_org = g.get_organization('lsst')
+    # protect destination org
+    codetools.validate_org(args.dst_org)
+    src_org = g.get_organization(args.src_org)
     dst_org = g.get_organization(args.dst_org)
     # print full Org object as non-visible orgs will have a name of `None`
     debug("forking repos from: {org}".format(org=src_org))
