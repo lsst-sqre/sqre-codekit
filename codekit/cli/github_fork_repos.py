@@ -143,13 +143,12 @@ def create_teams(org, teams, with_repos=False, ignore_existing=False):
     return dst_teams
 
 
-def create_forks(dst_org, src_rt, dst_teams=None):
+def create_forks(dst_org, src_repos):
     assert isinstance(dst_org, github.Organization.Organization),\
         type(dst_org)
-    assert isinstance(src_rt, dict), type(src_rt)
-    assert isinstance(dst_teams, (dict, type(None))), type(dst_teams)
+    assert isinstance(src_repos, list), type(src_repos)
 
-    repo_count = len(src_rt)
+    repo_count = len(src_repos)
 
     widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
 
@@ -160,19 +159,9 @@ def create_forks(dst_org, src_rt, dst_teams=None):
             max_value=repo_count) as pbar:
 
         repo_idx = 0
-        for _, data in src_rt.items():
-            r = data['repo']
-
+        for r in src_repos:
             debug("forking {r}".format(r=r.full_name))
-            fork = dst_org.create_fork(r)
-
-            # add new fork to teams, if we have a list of team objects
-            if dst_teams:
-                for t in data['teams']:
-                    debug("  adding to team '{t}'".format(t=t.name))
-                    # find team object
-                    dst_t = dst_teams[t.name]
-                    dst_t.add_to_repos(fork)
+            dst_org.create_fork(r)
 
             pbar.update(repo_idx)
             repo_idx += 1
@@ -208,15 +197,18 @@ def main():
         # dict of repo and team objects, keyed by repo name
         src_rt = find_teams_by_repos(src_repos)
 
-    # extract a non-duplicated list of team names from all repos being forked
-    src_teams = find_used_teams(src_rt)
+        # extract a non-duplicated list of team names from all repos being
+        # forked
+        src_teams = find_used_teams(src_rt)
 
-    debug("found {n} teams with repo members".format(n=len(src_teams)))
-    debug('teams in use within source org:')
-    [debug("  '{t}'".format(t=t)) for t in src_teams.keys()]
+        debug("found {n} teams with repo members".format(n=len(src_teams)))
+        debug('teams in use within source org:')
+        [debug("  '{t}'".format(t=t)) for t in src_teams.keys()]
+
+        # TODO sanity check that teams do not already exist in dst org
 
     debug('there is no spoon...')
-    create_forks(dst_org, src_rt)
+    create_forks(dst_org, src_repos)
 
     if args.copy_teams:
         create_teams(dst_org, src_teams)
