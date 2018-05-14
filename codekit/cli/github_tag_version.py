@@ -373,7 +373,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
                 ref.edit(tag_obj.sha, force=True)
                 debug("  updated existing ref: {ref}".format(ref=ref))
             else:
-                ref = repo.create_git_ref(
+                ref = repo['repo'].create_git_ref(
                     "refs/tags/{t}".format(t=t_tag['name']),
                     tag_obj.sha
                 )
