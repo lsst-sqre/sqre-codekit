@@ -55,6 +55,10 @@ def parse_args():
         help='Maximum number of teams to delete')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
+        '--fail-fast',
+        action='store_true',
+        help='Fail immediately on github API errors.')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -155,7 +159,7 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
         try:
             info("deleting team: {t}".format(t=t.name))
             if dry_run:
-                debug('  (noop)')
+                info('  (noop)')
                 continue
             t.delete()
             info('OK')
@@ -184,6 +188,7 @@ def main():
 
     problems += delete_all_repos(
         org,
+        fail_fast=args.fail_fast,
         limit=args.limit,
         dry_run=args.dry_run
     )
@@ -191,6 +196,7 @@ def main():
     if args.delete_teams:
         problems += delete_all_teams(
             org,
+            fail_fast=args.fail_fast,
             limit=args.delete_teams_limit,
             dry_run=args.dry_run
         )
