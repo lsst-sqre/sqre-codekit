@@ -53,6 +53,7 @@ def parse_args():
         default=None,
         type=int,
         help='Maximum number of teams to delete')
+    parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
         '-d', '--debug',
         action='store_true',
@@ -89,7 +90,7 @@ def delete_all_repos(org, **kwargs):
     repos = list(itertools.islice(org.get_repos(), limit))
     # print full Org object as non-visible orgs will have a name of `None`
     info("found {n} repos in {org}".format(n=len(repos), org=org))
-    [debug("  {r}".format(r=r)) for r in repos]
+    [debug("  {r}".format(r=r.full_name)) for r in repos]
 
     if repos:
         warn("Deleting all repos in {org}".format(org=org))
@@ -134,7 +135,7 @@ def delete_all_teams(org, **kwargs):
     teams = list(itertools.islice(org.get_teams(), limit))
     # print full Org object as non-visible orgs will have a name of `None`
     info("found {n} teams in {org}".format(n=len(teams), org=org))
-    [debug("  {t}".format(t=t)) for t in teams]
+    [debug("  {t}".format(t=t.name)) for t in teams]
 
     if teams:
         warn("Deleting all teams in {org}".format(org=org))
@@ -178,17 +179,25 @@ def main():
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(args.org)
 
+    # list of exceptions
     problems = []
-    problems += delete_all_repos(org, limit=args.limit)
+
+    problems += delete_all_repos(
+        org,
+        limit=args.limit,
+        dry_run=args.dry_run
+    )
 
     if args.delete_teams:
-        problems += delete_all_teams(org, limit=args.delete_teams_limit)
+        problems += delete_all_teams(
+            org,
+            limit=args.delete_teams_limit,
+            dry_run=args.dry_run
+        )
 
     if problems:
         error("ERROR: {n} failures".format(n=str(len(problems))))
-
-        for e in problems:
-            error(e)
+        [error(e) for e in problems]
 
         sys.exit(1)
 
