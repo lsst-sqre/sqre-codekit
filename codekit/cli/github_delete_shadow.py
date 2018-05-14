@@ -49,6 +49,11 @@ def parse_args():
         action='store_true',
         help='Delete *ALL* teams in org in addition to removing repos')
     parser.add_argument(
+        '--delete-teams-limit',
+        default=None,
+        type=int,
+        help='Maximum number of teams to delete')
+    parser.add_argument(
         '-d', '--debug',
         action='store_true',
         default=os.getenv('DM_SQUARE_DEBUG'),
@@ -177,7 +182,7 @@ def main():
     problems += delete_all_repos(org, limit=args.limit)
 
     if args.delete_teams:
-        problems += delete_all_teams(org)
+        problems += delete_all_teams(org, limit=args.delete_teams_limit)
 
     if problems:
         error("ERROR: {n} failures".format(n=str(len(problems))))
