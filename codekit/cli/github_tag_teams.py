@@ -190,6 +190,7 @@ def main():
 
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(gh_org_name)
+    debug("tagging repos by team in org: {o}".format(o=org.login))
 
     teams = org.get_teams()
 

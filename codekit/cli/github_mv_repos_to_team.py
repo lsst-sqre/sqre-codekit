@@ -110,7 +110,7 @@ def main():
         r = org.get_repo(name)
 
         # Add team to the repo
-        debug("Adding {repo} to {team} ...".format(
+        debug("Adding {repo} to '{team}' ...".format(
             repo=r.full_name,
             team=args.newteam
         ))
@@ -127,7 +127,7 @@ def main():
             warn("Removing repo {repo} from team 'Owners' is not allowed"
                  .format(repo=r.full_name))
 
-        debug("Removing {repo} from {team} ...".format(
+        debug("Removing {repo} from '{team}' ...".format(
             repo=r.full_name,
             team=args.oldteam
         ))

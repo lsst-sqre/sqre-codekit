@@ -100,12 +100,11 @@ def delete_all_repos(org, **kwargs):
     limit = kwargs.pop('limit', None)
 
     repos = list(itertools.islice(org.get_repos(), limit))
-    # print full Org object as non-visible orgs will have a name of `None`
-    info("found {n} repos in {org}".format(n=len(repos), org=org))
+    info("found {n} repos in {org}".format(n=len(repos), org=org.login))
     [debug("  {r}".format(r=r.full_name)) for r in repos]
 
     if repos:
-        warn("Deleting all repos in {org}".format(org=org))
+        warn("Deleting all repos in {org}".format(org=org.login))
         wait_for_user_panic_once()
 
     return delete_repos(repos, **kwargs)
@@ -145,12 +144,11 @@ def delete_all_teams(org, **kwargs):
     limit = kwargs.pop('limit', None)
 
     teams = list(itertools.islice(org.get_teams(), limit))
-    # print full Org object as non-visible orgs will have a name of `None`
-    info("found {n} teams in {org}".format(n=len(teams), org=org))
-    [debug("  {t}".format(t=t.name)) for t in teams]
+    info("found {n} teams in {org}".format(n=len(teams), org=org.login))
+    [debug("  '{t}'".format(t=t.name)) for t in teams]
 
     if teams:
-        warn("Deleting all teams in {org}".format(org=org))
+        warn("Deleting all teams in {org}".format(org=org.login))
         wait_for_user_panic_once()
 
     return delete_teams(teams, **kwargs)
@@ -165,7 +163,7 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
             sleep(delay)
 
         try:
-            info("deleting team: {t}".format(t=t.name))
+            info("deleting team: '{t}'".format(t=t.name))
             if dry_run:
                 info('  (noop)')
                 continue

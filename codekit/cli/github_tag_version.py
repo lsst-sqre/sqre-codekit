@@ -404,7 +404,6 @@ def main():
     if args.debug:
         logger.setLevel(logging.DEBUG)
 
-    orgname = args.org
     version = args.tag
 
     # if email not specified, try getting it from the gitconfig
@@ -443,8 +442,8 @@ def main():
     debug(tag_template)
 
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
-
-    debug("Tagging repos in github org: {org}".format(org=orgname))
+    org = g.get_organization(args.org)
+    debug("tagging repos in github org: {org}".format(org=org.login))
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
@@ -453,7 +452,6 @@ def main():
 
     manifest = fetch_eups_tag_file(args, eups_candidate)
     eups_products = parse_eups_tag_file(manifest)
-    org = g.get_organization(orgname)
 
     gh_repos = eups_products_to_gh_repos(
         org,

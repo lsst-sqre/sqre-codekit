@@ -56,7 +56,7 @@ class CaughtTeamError(Exception):
             """.format(
             name=type(self.caught),
             team=self.team.slug,
-            org=self.team.organization.name,
+            org=self.team.organization.login,
             e=str(self.caught)
         ))
 

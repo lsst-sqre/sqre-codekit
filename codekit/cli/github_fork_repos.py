@@ -117,24 +117,25 @@ def create_teams(org, teams, with_repos=False, ignore_existing=False):
     # members after all repos have been forked but this blows up if the team
     # already exists.
 
-    debug("creating teams in {org}".format(org=org))
+    debug("creating teams in {org}".format(org=org.login))
 
     # dict of dst org teams keyed by name (str) with team object as value
     dst_teams = {}
     for name, repos in teams.items():
+        debug("creating team {o}/'{t}'".format(
+            org=org.login,
+            t=name
+        ))
 
         dst_t = None
         try:
             if with_repos:
                 # need full qualified list of repos in the new org
-                dst_repo_names = ['/'.join([org.name, r.name]) for r in repos]
-
-                debug("creating team {t} with members:".format(
-                    t=name, org=org))
-                [debug("  {r}".format(r=r)) for r in dst_repo_names]
+                dst_repo_names = ['/'.join([org.login, r.name]) for r in repos]
+                debug('  with members:')
+                [debug("    {r}".format(r=r)) for r in dst_repo_names]
                 dst_t = org.create_team(name, repo_names=dst_repo_names)
             else:
-                debug("creating team {t}".format(t=name, org=org))
                 dst_t = org.create_team(name)
         except github.GithubException as e:
             error("  {m}".format(m=e.data['message']))
@@ -199,9 +200,8 @@ def main():
     codetools.validate_org(args.dst_org)
     src_org = g.get_organization(args.src_org)
     dst_org = g.get_organization(args.dst_org)
-    # print full Org object as non-visible orgs will have a name of `None`
-    debug("forking repos from: {org}".format(org=src_org))
-    debug("                to: {org}".format(org=dst_org))
+    debug("forking repos from: {org}".format(org=src_org.login))
+    debug("                to: {org}".format(org=dst_org.login))
 
     debug('looking for repos -- this can take a while for large orgs...')
     if args.team:
@@ -216,12 +216,14 @@ def main():
     src_repos = list(itertools.islice(repos, args.limit))
 
     repo_count = len(src_repos)
-    debug("found {n} repos in {src_org}".format(n=repo_count, src_org=src_org))
     if not repo_count:
         debug('nothing to do -- exiting')
         sys.exit(0)
 
-    debug('repos to be forked:')
+    debug("found {n} repos to be forked from org {src_org}:".format(
+        n=repo_count,
+        src_org=src_org.login
+    ))
     [debug("  {r}".format(r=r.full_name)) for r in src_repos]
 
     if args.copy_teams:
@@ -233,8 +235,10 @@ def main():
         # forked as a dict, keyed by team name
         src_teams = find_used_teams(src_rt)
 
-        debug("found {n} teams with repo members".format(n=len(src_teams)))
-        debug('teams in use within source org:')
+        debug('found {n} teams in use within org {o}:'.format(
+            n=len(src_teams),
+            o=src_org.login
+        ))
         [debug("  '{t}'".format(t=t)) for t in src_teams.keys()]
 
         debug('checking teams in destination org:')
