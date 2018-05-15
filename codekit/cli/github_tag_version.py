@@ -378,11 +378,10 @@ def tag_gh_repos(gh_repos, args, tag_template):
                 debug("  created ref: {ref}".format(ref=ref))
         except Exception as e:
             yikes = pygithub.CaughtGitError(repo['repo'], e)
-            tag_exceptions.append(yikes)
-            error(yikes)
-
             if args.fail_fast:
                 raise yikes from None
+            tag_exceptions.append(yikes)
+            error(yikes)
 
     lp_fires = len(tag_exceptions)
     if lp_fires:

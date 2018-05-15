@@ -128,13 +128,12 @@ def delete_repos(repos, fail_fast=False, dry_run=False, delay=0):
             r.delete()
             info('OK')
         except github.GithubException as e:
-            yikes = pygithub.CaughtGitError(r, e)
-            problems.append(yikes)
             error('FAILED - does your token have delete_repo scope?')
-            error(yikes)
-
+            yikes = pygithub.CaughtGitError(r, e)
             if fail_fast:
                 raise yikes from None
+            problems.append(yikes)
+            error(yikes)
 
     return problems
 
@@ -171,11 +170,10 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
             info('OK')
         except github.GithubException as e:
             yikes = pygithub.CaughtTeamError(t, e)
-            problems.append(yikes)
-            error(yikes)
-
             if fail_fast:
                 raise yikes from None
+            problems.append(yikes)
+            error(yikes)
 
     return problems
 
