@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from codekit import pygithub
-from getpass import getuser
 from .. import codetools
 from .. import info, debug
 import argparse
@@ -48,7 +47,7 @@ def parse_args():
     parser.add_argument(
         '--org',
         required=True,
-        default=getuser() + '-shadow')
+        help="Github organization")
     parser.add_argument(
         '--team',
         action='append',
