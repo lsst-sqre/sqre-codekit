@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from codekit.codetools import debug, error, warn
+from codekit.codetools import debug, error, info, warn
 from .. import codetools
 import argparse
 import codekit.pygithub as pygithub
@@ -73,7 +73,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def find_teams_by_repos(src_repos):
+def find_teams_by_repo(src_repos):
     assert isinstance(src_repos, list), type(src_repos)
 
     # length of longest repo name
@@ -188,6 +188,30 @@ def create_forks(dst_org, src_repos):
             repo_idx += 1
 
 
+def find_teams_by_name(org, team_names):
+    assert isinstance(org, github.Organization.Organization),\
+        type(org)
+    assert isinstance(team_names, list), type(team_names)
+
+    org_teams = list(org.get_teams())
+
+    found_teams = []
+    for name in team_names:
+        debug("looking for team: {o}/'{t}'".format(
+            o=org.login,
+            t=name
+        ))
+
+        t = next((t for t in org_teams if t.name == name), None)
+        if t:
+            debug('  found')
+            found_teams.append(t)
+        else:
+            debug('  not found')
+
+    return found_teams
+
+
 def main():
     args = parse_args()
 
@@ -200,8 +224,8 @@ def main():
     codetools.validate_org(args.dst_org)
     src_org = g.get_organization(args.src_org)
     dst_org = g.get_organization(args.dst_org)
-    debug("forking repos from: {org}".format(org=src_org.login))
-    debug("                to: {org}".format(org=dst_org.login))
+    info("forking repos from: {org}".format(org=src_org.login))
+    info("                to: {org}".format(org=dst_org.login))
 
     debug('looking for repos -- this can take a while for large orgs...')
     if args.team:
@@ -229,7 +253,7 @@ def main():
     if args.copy_teams:
         debug('checking source repo team membership...')
         # dict of repo and team objects, keyed by repo name
-        src_rt = find_teams_by_repos(src_repos)
+        src_rt = find_teams_by_repo(src_repos)
 
         # extract a non-duplicated list of team names from all repos being
         # forked as a dict, keyed by team name
@@ -241,23 +265,17 @@ def main():
         ))
         [debug("  '{t}'".format(t=t)) for t in src_teams.keys()]
 
-        debug('checking teams in destination org:')
-        dst_teams = list(dst_org.get_teams())
-        dst_team_names = [t.name for t in dst_teams]
-
-        conflicting_teams = []
-        for src_t_name in src_teams:
-            debug("  looking for team: '{t}'".format(t=src_t_name))
-            if src_t_name in dst_team_names:
-                error("    {o}/'{t}' already exists".format(
-                    o=dst_org.login,
-                    t=src_t_name
-                ))
-                conflicting_teams.append(src_t_name)
-
+        # check for conflicting teams in dst org before attempting to create
+        # any forks so its possible to bail out before any resources have been
+        # created.
+        debug('checking teams in destination org')
+        conflicting_teams = find_teams_by_name(dst_org, list(src_teams.keys()))
         if conflicting_teams:
-            error("conflicting teams in {o}:".format(o=dst_org.login))
-            [error("  '{t}'".format(t=t)) for t in conflicting_teams]
+            error("found {n} conflicting teams in {o}:".format(
+                n=len(conflicting_teams),
+                o=dst_org.login
+            ))
+            [error("  '{t}'".format(t=t.name)) for t in conflicting_teams]
             sys.exit(1)
 
     debug('there is no spoon...')
