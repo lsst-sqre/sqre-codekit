@@ -353,8 +353,6 @@ def tag_gh_repos(gh_repos, args, tag_template):
             continue
 
         try:
-            # create_tag() returns a Tag object on success or None
-            # on failure
             tag_obj = repo['repo'].create_git_tag(
                 t_tag['name'],
                 t_tag['message'],
