@@ -64,6 +64,7 @@ def parse_args():
             teams a repo is a member of, reguardless if they were specified as
             a selection "--team" or not.\
         """))
+    parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
         '-d', '--debug',
         action='store_true',
@@ -109,7 +110,13 @@ def find_used_teams(src_rt):
     return used_teams
 
 
-def create_teams(org, teams, with_repos=False, ignore_existing=False):
+def create_teams(
+    org,
+    teams,
+    with_repos=False,
+    ignore_existing=False,
+    dry_run=False
+):
     assert isinstance(org, github.Organization.Organization), type(org)
     assert isinstance(teams, dict), type(teams)
 
@@ -123,9 +130,13 @@ def create_teams(org, teams, with_repos=False, ignore_existing=False):
     dst_teams = {}
     for name, repos in teams.items():
         debug("creating team {o}/'{t}'".format(
-            org=org.login,
+            o=org.login,
             t=name
         ))
+
+        if dry_run:
+            debug('  (noop)')
+            continue
 
         dst_t = None
         try:
@@ -155,7 +166,7 @@ def create_teams(org, teams, with_repos=False, ignore_existing=False):
     return dst_teams
 
 
-def create_forks(dst_org, src_repos):
+def create_forks(dst_org, src_repos, dry_run=False):
     assert isinstance(dst_org, github.Organization.Organization),\
         type(dst_org)
     assert isinstance(src_repos, list), type(src_repos)
@@ -170,12 +181,29 @@ def create_forks(dst_org, src_repos):
             widgets=widgets,
             max_value=repo_count) as pbar:
 
+        new_forks = []
         repo_idx = 0
         for r in src_repos:
+            pbar.update(repo_idx)
+            repo_idx += 1
+
+            # XXX per
+            # https://developer.github.com/v3/repos/forks/#create-a-fork
+            # fork creation is async and pygithub doesn't appear to wait.
+            # https://github.com/PyGithub/PyGithub/blob/c44469965e4ea368b78c4055a8afcfcf08314585/github/Organization.py#L321-L336
+            # so its possible that this may fail in some strange way such as
+            # not returning all repo data, but it hasn't yet been observed.
+
+            # get current time before API call in case fork creation is slow.
             now = datetime.datetime.now()
 
             debug("forking {r}".format(r=r.full_name))
+            if dry_run:
+                debug('  (noop)')
+                continue
+
             fork = dst_org.create_fork(r)
+            new_forks.append(fork)
             debug("  -> {r}".format(r=fork.full_name))
 
             if fork.created_at < now:
@@ -184,8 +212,7 @@ def create_forks(dst_org, src_repos):
                     ctime=fork.created_at
                 ))
 
-            pbar.update(repo_idx)
-            repo_idx += 1
+        return new_forks
 
 
 def find_teams_by_name(org, team_names):
@@ -279,10 +306,10 @@ def main():
             sys.exit(1)
 
     debug('there is no spoon...')
-    create_forks(dst_org, src_repos)
+    create_forks(dst_org, src_repos, dry_run=args.dry_run)
 
     if args.copy_teams:
-        create_teams(dst_org, src_teams)
+        create_teams(dst_org, src_teams, dry_run=args.dry_run)
 
 
 if __name__ == '__main__':
