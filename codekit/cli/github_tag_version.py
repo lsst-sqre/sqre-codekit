@@ -343,7 +343,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
             if args.force_tag:
                 update_tag = True
             elif args.fail_fast:
-                raise yikes
+                raise yikes from None
             else:
                 tag_exceptions.append(yikes)
                 continue
@@ -382,7 +382,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
             error(yikes)
 
             if args.fail_fast:
-                raise yikes
+                raise yikes from None
 
     lp_fires = len(tag_exceptions)
     if lp_fires:

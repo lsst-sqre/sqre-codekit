@@ -134,7 +134,7 @@ def delete_repos(repos, fail_fast=False, dry_run=False, delay=0):
             error(yikes)
 
             if fail_fast:
-                raise
+                raise yikes from None
 
     return problems
 
@@ -175,7 +175,7 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
             error(yikes)
 
             if fail_fast:
-                raise
+                raise yikes from None
 
     return problems
 
