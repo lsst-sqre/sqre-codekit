@@ -207,7 +207,7 @@ def main():
     if args.team:
         debug('selecting repos by membership in team(s):')
         fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
-        [debug("  {t}".format(t=t.name)) for t in fork_teams]
+        [debug("  '{t}'".format(t=t.name)) for t in fork_teams]
         fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
         repos = pygithub.get_repos_by_team(fork_teams)
     else:
@@ -230,14 +230,31 @@ def main():
         src_rt = find_teams_by_repos(src_repos)
 
         # extract a non-duplicated list of team names from all repos being
-        # forked
+        # forked as a dict, keyed by team name
         src_teams = find_used_teams(src_rt)
 
         debug("found {n} teams with repo members".format(n=len(src_teams)))
         debug('teams in use within source org:')
         [debug("  '{t}'".format(t=t)) for t in src_teams.keys()]
 
-        # TODO sanity check that teams do not already exist in dst org
+        debug('checking teams in destination org:')
+        dst_teams = list(dst_org.get_teams())
+        dst_team_names = [t.name for t in dst_teams]
+
+        conflicting_teams = []
+        for src_t_name in src_teams:
+            debug("  looking for team: '{t}'".format(t=src_t_name))
+            if src_t_name in dst_team_names:
+                error("    {o}/'{t}' already exists".format(
+                    o=dst_org.login,
+                    t=src_t_name
+                ))
+                conflicting_teams.append(src_t_name)
+
+        if conflicting_teams:
+            error("conflicting teams in {o}:".format(o=dst_org.login))
+            [error("  '{t}'".format(t=t)) for t in conflicting_teams]
+            sys.exit(1)
 
     debug('there is no spoon...')
     create_forks(dst_org, src_repos)
