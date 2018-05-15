@@ -15,7 +15,6 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 
-from getpass import getuser
 from .. import codetools
 from .. import debug, warn, error
 import argparse
@@ -39,7 +38,6 @@ class GitTagExistsError(Exception):
 
 def parse_args():
     """Parse command-line arguments"""
-    user = getuser()
 
     parser = argparse.ArgumentParser(
         prog='github-tag-version',
@@ -64,15 +62,12 @@ def parse_args():
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
 
-    # for safety, default to dummy org <user>-shadow
-    # will fail for most people but see github_fork_repos in this module
-    # on how to get your own
-
     parser.add_argument('tag')
     parser.add_argument('manifest')
     parser.add_argument(
         '--org',
-        default=user + '-shadow')
+        required=True,
+        help="Github organization")
     parser.add_argument(
         '--team',
         action='append',
