@@ -67,13 +67,21 @@ def parse_args():
     return parser.parse_args()
 
 
-def countdown_timer():
+def countdown_timer(seconds=10):
     """Show countdown bar"""
+
+    tick = 0.1  # seconds
+    n_ticks = int(seconds / tick)
+
     widgets = ['Pause for panic: ', progressbar.ETA(), ' ', progressbar.Bar()]
-    pbar = progressbar.ProgressBar(widgets=widgets, max_value=200).start()
-    for i in range(200):
+    pbar = progressbar.ProgressBar(
+        widgets=widgets, max_value=n_ticks
+    ).start()
+
+    for i in range(n_ticks):
         pbar.update(i)
-        sleep(0.1)
+        sleep(tick)
+
     pbar.finish()
 
 
