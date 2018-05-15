@@ -21,7 +21,7 @@ logger = logging.getLogger('codekit')
 def parse_args():
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
-        prog='github-delete-shadow',
+        prog='github-decimate-org',
         description=textwrap.dedent("""\
             Delete all repos (and optionally teams) in a GitHub organization.\
         """),

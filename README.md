@@ -43,7 +43,7 @@ If you want to take a recent fork, you will need to delete the existing shadow
 repos first:
 
 ```bash
-github-delete-shadow -u {{username}}
+github-decimate-org -u {{username}}
 ```
 
 That requires a token with delete privileges.
