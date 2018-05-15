@@ -59,7 +59,7 @@ setup(
         'console_scripts': [
             'github-auth = codekit.cli.github_auth:main',
             'github-delete-shadow = codekit.cli.github_delete_shadow:main',
-            'github-fork-repos = codekit.cli.github_fork_repos:main',
+            'github-fork-org = codekit.cli.github_fork_org:main',
             'github-list-repos = codekit.cli.github_list_repos:main',
             'github-mv-repos-to-team = codekit.cli.github_mv_repos_to_team:main',  # NOQA
             'github-tag-version = codekit.cli.github_tag_version:main',

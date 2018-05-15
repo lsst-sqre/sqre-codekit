@@ -21,7 +21,7 @@ logger = logging.getLogger('codekit')
 def parse_args():
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
-        prog='github-fork-repos',
+        prog='github-fork-org',
         description=textwrap.dedent("""
         Fork repos (and optionally copy teams) between a source and destination
         Github organization.
