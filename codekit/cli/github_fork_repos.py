@@ -23,7 +23,8 @@ def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-fork-repos',
         description=textwrap.dedent("""
-        Fork LSST repos into a showow GitHub organization.
+        Fork repos (and optionally copy teams) between a source and destination
+        Github organization.
         """),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
