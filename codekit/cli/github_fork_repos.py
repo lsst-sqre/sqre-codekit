@@ -64,6 +64,10 @@ def parse_args():
             teams a repo is a member of, reguardless if they were specified as
             a selection "--team" or not.\
         """))
+    parser.add_argument(
+        '--fail-fast',
+        action='store_true',
+        help='Fail immediately on github API errors.')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
         '-d', '--debug',
@@ -115,6 +119,7 @@ def create_teams(
     teams,
     with_repos=False,
     ignore_existing=False,
+    fail_fast=False,
     dry_run=False
 ):
     assert isinstance(org, github.Organization.Organization), type(org)
@@ -128,6 +133,7 @@ def create_teams(
 
     # dict of dst org teams keyed by name (str) with team object as value
     dst_teams = {}
+    problems = []
     for name, repos in teams.items():
         debug("creating team {o}/'{t}'".format(
             o=org.login,
@@ -149,24 +155,32 @@ def create_teams(
             else:
                 dst_t = org.create_team(name)
         except github.GithubException as e:
-            error("  {m}".format(m=e.data['message']))
             for oops in e.data['errors']:
                 msg = oops['message']
-                error("    {m}".format(m=msg))
-                # if the error is for any cause other than the team already
-                # existing, puke.
-                if not\
-                   (ignore_existing and 'Name has already been taken' in msg):
-                    raise e
+                if ignore_existing and 'Name has already been taken' in msg:
+                    # find existing team
+                    dst_t = next(t for t in org.get_teams() if t.name in name)
+                else:
+                    # if the error is for any cause other than the team already
+                    # existing, puke.
+                    yikes = pygithub.CaughtOrganizationError(org, e)
+                    if fail_fast:
+                        raise yikes from None
+                    problems.append(yikes)
+                    error(yikes)
+                    break
+        else:
+            dst_teams[dst_t.name] = dst_t
 
-            dst_t = next(t for t in org.get_teams() if t.name in name)
-
-        dst_teams[dst_t.name] = dst_t
-
-    return dst_teams
+    return dst_teams, problems
 
 
-def create_forks(dst_org, src_repos, dry_run=False):
+def create_forks(
+    dst_org,
+    src_repos,
+    fail_fast=False,
+    dry_run=False
+):
     assert isinstance(dst_org, github.Organization.Organization),\
         type(dst_org)
     assert isinstance(src_repos, list), type(src_repos)
@@ -175,13 +189,14 @@ def create_forks(dst_org, src_repos, dry_run=False):
 
     widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
 
+    new_forks = []
+    problems = []
     # XXX progressbar is not playing nicely with debug output and the advice in
     # the docs for working with logging don't have any effect.
     with progressbar.ProgressBar(
             widgets=widgets,
             max_value=repo_count) as pbar:
 
-        new_forks = []
         repo_idx = 0
         for r in src_repos:
             pbar.update(repo_idx)
@@ -202,9 +217,16 @@ def create_forks(dst_org, src_repos, dry_run=False):
                 debug('  (noop)')
                 continue
 
-            fork = dst_org.create_fork(r)
-            new_forks.append(fork)
-            debug("  -> {r}".format(r=fork.full_name))
+            try:
+                fork = dst_org.create_fork(r)
+                new_forks.append(fork)
+                debug("  -> {r}".format(r=fork.full_name))
+            except github.GithubException as e:
+                yikes = pygithub.CaughtOrganizationError(dst_org, e)
+                if fail_fast:
+                    raise yikes from None
+                problems.append(yikes)
+                error(yikes)
 
             if fork.created_at < now:
                 warn("fork of {r} already exists\n  created_at {ctime}".format(
@@ -212,7 +234,7 @@ def create_forks(dst_org, src_repos, dry_run=False):
                     ctime=fork.created_at
                 ))
 
-        return new_forks
+    return new_forks, problems
 
 
 def find_teams_by_name(org, team_names):
@@ -306,10 +328,31 @@ def main():
             sys.exit(1)
 
     debug('there is no spoon...')
-    create_forks(dst_org, src_repos, dry_run=args.dry_run)
+    problems = []
+    _, err = create_forks(
+        dst_org,
+        src_repos,
+        fail_fast=args.fail_fast,
+        dry_run=args.dry_run
+    )
+    if err:
+        problems += err
 
     if args.copy_teams:
-        create_teams(dst_org, src_teams, dry_run=args.dry_run)
+        _, err = create_teams(
+            dst_org,
+            src_teams,
+            fail_fast=args.fail_fast,
+            dry_run=args.dry_run
+        )
+        if err:
+            problems += err
+
+    if problems:
+        error("ERROR: {n} failures".format(n=str(len(problems))))
+        [error(e) for e in problems]
+
+        sys.exit(1)
 
 
 if __name__ == '__main__':
