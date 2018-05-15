@@ -15,8 +15,8 @@ logger = logging.getLogger('codekit')
 
 
 class CaughtGitError(Exception):
-    """Simple exception class intended to bundle together a github.Repository
-    object and a thrown exception
+    """Simple exception class intended to bundle together a
+    github.Repository.Repository object and a thrown exception
     """
     def __init__(self, repo, caught):
         assert isinstance(repo, github.Repository.Repository), type(repo)
@@ -38,7 +38,7 @@ class CaughtGitError(Exception):
 
 
 class CaughtTeamError(Exception):
-    """Simple exception class intended to bundle together a github.Repository
+    """Simple exception class intended to bundle together a github.Team.Team
     object and a thrown exception
     """
     def __init__(self, team, caught):
@@ -57,6 +57,29 @@ class CaughtTeamError(Exception):
             name=type(self.caught),
             team=self.team.slug,
             org=self.team.organization.login,
+            e=str(self.caught)
+        ))
+
+
+class CaughtOrganizationError(Exception):
+    """Simple exception class intended to bundle together a
+    github.Organization.Organization object and a thrown exception
+    """
+    def __init__(self, org, caught):
+        assert isinstance(org, github.Organization.Organization), type(org)
+        assert isinstance(caught, Exception)
+
+        self.org = org
+        self.caught = caught
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Caught: {name}
+              In org: {org}
+              Message: {e}\
+            """.format(
+            name=type(self.caught),
+            org=self.org.login,
             e=str(self.caught)
         ))
 
