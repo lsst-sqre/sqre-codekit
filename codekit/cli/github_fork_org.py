@@ -284,10 +284,18 @@ def main():
 
     debug('looking for repos -- this can take a while for large orgs...')
     if args.team:
-        debug('selecting repos by membership in team(s):')
+        debug('checking that selection team(s) exist')
+        org_teams = list(src_org.get_teams())
+        missing_teams = [n for n in args.team if n not in
+                         [t.name for t in org_teams]]
+        if missing_teams:
+            error("{n} team(s) do not exist:".format(n=len(missing_teams)))
+            [error("  '{t}'".format(t=n)) for n in missing_teams]
+            sys.exit(0)
         fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
-        [debug("  '{t}'".format(t=t.name)) for t in fork_teams]
         repos = pygithub.get_repos_by_team(fork_teams)
+        debug('selecting repos by membership in team(s):')
+        [debug("  '{t}'".format(t=t.name)) for t in fork_teams]
     else:
         repos = pygithub.get_repos_by_team(fork_teams)
 
