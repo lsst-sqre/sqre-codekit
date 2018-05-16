@@ -148,11 +148,9 @@ def create_teams(
         dst_t = None
         try:
             if with_repos:
-                # need full qualified list of repos in the new org
-                dst_repo_names = ['/'.join([org.login, r.name]) for r in repos]
                 debug('  with members:')
-                [debug("    {r}".format(r=r)) for r in dst_repo_names]
-                dst_t = org.create_team(name, repo_names=dst_repo_names)
+                [debug("    {r}".format(r=r.full_name)) for r in repos]
+                dst_t = org.create_team(name, repo_names=repos)
             else:
                 dst_t = org.create_team(name)
         except github.GithubException as e:
@@ -190,7 +188,7 @@ def create_forks(
 
     widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
 
-    new_forks = []
+    dst_repos = []
     problems = []
     # XXX progressbar is not playing nicely with debug output and the advice in
     # the docs for working with logging don't have any effect.
@@ -220,7 +218,7 @@ def create_forks(
 
             try:
                 fork = dst_org.create_fork(r)
-                new_forks.append(fork)
+                dst_repos.append(fork)
                 debug("  -> {r}".format(r=fork.full_name))
             except github.GithubException as e:
                 yikes = pygithub.CaughtOrganizationError(dst_org, e)
@@ -235,7 +233,7 @@ def create_forks(
                     ctime=fork.created_at
                 ))
 
-    return new_forks, problems
+    return dst_repos, problems
 
 
 def find_teams_by_name(org, team_names):
@@ -330,7 +328,7 @@ def main():
 
     debug('there is no spoon...')
     problems = []
-    _, err = create_forks(
+    dst_repos, err = create_forks(
         dst_org,
         src_repos,
         fail_fast=args.fail_fast,
@@ -340,9 +338,17 @@ def main():
         problems += err
 
     if args.copy_teams:
+        # dict of str(fork_repo.name): fork_repo
+        dst_forks = dict((r.name, r) for r in dst_repos)
+        # dict of str(team.name): [repos] to be created
+        dst_teams = {}
+        for name, repos in src_teams.items():
+            dst_teams[name] = [dst_forks[r.name] for r in repos]
+
         _, err = create_teams(
             dst_org,
-            src_teams,
+            dst_teams,
+            with_repos=True,
             fail_fast=args.fail_fast,
             dry_run=args.dry_run
         )
