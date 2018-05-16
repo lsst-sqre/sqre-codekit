@@ -168,3 +168,47 @@ def get_repos_by_team(teams):
     return itertools.chain.from_iterable(
         t.get_repos() for t in teams
     )
+
+
+@public
+def get_teams_by_name(org, team_names):
+    """Find team(s) in org by name(s).
+
+    Parameters
+    ----------
+    org: github.Organization.Organization
+        org to search for team(s)
+
+    teams: list(str)
+        list of team names to search for
+
+    Returns
+    -------
+    list of github.Team.Team objects
+
+    Raises
+    ------
+    github.GithubException
+        Upon error from github api
+    """
+    assert isinstance(org, github.Organization.Organization),\
+        type(org)
+    assert isinstance(team_names, list), type(team_names)
+
+    org_teams = list(org.get_teams())
+
+    found_teams = []
+    for name in team_names:
+        debug("looking for team: {o}/'{t}'".format(
+            o=org.login,
+            t=name
+        ))
+
+        t = next((t for t in org_teams if t.name == name), None)
+        if t:
+            debug('  found')
+            found_teams.append(t)
+        else:
+            debug('  not found')
+
+    return found_teams
