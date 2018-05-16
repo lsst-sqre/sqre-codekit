@@ -287,7 +287,6 @@ def main():
         debug('selecting repos by membership in team(s):')
         fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
         [debug("  '{t}'".format(t=t.name)) for t in fork_teams]
-        fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
         repos = pygithub.get_repos_by_team(fork_teams)
     else:
         repos = pygithub.get_repos_by_team(fork_teams)
