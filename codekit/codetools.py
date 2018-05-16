@@ -182,12 +182,11 @@ def github_2fa_callback():
 def fetch_manifest_file(
     build_id,
     versiondb='https://raw.githubusercontent.com'
-              '/lsst/versiondb/master/manifests',
-    debug=False
+              '/lsst/versiondb/master/manifests'
 ):
     # eg. https://raw.githubusercontent.com/lsst/versiondb/master/manifests/b1108.txt  # NOQA
     shafile = versiondb + '/' + build_id + '.txt'
-    logger.debug("fetching: {url}".format(url=shafile))
+    debug("fetching: {url}".format(url=shafile))
 
     # Get the file tying shas to eups versions
     r = requests.get(shafile)
@@ -228,12 +227,11 @@ def parse_manifest_file(data):
 def eups2git_ref(
     product,
     eups_version,
-    build_id,
-    debug=False
+    build_id
 ):
     """Provide the sha1 for an EUPS product."""
 
-    manifest = fetch_manifest_file(build_id, debug=debug)
+    manifest = fetch_manifest_file(build_id)
     products = parse_manifest_file(manifest)
 
     entry = products[product]

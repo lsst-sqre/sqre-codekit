@@ -154,20 +154,19 @@ def eups_products_to_gh_repos(
     org,
     teams,
     eupsbuild,
-    eups_products,
-    debug=False
+    eups_products
 ):
     gh_repos = []
 
     for prod in eups_products:
-        codetools.debug("looking for git repo for: {prod} [{ver}]".format(
+        debug("looking for git repo for: {prod} [{ver}]".format(
             prod=prod['name'],
             ver=prod['eups_version']
         ))
 
         repo = org.get_repo(prod['name'])
 
-        codetools.debug("  found: {slug}".format(slug=repo.full_name))
+        debug("  found: {slug}".format(slug=repo.full_name))
 
         repo_teams = [t.name for t in repo.get_teams()]
         if not any(x in repo_teams for x in teams):
@@ -185,8 +184,7 @@ def eups_products_to_gh_repos(
         sha = codetools.eups2git_ref(
             product=repo.name,
             eups_version=prod['eups_version'],
-            build_id=eupsbuild,
-            debug=debug
+            build_id=eupsbuild
         )
 
         gh_repos.append({
@@ -452,8 +450,7 @@ def run():
         org,
         args.team,
         eupsbuild,
-        eups_products,
-        args.debug
+        eups_products
     )
     tag_gh_repos(gh_repos, args, tag_template)
 
