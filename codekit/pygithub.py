@@ -2,6 +2,7 @@
 pygithub based help functions for interacting with the github api.
 """
 
+from codekit.codetools import debug
 from github import Github
 from public import public
 import codekit.codetools as codetools
@@ -104,7 +105,9 @@ def login_github(token_path=None, token=None):
     """
 
     token = codetools.github_token(token_path=token_path, token=token)
-    return Github(token)
+    g = Github(token)
+    debug("github ratelimit: {rl}".format(rl=g.rate_limiting))
+    return g
 
 
 @public
