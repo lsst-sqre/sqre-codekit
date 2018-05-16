@@ -333,7 +333,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
 
                 continue
         except GitTagExistsError as e:
-            yikes = pygithub.CaughtGitError(repo['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
 
             if args.force_tag:
                 update_tag = True
@@ -372,7 +372,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
                 )
                 debug("  created ref: {ref}".format(ref=ref))
         except Exception as e:
-            yikes = pygithub.CaughtGitError(repo['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
             if args.fail_fast:
                 raise yikes from None
             tag_exceptions.append(yikes)

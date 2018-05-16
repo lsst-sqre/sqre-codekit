@@ -129,7 +129,7 @@ def delete_repos(repos, fail_fast=False, dry_run=False, delay=0):
             info('OK')
         except github.GithubException as e:
             error('FAILED - does your token have delete_repo scope?')
-            yikes = pygithub.CaughtGitError(r, e)
+            yikes = pygithub.CaughtRepositoryError(r, e)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)

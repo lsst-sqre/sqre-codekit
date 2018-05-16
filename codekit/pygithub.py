@@ -14,7 +14,7 @@ logging.basicConfig()
 logger = logging.getLogger('codekit')
 
 
-class CaughtGitError(Exception):
+class CaughtRepositoryError(Exception):
     """Simple exception class intended to bundle together a
     github.Repository.Repository object and a thrown exception
     """
