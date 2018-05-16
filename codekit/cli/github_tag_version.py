@@ -98,6 +98,12 @@ def parse_args():
         action='store_true',
         help='Fail immediately on github API errors.')
     parser.add_argument(
+        '--no-fail-fast',
+        action='store_const',
+        const=False,
+        dest='fail_fast',
+        help='DO NOT Fail immediately on github API errors. (default)')
+    parser.add_argument(
         '-d', '--debug',
         action='count',
         default=os.getenv('DM_SQUARE_DEBUG'),
