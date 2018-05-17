@@ -64,7 +64,7 @@ def parse_args():
         help='Literal github personal access token string')
     parser.add_argument(
         '-d', '--debug',
-        action='store_true',
+        action='count',
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode')
     parser.add_argument('--dry-run', action='store_true')
@@ -86,13 +86,16 @@ def find_team(teams, name):
     return t
 
 
-def main():
+def run():
     """Move the repos"""
     args = parse_args()
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
+    if args.debug > 1:
+        github.enable_console_debug_logging()
 
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.organization(args.org)
 
@@ -110,7 +113,7 @@ def main():
         r = org.get_repo(name)
 
         # Add team to the repo
-        debug("Adding {repo} to {team} ...".format(
+        debug("Adding {repo} to '{team}' ...".format(
             repo=r.full_name,
             team=args.newteam
         ))
@@ -127,7 +130,7 @@ def main():
             warn("Removing repo {repo} from team 'Owners' is not allowed"
                  .format(repo=r.full_name))
 
-        debug("Removing {repo} from {team} ...".format(
+        debug("Removing {repo} from '{team}' ...".format(
             repo=r.full_name,
             team=args.oldteam
         ))
@@ -142,6 +145,14 @@ def main():
 
     info('Added:', added)
     info('Removed:', removed)
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':

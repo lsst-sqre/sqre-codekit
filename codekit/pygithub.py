@@ -2,22 +2,28 @@
 pygithub based help functions for interacting with the github api.
 """
 
+from codekit.codetools import debug
 from github import Github
 from public import public
 import codekit.codetools as codetools
 import github
+import itertools
 import logging
 import textwrap
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
+github.MainClass.DEFAULT_TIMEOUT = 15  # timeouts creating teams w/ many repos
 
 
-class CaughtGitError(Exception):
-    """Simple exception class intended to bundle together a github.Repository
-    object and a thrown exception
+class CaughtRepositoryError(Exception):
+    """Simple exception class intended to bundle together a
+    github.Repository.Repository object and a thrown exception
     """
     def __init__(self, repo, caught):
+        assert isinstance(repo, github.Repository.Repository), type(repo)
+        assert isinstance(caught, Exception)
+
         self.repo = repo
         self.caught = caught
 
@@ -29,6 +35,53 @@ class CaughtGitError(Exception):
             """.format(
             name=type(self.caught),
             repo=self.repo.full_name,
+            e=str(self.caught)
+        ))
+
+
+class CaughtTeamError(Exception):
+    """Simple exception class intended to bundle together a github.Team.Team
+    object and a thrown exception
+    """
+    def __init__(self, team, caught):
+        assert isinstance(team, github.Team.Team), type(team)
+        assert isinstance(caught, Exception)
+
+        self.team = team
+        self.caught = caught
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Caught: {name}
+              In team: {team}@{org}
+              Message: {e}\
+            """.format(
+            name=type(self.caught),
+            team=self.team.slug,
+            org=self.team.organization.login,
+            e=str(self.caught)
+        ))
+
+
+class CaughtOrganizationError(Exception):
+    """Simple exception class intended to bundle together a
+    github.Organization.Organization object and a thrown exception
+    """
+    def __init__(self, org, caught):
+        assert isinstance(org, github.Organization.Organization), type(org)
+        assert isinstance(caught, Exception)
+
+        self.org = org
+        self.caught = caught
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Caught: {name}
+              In org: {org}
+              Message: {e}\
+            """.format(
+            name=type(self.caught),
+            org=self.org.login,
             e=str(self.caught)
         ))
 
@@ -53,7 +106,9 @@ def login_github(token_path=None, token=None):
     """
 
     token = codetools.github_token(token_path=token_path, token=token)
-    return Github(token)
+    g = Github(token)
+    debug_ratelimit(g)
+    return g
 
 
 @public
@@ -91,3 +146,84 @@ def find_tag_by_name(repo, tag_name, safe=True):
             raise
 
     return None
+
+
+@public
+def get_repos_by_team(teams):
+    """Find repos by membership in github team(s).
+
+    Parameters
+    ----------
+    teams: list(github.Team.Team)
+        list of Team objects
+
+    Returns
+    -------
+    generator of github.Repository.Repository objects
+
+    Raises
+    ------
+    github.GithubException
+        Upon error from github api
+    """
+    return itertools.chain.from_iterable(
+        t.get_repos() for t in teams
+    )
+
+
+@public
+def get_teams_by_name(org, team_names):
+    """Find team(s) in org by name(s).
+
+    Parameters
+    ----------
+    org: github.Organization.Organization
+        org to search for team(s)
+
+    teams: list(str)
+        list of team names to search for
+
+    Returns
+    -------
+    list of github.Team.Team objects
+
+    Raises
+    ------
+    github.GithubException
+        Upon error from github api
+    """
+    assert isinstance(org, github.Organization.Organization),\
+        type(org)
+    assert isinstance(team_names, list), type(team_names)
+
+    org_teams = list(org.get_teams())
+
+    found_teams = []
+    for name in team_names:
+        debug("looking for team: {o}/'{t}'".format(
+            o=org.login,
+            t=name
+        ))
+
+        t = next((t for t in org_teams if t.name == name), None)
+        if t:
+            debug('  found')
+            found_teams.append(t)
+        else:
+            debug('  not found')
+
+    return found_teams
+
+
+@public
+def debug_ratelimit(g):
+    """Log debug of github ratelimit information from last API call
+
+    Parameters
+    ----------
+    org: github.MainClass.Github
+        github object
+    """
+    assert isinstance(g, github.MainClass.Github), type(g)
+
+    debug("github ratelimit: {rl}".format(rl=g.rate_limiting))

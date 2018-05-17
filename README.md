@@ -33,7 +33,7 @@ To clone all github.com/lsst repos into an GitHub organization called
 `{{username}}-shadow`:
 
 ```bash
-github-fork-repos -u {{username}} --org {{username}}-shadow
+github-fork-org -u {{username}} --org {{username}}-shadow
 ```
 
 You'll need to create this shadow organization in advance. Working in a shadow
@@ -43,7 +43,7 @@ If you want to take a recent fork, you will need to delete the existing shadow
 repos first:
 
 ```bash
-github-delete-shadow -u {{username}}
+github-decimate-org -u {{username}}
 ```
 
 That requires a token with delete privileges.
@@ -54,7 +54,7 @@ running any command, or use the `-d` debug flag on the command line.
 ## Available commands
 
 - `github-auth`: create a GitHub authentication token.
-- `github-fork-repos`: fork repositories into a shadow GitHub organization.
+- `github-fork-org`: fork repositories from one GitHub organization to another.
 - `github-list-repos`: list repositories in a GitHub organization, showing teams.
 - `github-mv-repos-to-team`: move repositories from one team to another.
 - `github-tag-version`: tag all repositories in a GitHub org using a team-based scheme.

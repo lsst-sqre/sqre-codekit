@@ -15,7 +15,6 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 
-from getpass import getuser
 from .. import codetools
 from .. import debug, warn, error
 import argparse
@@ -39,7 +38,6 @@ class GitTagExistsError(Exception):
 
 def parse_args():
     """Parse command-line arguments"""
-    user = getuser()
 
     parser = argparse.ArgumentParser(
         prog='github-tag-version',
@@ -64,15 +62,12 @@ def parse_args():
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
 
-    # for safety, default to dummy org <user>-shadow
-    # will fail for most people but see github_fork_repos in this module
-    # on how to get your own
-
     parser.add_argument('tag')
     parser.add_argument('manifest')
     parser.add_argument(
         '--org',
-        default=user + '-shadow')
+        required=True,
+        help="Github organization")
     parser.add_argument(
         '--team',
         action='append',
@@ -104,7 +99,7 @@ def parse_args():
         help='Fail immediately on github API errors.')
     parser.add_argument(
         '-d', '--debug',
-        action='store_true',
+        action='count',
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
@@ -338,12 +333,12 @@ def tag_gh_repos(gh_repos, args, tag_template):
 
                 continue
         except GitTagExistsError as e:
-            yikes = pygithub.CaughtGitError(repo['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
 
             if args.force_tag:
                 update_tag = True
             elif args.fail_fast:
-                raise yikes
+                raise yikes from None
             else:
                 tag_exceptions.append(yikes)
                 continue
@@ -353,8 +348,6 @@ def tag_gh_repos(gh_repos, args, tag_template):
             continue
 
         try:
-            # create_tag() returns a Tag object on success or None
-            # on failure
             tag_obj = repo['repo'].create_git_tag(
                 t_tag['name'],
                 t_tag['message'],
@@ -379,12 +372,11 @@ def tag_gh_repos(gh_repos, args, tag_template):
                 )
                 debug("  created ref: {ref}".format(ref=ref))
         except Exception as e:
-            yikes = pygithub.CaughtGitError(repo['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
+            if args.fail_fast:
+                raise yikes from None
             tag_exceptions.append(yikes)
             error(yikes)
-
-            if args.fail_fast:
-                raise yikes
 
     lp_fires = len(tag_exceptions)
     if lp_fires:
@@ -396,15 +388,16 @@ def tag_gh_repos(gh_repos, args, tag_template):
         sys.exit(lp_fires if lp_fires < 256 else 255)
 
 
-def main():
+def run():
     """Create the tag"""
 
     args = parse_args()
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
+    if args.debug > 1:
+        github.enable_console_debug_logging()
 
-    orgname = args.org
     version = args.tag
 
     # if email not specified, try getting it from the gitconfig
@@ -442,9 +435,10 @@ def main():
 
     debug(tag_template)
 
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
-
-    debug("Tagging repos in github org: {org}".format(org=orgname))
+    org = g.get_organization(args.org)
+    debug("tagging repos in github org: {org}".format(org=org.login))
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
@@ -453,7 +447,6 @@ def main():
 
     manifest = fetch_eups_tag_file(args, eups_candidate)
     eups_products = parse_eups_tag_file(manifest)
-    org = g.get_organization(orgname)
 
     gh_repos = eups_products_to_gh_repos(
         org,
@@ -463,6 +456,14 @@ def main():
         args.debug
     )
     tag_gh_repos(gh_repos, args, tag_template)
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':

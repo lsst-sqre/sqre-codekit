@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
-import sys
-import logging
-import argparse
-import textwrap
-import github
-import itertools
-import re
-from getpass import getuser
+from codekit import pygithub
 from .. import codetools
 from .. import info, debug
-from codekit import pygithub
+import argparse
+import github
+import logging
+import re
+import sys
+import textwrap
 
 logger = logging.getLogger('codekit')
 logging.basicConfig()
@@ -49,7 +47,7 @@ def parse_args():
     parser.add_argument(
         '--org',
         required=True,
-        default=getuser() + '-shadow')
+        help="Github organization")
     parser.add_argument(
         '--team',
         action='append',
@@ -72,7 +70,7 @@ def parse_args():
         help='Literal github personal access token string')
     parser.add_argument(
         '-d', '--debug',
-        action='store_true',
+        action='count',
         help='Debug mode')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
     return parser.parse_args()
@@ -169,12 +167,13 @@ def tag_repo(repo, tags, tagger, dry_run=False):
         debug("  created ref: {ref}".format(ref=ref))
 
 
-def main():
+def run():
     args = parse_args()
 
     if args.debug:
-        # logging.getLogger(None).setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
+    if args.debug > 1:
+        github.enable_console_debug_logging()
 
     gh_org_name = args.org
     tags = args.tag
@@ -189,8 +188,10 @@ def main():
     )
     debug(tagger)
 
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(gh_org_name)
+    debug("tagging repos by team in org: {o}".format(o=org.login))
 
     teams = org.get_teams()
 
@@ -201,14 +202,8 @@ def main():
     if not tag_teams:
         raise RuntimeError('No teams found')
 
-    # get_repos() returns an iterator
-    target_repos = itertools.chain.from_iterable(
-        t.get_repos() for t in tag_teams
-    )
-
-    # flatten iterator now for debugging output; otherwise, the iterator
-    # might end up left at the wrong index
-    target_repos = list(target_repos)
+    # flatten generator to list so it can be itererated over multiple times
+    target_repos = list(pygithub.get_repos_by_team(tag_teams))
 
     # find length of longest repo name to nicely format output
     names = [r.full_name for r in target_repos]
@@ -252,6 +247,14 @@ def main():
         r = untagged_repos[k]['repo']
         tags = untagged_repos[k]['need_tags']
         tag_repo(r, tags, tagger, dry_run=args.dry_run)
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':
