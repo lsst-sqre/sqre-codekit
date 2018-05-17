@@ -333,9 +333,9 @@ def check_existing_git_tag(repo, t_tag):
             tagger: {t_tagger}\
     """).format(
         tag=t_tag['name'],
-        e_sha=e_tag['sha'],
-        e_message=e_tag['message'],
-        e_tagger=e_tag['tagger'],
+        e_sha=e_tag.sha,
+        e_message=e_tag.message,
+        e_tagger=e_tag.tagger,
         t_sha=t_tag['sha'],
         t_message=t_tag['message'],
         t_tagger=t_tag['tagger'],
