@@ -6,13 +6,17 @@
 # - add command line option for delete scope
 
 from getpass import getpass
+from .. import codetools
 import argparse
-import textwrap
+import github
+import logging
 import os
 import platform
 import sys
-import github
-from .. import codetools
+import textwrap
+
+logging.basicConfig()
+logger = logging.getLogger('codekit')
 
 
 def parse_args():
@@ -46,7 +50,7 @@ def parse_args():
         help='Save this token to a non-standard path')
     parser.add_argument(
         '-d', '--debug',
-        action='store_true',
+        action='count',
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
@@ -61,7 +65,10 @@ def main():
     hostname = platform.node()
 
     if args.debug:
-        print(args.user)
+        logger.setLevel(logging.DEBUG)
+    if args.debug > 1:
+        github.enable_console_debug_logging()
+
     password = ''
 
     if args.token_path is None and args.delete_role is True:

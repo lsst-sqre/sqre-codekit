@@ -70,7 +70,7 @@ def parse_args():
         help='Literal github personal access token string')
     parser.add_argument(
         '-d', '--debug',
-        action='store_true',
+        action='count',
         help='Debug mode')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
     return parser.parse_args()
@@ -171,8 +171,9 @@ def main():
     args = parse_args()
 
     if args.debug:
-        # logging.getLogger(None).setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
+    if args.debug > 1:
+        github.enable_console_debug_logging()
 
     gh_org_name = args.org
     tags = args.tag

@@ -67,7 +67,7 @@ def parse_args():
         help='DO NOT Fail immediately on github API errors.')
     parser.add_argument(
         '-d', '--debug',
-        action='store_true',
+        action='count',
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
@@ -190,6 +190,8 @@ def main():
 
     if args.debug:
         logger.setLevel(logging.DEBUG)
+    if args.debug > 1:
+        github.enable_console_debug_logging()
 
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     codetools.validate_org(args.org)
