@@ -251,7 +251,7 @@ def create_forks(
     return dst_repos, skipped_repos, problems
 
 
-def main():
+def run():
     args = parse_args()
 
     if args.debug:
@@ -259,6 +259,7 @@ def main():
     if args.debug > 1:
         github.enable_console_debug_logging()
 
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
 
     # protect destination org
@@ -366,6 +367,14 @@ def main():
         [error(e) for e in problems]
 
         sys.exit(1)
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':

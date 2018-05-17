@@ -185,7 +185,7 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
     return problems
 
 
-def main():
+def run():
     args = parse_args()
 
     if args.debug:
@@ -193,6 +193,7 @@ def main():
     if args.debug > 1:
         github.enable_console_debug_logging()
 
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     codetools.validate_org(args.org)
     org = g.get_organization(args.org)
@@ -223,6 +224,14 @@ def main():
 
     info("Consider deleting your privileged auth token @ {path}".format(
         path=args.token_path))
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':

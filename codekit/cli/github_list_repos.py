@@ -76,9 +76,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def run():
     """List repos and teams"""
     args = parse_args()
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
 
     if args.debug:
@@ -101,6 +102,14 @@ def main():
 
         if args.mint <= len(teamnames) <= maxt:
             print(r.name.ljust(40) + args.delimiter.join(teamnames))
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':

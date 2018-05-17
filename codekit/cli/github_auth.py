@@ -5,6 +5,7 @@
 # - add command line option to override default user
 # - add command line option for delete scope
 
+from codekit import pygithub
 from getpass import getpass
 from .. import codetools
 import argparse
@@ -57,7 +58,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def run():
     """Log in and store credentials"""
     args = parse_args()
 
@@ -106,6 +107,7 @@ def main():
         else:
             scopes = ['repo', 'user']
 
+        global g
         g = github.Github(args.user, password)
         u = g.get_user()
 
@@ -135,6 +137,14 @@ def main():
         print("You already have an auth file: {0} ".format(cred_path))
         print("Delete it if you want a new one and run again")
         print("Remember to also remove the corresponding token on Github")
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':

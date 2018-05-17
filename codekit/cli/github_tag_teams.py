@@ -167,7 +167,7 @@ def tag_repo(repo, tags, tagger, dry_run=False):
         debug("  created ref: {ref}".format(ref=ref))
 
 
-def main():
+def run():
     args = parse_args()
 
     if args.debug:
@@ -188,6 +188,7 @@ def main():
     )
     debug(tagger)
 
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(gh_org_name)
     debug("tagging repos by team in org: {o}".format(o=org.login))
@@ -246,6 +247,14 @@ def main():
         r = untagged_repos[k]['repo']
         tags = untagged_repos[k]['need_tags']
         tag_repo(r, tags, tagger, dry_run=args.dry_run)
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':

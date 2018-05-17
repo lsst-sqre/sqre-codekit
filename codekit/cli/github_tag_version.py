@@ -388,7 +388,7 @@ def tag_gh_repos(gh_repos, args, tag_template):
         sys.exit(lp_fires if lp_fires < 256 else 255)
 
 
-def main():
+def run():
     """Create the tag"""
 
     args = parse_args()
@@ -435,6 +435,7 @@ def main():
 
     debug(tag_template)
 
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(args.org)
     debug("tagging repos in github org: {org}".format(org=org.login))
@@ -455,6 +456,14 @@ def main():
         args.debug
     )
     tag_gh_repos(gh_repos, args, tag_template)
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':

@@ -86,7 +86,7 @@ def find_team(teams, name):
     return t
 
 
-def main():
+def run():
     """Move the repos"""
     args = parse_args()
 
@@ -95,6 +95,7 @@ def main():
     if args.debug > 1:
         github.enable_console_debug_logging()
 
+    global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.organization(args.org)
 
@@ -144,6 +145,14 @@ def main():
 
     info('Added:', added)
     info('Removed:', removed)
+
+
+def main():
+    try:
+        run()
+    finally:
+        if 'g' in globals():
+            pygithub.debug_ratelimit(g)
 
 
 if __name__ == '__main__':
