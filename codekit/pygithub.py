@@ -107,7 +107,7 @@ def login_github(token_path=None, token=None):
 
     token = codetools.github_token(token_path=token_path, token=token)
     g = Github(token)
-    debug("github ratelimit: {rl}".format(rl=g.rate_limiting))
+    debug_ratelimit(g)
     return g
 
 
@@ -213,3 +213,17 @@ def get_teams_by_name(org, team_names):
             debug('  not found')
 
     return found_teams
+
+
+@public
+def debug_ratelimit(g):
+    """Log debug of github ratelimit information from last API call
+
+    Parameters
+    ----------
+    org: github.MainClass.Github
+        github object
+    """
+    assert isinstance(g, github.MainClass.Github), type(g)
+
+    debug("github ratelimit: {rl}".format(rl=g.rate_limiting))
