@@ -86,6 +86,32 @@ class CaughtOrganizationError(Exception):
         ))
 
 
+class CaughtUnknownObjectError(Exception):
+    """Simple exception class intended to bundle together the name of the
+    resource that was attempted to be accessed and a thrown exception.
+    """
+    def __init__(self, name, caught):
+        assert isinstance(name, str), type(name)
+        assert isinstance(
+            caught,
+            github.UnknownObjectException
+        ), type(caught)
+
+        self.name = name
+        self.caught = caught
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Caught: {cls}
+              Name: {name}
+              Message: {e}\
+            """.format(
+            cls=type(self.caught),
+            name=self.name,
+            e=str(self.caught)
+        ))
+
+
 @public
 def login_github(token_path=None, token=None):
     """Log into GitHub using an existing token.
