@@ -13,6 +13,7 @@ import textwrap
 
 logging.basicConfig()
 logger = logging.getLogger('codekit')
+github.MainClass.DEFAULT_TIMEOUT = 15  # timeouts creating teams w/ many repos
 
 
 class CaughtRepositoryError(Exception):
