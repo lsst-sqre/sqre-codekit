@@ -243,30 +243,6 @@ def create_forks(
     return dst_repos, problems
 
 
-def find_teams_by_name(org, team_names):
-    assert isinstance(org, github.Organization.Organization),\
-        type(org)
-    assert isinstance(team_names, list), type(team_names)
-
-    org_teams = list(org.get_teams())
-
-    found_teams = []
-    for name in team_names:
-        debug("looking for team: {o}/'{t}'".format(
-            o=org.login,
-            t=name
-        ))
-
-        t = next((t for t in org_teams if t.name == name), None)
-        if t:
-            debug('  found')
-            found_teams.append(t)
-        else:
-            debug('  not found')
-
-    return found_teams
-
-
 def main():
     args = parse_args()
 
@@ -333,7 +309,10 @@ def main():
         # any forks so its possible to bail out before any resources have been
         # created.
         debug('checking teams in destination org')
-        conflicting_teams = find_teams_by_name(dst_org, list(src_teams.keys()))
+        conflicting_teams = pygithub.get_teams_by_name(
+            dst_org,
+            list(src_teams.keys())
+        )
         if conflicting_teams:
             error("found {n} conflicting teams in {o}:".format(
                 n=len(conflicting_teams),
