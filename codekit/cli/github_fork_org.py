@@ -196,6 +196,7 @@ def create_forks(
     widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
 
     dst_repos = []
+    skipped_repos = []
     problems = []
     # XXX progressbar is not playing nicely with debug output and the advice in
     # the docs for working with logging don't have any effect.
@@ -228,6 +229,13 @@ def create_forks(
                 dst_repos.append(fork)
                 debug("  -> {r}".format(r=fork.full_name))
             except github.GithubException as e:
+                if 'Empty repositories cannot be forked.' in e.data['message']:
+                    warn("{r} is empty and can not be forked".format(
+                        r=r.full_name
+                    ))
+                    skipped_repos.append(r)
+                    continue
+
                 yikes = pygithub.CaughtOrganizationError(dst_org, e)
                 if fail_fast:
                     raise yikes from None
@@ -240,7 +248,7 @@ def create_forks(
                     ctime=fork.created_at
                 ))
 
-    return dst_repos, problems
+    return dst_repos, skipped_repos, problems
 
 
 def main():
@@ -323,7 +331,7 @@ def main():
 
     debug('there is no spoon...')
     problems = []
-    dst_repos, err = create_forks(
+    dst_repos, skipped_repos, err = create_forks(
         dst_org,
         src_repos,
         fail_fast=args.fail_fast,
@@ -333,12 +341,15 @@ def main():
         problems += err
 
     if args.copy_teams:
+        # filter out repos which were skipped
         # dict of str(fork_repo.name): fork_repo
         dst_forks = dict((r.name, r) for r in dst_repos)
+        bad_repos = dict((r.name, r) for r in skipped_repos)
         # dict of str(team.name): [repos] to be created
         dst_teams = {}
         for name, repos in src_teams.items():
-            dst_teams[name] = [dst_forks[r.name] for r in repos]
+            dst_teams[name] = [dst_forks[r.name] for r in repos
+                               if r.name not in bad_repos]
 
         _, err = create_teams(
             dst_org,
