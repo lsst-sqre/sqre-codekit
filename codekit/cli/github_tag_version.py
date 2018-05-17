@@ -389,19 +389,31 @@ def tag_gh_repos(
                 continue
         except github.RateLimitExceededException:
             raise
-        except (github.GithubException, GitTagExistsError) as e:
-            yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
-
+        except GitTagExistsError as e:
+            # if force_tag is set, and the tag already exists, set
+            # update_tag and fall through. Otherwise, treat it as any other
+            # exception.
             if force_tag:
                 update_tag = True
             elif fail_fast:
+                raise
+            else:
+                problems.append(e)
+                error(e)
+                continue
+        except github.GithubException as e:
+            yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
+
+            if fail_fast:
                 raise yikes from None
             else:
                 problems.append(yikes)
+                error(yikes)
                 continue
 
         # tags are created/updated past this point
         if dry_run:
+            debug('  (noop)')
             continue
 
         try:
