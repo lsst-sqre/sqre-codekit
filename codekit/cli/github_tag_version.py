@@ -36,6 +36,35 @@ class GitTagExistsError(Exception):
     pass
 
 
+class RepositoryMissingTeamError(Exception):
+    def __init__(self, repo, repo_teams, tag_teams):
+        assert isinstance(repo, github.Repository.Repository), type(repo)
+
+        self.repo = repo
+        self.repo_teams = repo_teams
+        self.tag_teams = tag_teams
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            No action for {repo}
+              has teams: {repo_teams}
+              does not belong to any of: {tag_teams}\
+            """.format(
+            repo=self.repo.full_name,
+            repo_teams=self.repo_teams,
+            tag_teams=self.tag_teams
+        ))
+
+
+class DogpileError(Exception):
+    def __init__(self, errors, msg):
+        self.errors = errors
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg + "\n" + "\n".join([str(e) for e in self.errors])
+
+
 def parse_args():
     """Parse command-line arguments"""
 
@@ -160,31 +189,40 @@ def eups_products_to_gh_repos(
     org,
     teams,
     eupsbuild,
-    eups_products
+    eups_products,
+    fail_fast=False
 ):
+    problems = []
     gh_repos = []
-
     for prod in eups_products:
         debug("looking for git repo for: {prod} [{ver}]".format(
             prod=prod['name'],
             ver=prod['eups_version']
         ))
 
-        repo = org.get_repo(prod['name'])
+        try:
+            repo = org.get_repo(prod['name'])
+        except github.RateLimitExceededException:
+            raise
+        except github.UnknownObjectException as e:
+            yikes = pygithub.CaughtUnknownObjectError(prod['name'], e)
+            if fail_fast:
+                raise yikes from None
+            problems.append(yikes)
+            error(yikes)
+
+            continue
 
         debug("  found: {slug}".format(slug=repo.full_name))
 
         repo_teams = [t.name for t in repo.get_teams()]
         if not any(x in repo_teams for x in teams):
-            warn(textwrap.dedent("""\
-                No action for {repo}
-                  has teams: {repo_teams}
-                  does not belong to any of: {tag_teams}\
-                """).format(
-                repo=repo.full_name,
-                repo_teams=repo_teams,
-                tag_teams=teams,
-            ))
+            yikes = RepositoryMissingTeamError(repo, repo_teams, teams)
+            if fail_fast:
+                raise yikes
+            problems.append(yikes)
+            error(yikes)
+
             continue
 
         sha = codetools.eups2git_ref(
@@ -199,6 +237,10 @@ def eups_products_to_gh_repos(
             'eups_version': prod['eups_version'],
             'sha': sha,
         })
+
+    if problems:
+        msg = "{n} repo(s) have errors".format(n=len(problems))
+        raise DogpileError(problems, msg)
 
     return gh_repos
 
@@ -303,8 +345,14 @@ def check_existing_git_tag(repo, t_tag):
                             .format(tag=e_tag))
 
 
-def tag_gh_repos(gh_repos, args, tag_template):
-    tag_exceptions = []
+def tag_gh_repos(
+    gh_repos,
+    tag_template,
+    force_tag=False,
+    fail_fast=False,
+    dry_run=False,
+):
+    problems = []
     for repo in gh_repos:
         # "target tag"
         t_tag = copy.copy(tag_template)
@@ -336,19 +384,21 @@ def tag_gh_repos(gh_repos, args, tag_template):
                 ))
 
                 continue
-        except GitTagExistsError as e:
+        except github.RateLimitExceededException:
+            raise
+        except (github.GithubException, GitTagExistsError) as e:
             yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
 
-            if args.force_tag:
+            if force_tag:
                 update_tag = True
-            elif args.fail_fast:
+            elif fail_fast:
                 raise yikes from None
             else:
-                tag_exceptions.append(yikes)
+                problems.append(yikes)
                 continue
 
         # tags are created/updated past this point
-        if args.dry_run:
+        if dry_run:
             continue
 
         try:
@@ -375,21 +425,18 @@ def tag_gh_repos(gh_repos, args, tag_template):
                     tag_obj.sha
                 )
                 debug("  created ref: {ref}".format(ref=ref))
-        except Exception as e:
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
             yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
-            if args.fail_fast:
+            if fail_fast:
                 raise yikes from None
-            tag_exceptions.append(yikes)
+            problems.append(yikes)
             error(yikes)
 
-    lp_fires = len(tag_exceptions)
-    if lp_fires:
-        error("ERROR: {failed} tag failures".format(failed=str(lp_fires)))
-
-        for e in tag_exceptions:
-            error(e)
-
-        sys.exit(lp_fires if lp_fires < 256 else 255)
+    if problems:
+        msg = "{n} tag failures".format(n=len(problems))
+        raise DogpileError(problems, msg)
 
 
 def run():
@@ -452,18 +499,31 @@ def run():
     manifest = fetch_eups_tag_file(args, eups_candidate)
     eups_products = parse_eups_tag_file(manifest)
 
+    # do not fail-fast on non-write operations
     gh_repos = eups_products_to_gh_repos(
         org,
         args.team,
         eupsbuild,
-        eups_products
+        eups_products,
+        fail_fast=False
     )
-    tag_gh_repos(gh_repos, args, tag_template)
+
+    tag_gh_repos(
+        gh_repos,
+        tag_template,
+        force_tag=args.force_tag,
+        fail_fast=args.fail_fast,
+        dry_run=args.dry_run
+    )
 
 
 def main():
     try:
         run()
+    except DogpileError as e:
+        error(e)
+        n = len(e.errors)
+        sys.exit(n if n < 256 else 255)
     finally:
         if 'g' in globals():
             pygithub.debug_ratelimit(g)
