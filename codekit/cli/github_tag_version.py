@@ -289,8 +289,8 @@ def check_existing_git_tag(repo, t_tag):
 
     Parameters
     ----------
-    repo : dict
-        dict representing a target github repo
+    repo : github.Repository.Repository
+        repo to inspect for an existing tagsdf
     t_tag: dict
         dict repesenting a target git tag
 
@@ -305,17 +305,20 @@ def check_existing_git_tag(repo, t_tag):
         If tag exists but is not in sync.
     """
 
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+    assert isinstance(t_tag, dict)
+
     debug("looking for existing tag: {tag}"
           .format(tag=t_tag['name']))
 
     # find ref/tag by name
-    e_ref = pygithub.find_tag_by_name(repo['repo'], t_tag['name'])
+    e_ref = pygithub.find_tag_by_name(repo, t_tag['name'])
     if not e_ref:
         debug("  not found: {tag}".format(tag=t_tag['name']))
         return False
 
     # find tag object pointed to by the ref
-    e_tag = repo['repo'].get_git_tag(e_ref.object.sha)
+    e_tag = repo.get_git_tag(e_ref.object.sha)
     debug("  found existing tag: {tag}".format(tag=e_tag))
 
     if cmp_existing_git_tag(t_tag, e_tag):
@@ -374,7 +377,7 @@ def tag_gh_repos(
 
         try:
             # if the existing tag is in sync, do nothing
-            if check_existing_git_tag(repo, t_tag):
+            if check_existing_git_tag(repo['repo'], t_tag):
                 warn(textwrap.dedent("""\
                     No action for {repo}
                       existing tag: {tag} is already in sync\
