@@ -22,18 +22,18 @@ class CaughtRepositoryError(Exception):
     """
     def __init__(self, repo, caught):
         assert isinstance(repo, github.Repository.Repository), type(repo)
-        assert isinstance(caught, Exception)
+        assert isinstance(caught, github.GithubException), type(caught)
 
         self.repo = repo
         self.caught = caught
 
     def __str__(self):
         return textwrap.dedent("""\
-            Caught: {name}
+            Caught: {cls}
               In repo: {repo}
               Message: {e}\
             """.format(
-            name=type(self.caught),
+            cls=type(self.caught),
             repo=self.repo.full_name,
             e=str(self.caught)
         ))
@@ -45,18 +45,18 @@ class CaughtTeamError(Exception):
     """
     def __init__(self, team, caught):
         assert isinstance(team, github.Team.Team), type(team)
-        assert isinstance(caught, Exception)
+        assert isinstance(caught, github.GithubException), type(caught)
 
         self.team = team
         self.caught = caught
 
     def __str__(self):
         return textwrap.dedent("""\
-            Caught: {name}
+            Caught: {cls}
               In team: {team}@{org}
               Message: {e}\
             """.format(
-            name=type(self.caught),
+            cls=type(self.caught),
             team=self.team.slug,
             org=self.team.organization.login,
             e=str(self.caught)
@@ -69,18 +69,18 @@ class CaughtOrganizationError(Exception):
     """
     def __init__(self, org, caught):
         assert isinstance(org, github.Organization.Organization), type(org)
-        assert isinstance(caught, Exception)
+        assert isinstance(caught, github.GithubException), type(caught)
 
         self.org = org
         self.caught = caught
 
     def __str__(self):
         return textwrap.dedent("""\
-            Caught: {name}
+            Caught: {cls}
               In org: {org}
               Message: {e}\
             """.format(
-            name=type(self.caught),
+            cls=type(self.caught),
             org=self.org.login,
             e=str(self.caught)
         ))
