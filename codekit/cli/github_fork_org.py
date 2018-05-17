@@ -142,7 +142,9 @@ def create_teams(
     # dict of dst org teams keyed by name (str) with team object as value
     dst_teams = {}
     problems = []
+    batch_repos = 50
     for name, repos in teams.items():
+        pygithub.debug_ratelimit(g)
         debug("creating team {o}/'{t}'".format(
             o=org.login,
             t=name
@@ -155,9 +157,22 @@ def create_teams(
         dst_t = None
         try:
             if with_repos:
-                debug('  with members:')
+                debug("  with {n} member repos:".format(n=len(repos)))
                 [debug("    {r}".format(r=r.full_name)) for r in repos]
-                dst_t = org.create_team(name, repo_names=repos)
+
+                leftover_repos = repos[batch_repos:]
+                if leftover_repos:
+                    debug("  creating team with first {b} of {n} repos"
+                          .format(
+                              b=batch_repos,
+                              n=len(repos)
+                          ))
+                dst_t = org.create_team(name, repo_names=repos[:batch_repos])
+                if leftover_repos:
+                    # add any repos over the batch limit individually to team
+                    for r in leftover_repos:
+                        debug("  adding repo {r}".format(r=r.full_name))
+                        dst_t.add_to_repos(r)
             else:
                 dst_t = org.create_team(name)
         except github.GithubException as e:
@@ -332,6 +347,7 @@ def run():
 
     debug('there is no spoon...')
     problems = []
+    pygithub.debug_ratelimit(g)
     dst_repos, skipped_repos, err = create_forks(
         dst_org,
         src_repos,
