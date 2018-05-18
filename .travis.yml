@@ -18,8 +18,10 @@ matrix:
           github-tag-version \
             --dry-run \
             --org 'lsst' \
-            --team 'Data Management' \
-            --team 'DM Externals' \
+            --allow-team 'Data Management' \
+            --allow-team 'DM Externals' \
+            --external-team 'DM Externals' \
+            --deny-team 'DM Auxilliaries' \
             --email 'sqre-admin@lists.lsst.org' \
             --user 'sqreadmin' \
             --token "$SQREADMIN_TOKEN" \
