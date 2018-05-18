@@ -79,10 +79,17 @@ def parse_args():
         Tag all repositories in a GitHub org using a team-based scheme
 
         Examples:
-        github-tag-version --org lsst --team 'Data Management' w.2015.33 b1630
+        github-tag-version \\
+            --org lsst \\
+            --allow-team 'Data Management' \\
+            w.2015.33 b1630
 
-        github-tag-version --org lsst --team 'Data Management' \
-            --team 'External' --candidate v11_0_rc2 11.0.rc2 b1679
+        github-tag-version \\
+            --org lsst \\
+            --allow-team 'Data Management' \\
+            --allow-team 'DM Externals' \\
+            --candidate \\
+            v11_0_rc2 11.0.rc2 b1679
 
         Note that the access token must have access to these oauth scopes:
             * read:org
@@ -101,16 +108,16 @@ def parse_args():
         required=True,
         help="Github organization")
     parser.add_argument(
-        '--team',
+        '--allow-team',
         action='append',
         required=True,
         help='git repos to be tagged MUST be a member of ONE or more of'
-             ' these teams (can specify several times')
+             ' these teams (can specify several times)')
     parser.add_argument(
         '--deny-team',
         action='append',
         help='git repos to be tagged MUST NOT be a member of ANY of'
-             ' these teams (can specify several times')
+             ' these teams (can specify several times)')
     parser.add_argument('--candidate')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
@@ -538,7 +545,7 @@ def run():
     # do not fail-fast on non-write operations
     gh_repos = eups_products_to_gh_repos(
         org,
-        args.team,
+        args.allow_team,
         args.deny_team,
         eupsbuild,
         eups_products,
