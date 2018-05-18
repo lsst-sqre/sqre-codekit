@@ -36,23 +36,26 @@ class GitTagExistsError(Exception):
     pass
 
 
-class RepositoryMissingTeamError(Exception):
-    def __init__(self, repo, repo_teams, tag_teams):
+class RepositoryTeamMembershipError(Exception):
+    def __init__(self, repo, repo_team_names, allow_teams, deny_teams):
         assert isinstance(repo, github.Repository.Repository), type(repo)
 
         self.repo = repo
-        self.repo_teams = repo_teams
-        self.tag_teams = tag_teams
+        self.repo_team_names = repo_team_names
+        self.allow_teams = allow_teams
+        self.deny_teams = deny_teams
 
     def __str__(self):
         return textwrap.dedent("""\
-            No action for {repo}
-              has teams: {repo_teams}
-              does not belong to any of: {tag_teams}\
+            Invalid team membership for {repo}
+              has teams:     {repo_teams}
+              allowed teams: {allow}
+              denied teams:  {deny}\
             """.format(
             repo=self.repo.full_name,
-            repo_teams=self.repo_teams,
-            tag_teams=self.tag_teams
+            repo_teams=self.repo_team_names,
+            allow=self.allow_teams,
+            deny=self.deny_teams,
         ))
 
 
@@ -101,7 +104,13 @@ def parse_args():
         '--team',
         action='append',
         required=True,
-        help="team whose repos may be tagged (can specify several times")
+        help='git repos to be tagged MUST be a member of ONE or more of'
+             ' these teams (can specify several times')
+    parser.add_argument(
+        '--deny-team',
+        action='append',
+        help='git repos to be tagged MUST NOT be a member of ANY of'
+             ' these teams (can specify several times')
     parser.add_argument('--candidate')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
@@ -187,11 +196,15 @@ def parse_eups_tag_file(data):
 
 def eups_products_to_gh_repos(
     org,
-    teams,
+    allow_teams,
+    deny_teams,
     eupsbuild,
     eups_products,
     fail_fast=False
 ):
+    debug("allowed teams: {allow}".format(allow=allow_teams))
+    debug("denied teams: {deny}".format(deny=deny_teams))
+
     problems = []
     gh_repos = []
     for prod in eups_products:
@@ -215,9 +228,17 @@ def eups_products_to_gh_repos(
 
         debug("  found: {slug}".format(slug=repo.full_name))
 
-        repo_teams = [t.name for t in repo.get_teams()]
-        if not any(x in repo_teams for x in teams):
-            yikes = RepositoryMissingTeamError(repo, repo_teams, teams)
+        repo_team_names = [t.name for t in repo.get_teams()]
+        debug("  teams: {teams}".format(teams=repo_team_names))
+
+        if not any(x in repo_team_names for x in allow_teams)\
+           or any(x in repo_team_names for x in deny_teams):
+            yikes = RepositoryTeamMembershipError(
+                repo,
+                repo_team_names,
+                allow_teams=allow_teams,
+                deny_teams=deny_teams
+            )
             if fail_fast:
                 raise yikes
             problems.append(yikes)
@@ -518,6 +539,7 @@ def run():
     gh_repos = eups_products_to_gh_repos(
         org,
         args.team,
+        args.deny_team,
         eupsbuild,
         eups_products,
         fail_fast=False
