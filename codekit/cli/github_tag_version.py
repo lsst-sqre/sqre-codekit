@@ -23,6 +23,7 @@ import copy
 import github
 import logging
 import os
+import re
 import requests
 import sys
 import textwrap
@@ -82,14 +83,16 @@ def parse_args():
         github-tag-version \\
             --org lsst \\
             --allow-team 'Data Management' \\
-            w.2015.33 b1630
+            --allow-team 'DM Externals' \\
+            'w.2018.18' 'b3595'
 
         github-tag-version \\
             --org lsst \\
             --allow-team 'Data Management' \\
             --allow-team 'DM Externals' \\
-            --candidate \\
-            v11_0_rc2 11.0.rc2 b1679
+            --external-team 'DM Externals' \\
+            --candidate v11_0_rc2 \\
+            11.0.rc2 b1679
 
         Note that the access token must have access to these oauth scopes:
             * read:org
@@ -113,6 +116,12 @@ def parse_args():
         required=True,
         help='git repos to be tagged MUST be a member of ONE or more of'
              ' these teams (can specify several times)')
+    parser.add_argument(
+        '--external-team',
+        action='append',
+        help='git repos in this team MUST not have tags that start with a'
+             ' number. Any requested tag that violates this policy will be'
+             ' prefixed with \'v\' (can specify several times)')
     parser.add_argument(
         '--deny-team',
         action='append',
@@ -201,9 +210,11 @@ def parse_eups_tag_file(data):
     return products
 
 
+# split out actual eups/manifest mapping / rename
 def eups_products_to_gh_repos(
     org,
     allow_teams,
+    ext_teams,
     deny_teams,
     eupsbuild,
     eups_products,
@@ -253,6 +264,9 @@ def eups_products_to_gh_repos(
 
             continue
 
+        has_ext_team = any(x in repo_team_names for x in ext_teams)
+        debug("  external repo: {v}".format(v=has_ext_team))
+
         sha = codetools.eups2git_ref(
             product=repo.name,
             eups_version=prod['eups_version'],
@@ -264,6 +278,7 @@ def eups_products_to_gh_repos(
             'product': prod['name'],
             'eups_version': prod['eups_version'],
             'sha': sha,
+            'v': has_ext_team,
         })
 
     if problems:
@@ -389,18 +404,24 @@ def tag_gh_repos(
         t_tag = copy.copy(tag_template)
         t_tag['sha'] = repo['sha']
 
+        # prefix tag name with `v`?
+        if repo['v'] and re.match('\d', t_tag['name']):
+            t_tag['name'] = 'v' + t_tag['name']
+
         # control whether to create a new tag or update an existing one
         update_tag = False
 
         debug(textwrap.dedent("""\
             tagging repo: {repo}
               sha: {sha} as {gt}
-              (eups version: {et})\
+              (eups version: {et})
+              external repo: {v}\
             """).format(
             repo=repo['repo'].full_name,
             sha=t_tag['sha'],
             gt=t_tag['name'],
-            et=repo['eups_version']
+            et=repo['eups_version'],
+            v=repo['v']
         ))
 
         try:
@@ -544,11 +565,12 @@ def run():
 
     # do not fail-fast on non-write operations
     gh_repos = eups_products_to_gh_repos(
-        org,
-        args.allow_team,
-        args.deny_team,
-        eupsbuild,
-        eups_products,
+        org=org,
+        allow_teams=args.allow_team,
+        ext_teams=args.external_team,
+        deny_teams=args.deny_team,
+        eupsbuild=eupsbuild,
+        eups_products=eups_products,
         fail_fast=False
     )
 
