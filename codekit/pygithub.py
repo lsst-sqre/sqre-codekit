@@ -241,9 +241,7 @@ def get_teams_by_name(org, team_names):
     github.GithubException
         Upon error from github api
     """
-    assert isinstance(org, github.Organization.Organization),\
-        type(org)
-    assert isinstance(team_names, list), type(team_names)
+    assert isinstance(org, github.Organization.Organization), type(org)
 
     org_teams = list(org.get_teams())
 
