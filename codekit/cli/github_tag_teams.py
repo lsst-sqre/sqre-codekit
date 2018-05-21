@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-from codekit import pygithub
-from .. import codetools
-from .. import info, debug
+from codekit.codetools import debug, error, info, warn
+from codekit import codetools, pygithub
 import argparse
 import github
 import logging
@@ -13,6 +12,10 @@ import textwrap
 
 logger = logging.getLogger('codekit')
 logging.basicConfig()
+
+
+class GitTagExistsError(Exception):
+    pass
 
 
 def parse_args():
@@ -50,10 +53,16 @@ def parse_args():
         required=True,
         help="Github organization")
     parser.add_argument(
-        '--team',
+        '--allow-team',
         action='append',
         required=True,
-        help="team whose repos may be tagged (can specify several times")
+        help='git repos to be tagged MUST be a member of ONE or more of'
+             ' these teams (can specify several times)')
+    parser.add_argument(
+        '--deny-team',
+        action='append',
+        help='git repos to be tagged MUST NOT be a member of ANY of'
+             ' these teams (can specify several times)')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
         '--user',
@@ -78,21 +87,35 @@ def parse_args():
     return parser.parse_args()
 
 
-def find_repos_missing_tags(repos, tags):
-    debug("looking for repos WITHOUT {tags}".format(tags=tags))
-    need = {}
+def check_tags(repos, tags, ignore_existing=False, fail_fast=False):
+    """ check if tags already exist in repos"""
+
+    debug("looking for tags {tags} in repos".format(tags=tags))
+    target_tags = {}
+    problems = []
     for r in repos:
         has_tags = find_tags_in_repo(r, tags)
-        debug("has_tags {t}".format(t=has_tags))
+        if has_tags and not ignore_existing:
+            yikes = GitTagExistsError(
+                "tag(s) {tag} already exists in repos {r}".format(
+                    tag=has_tags,
+                    r=r.full_name
+                ))
+            if fail_fast:
+                raise yikes
+            problems.append(yikes)
+            error(yikes)
+
         missing_tags = [x for x in tags if x not in has_tags]
-        debug("missing_tags {t}".format(t=missing_tags))
         if missing_tags:
-            need[r.full_name] = {
+            target_tags[r.full_name] = {
                 'repo': r,
                 'need_tags': missing_tags,
             }
+        else:
+            warn("nothing to for {r}".format(r=r.full_name))
 
-    return need
+    return target_tags, problems
 
 
 def find_tags_in_repo(repo, tags):
@@ -131,7 +154,83 @@ def find_repo_teams(repo):
     return teams
 
 
-def tag_repo(repo, tags, tagger, dry_run=False):
+def get_candidate_teams(org, target_teams):
+    assert isinstance(org, github.Organization.Organization), type(org)
+
+    teams = org.get_teams()
+
+    debug("looking for teams: {teams}".format(teams=target_teams))
+    tag_teams = [t for t in teams if t.name in target_teams]
+    debug("found teams: {teams}".format(teams=tag_teams))
+
+    if not tag_teams:
+        raise RuntimeError('No teams found')
+
+    return tag_teams
+
+
+def get_candidate_repos(teams):
+    # flatten generator to list so it can be itererated over multiple times
+    repos = list(pygithub.get_repos_by_team(teams))
+
+    # find length of longest repo name to nicely format output
+    names = [r.full_name for r in repos]
+    max_name_len = len(max(names, key=len))
+
+    team_names = [t.name for t in teams]
+    info('found repo [select by team(s)]:')
+    for r in repos:
+        # list only teams which were used to select the repo as a candiate
+        # for tagging
+        s_teams = [t.name for t in find_repo_teams(r)
+                   if t.name in team_names]
+        info("  {repo: >{w}} {teams}".format(
+            w=max_name_len,
+            repo=r.full_name,
+            teams=s_teams)
+        )
+
+    return repos
+
+
+def check_repos(repos, allow_teams, deny_teams, fail_fast=False):
+    problems = []
+    for r in repos:
+        try:
+            pygithub.check_repo_teams(
+                r,
+                allow_teams=allow_teams,
+                deny_teams=deny_teams,
+                team_names=[t.name for t in find_repo_teams(r)],
+            )
+        except pygithub.RepositoryTeamMembershipError as e:
+            if fail_fast:
+                raise
+            problems.append(e)
+            error(e)
+
+            continue
+
+    return problems
+
+
+def tag_repos(tag_repos, **kwargs):
+    info('missing repo [tags]:')
+    max_name_len = len(max(tag_repos, key=len))
+    for k in tag_repos:
+        info("  {repo: >{w}} {tags}".format(
+            w=max_name_len,
+            repo=k,
+            tags=tag_repos[k]['need_tags']
+        ))
+
+    for k in tag_repos:
+        r = tag_repos[k]['repo']
+        tags = tag_repos[k]['need_tags']
+        create_tags(r, tags, **kwargs)
+
+
+def create_tags(repo, tags, tagger, dry_run=False):
     # tag the head of the designated "default branch"
     # XXX this probably should be resolved via repos.yaml
     default_branch = repo.default_branch
@@ -193,67 +292,37 @@ def run():
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(gh_org_name)
-    debug("tagging repos by team in org: {o}".format(o=org.login))
+    debug("tagging repos in org: {org}".format(org=org.login))
 
-    teams = org.get_teams()
+    tag_teams = get_candidate_teams(org, args.allow_team)
+    target_repos = get_candidate_repos(tag_teams)
 
-    debug("looking for teams: {teams}".format(teams=args.team))
-    tag_teams = [t for t in teams if t.name in args.team]
-    debug("found teams: {teams}".format(teams=tag_teams))
-
-    if not tag_teams:
-        raise RuntimeError('No teams found')
-
-    # flatten generator to list so it can be itererated over multiple times
-    target_repos = list(pygithub.get_repos_by_team(tag_teams))
-
-    # find length of longest repo name to nicely format output
-    names = [r.full_name for r in target_repos]
-    max_name_len = len(max(names, key=len))
-
-    info('found repo [teams]:')
-    for r in target_repos:
-        # list only teams which were used to select the repo as a candiate
-        # for tagging
-        m_teams = [t.name for t in find_repo_teams(r)
-                   if t.name in args.team]
-        info("  {repo: >{w}} {teams}".format(
-            w=max_name_len,
-            repo=r.full_name,
-            teams=m_teams)
-        )
+    problems = []
+    problems += check_repos(
+        target_repos,
+        args.allow_team,
+        args.deny_team,
+        fail_fast=False
+    )
 
     # dict
-    untagged_repos = find_repos_missing_tags(target_repos, tags)
-    # list
-    tagged_repos = [r for r in target_repos
-                    if r.full_name not in untagged_repos]
+    target_tags, err = check_tags(target_repos, tags)
+    problems += err
 
-    info('already tagged repos:')
-    for r in tagged_repos:
-        info("  {repo}".format(repo=r.full_name))
+    if problems:
+        msg = "{n} repo(s) have errors".format(n=len(problems))
+        raise codetools.DogpileError(problems, msg)
 
-    if not untagged_repos:
-        sys.exit('no untagged repos -- nothing to do')
-
-    info('missing repo [tags]:')
-    max_name_len = len(max(untagged_repos, key=len))
-    for k in untagged_repos:
-        info("  {repo: >{w}} {tags}".format(
-            w=max_name_len,
-            repo=k,
-            tags=untagged_repos[k]['need_tags']
-        ))
-
-    for k in untagged_repos:
-        r = untagged_repos[k]['repo']
-        tags = untagged_repos[k]['need_tags']
-        tag_repo(r, tags, tagger, dry_run=args.dry_run)
+    tag_repos(target_tags, tagger=tagger, dry_run=args.dry_run)
 
 
 def main():
     try:
         run()
+    except codetools.DogpileError as e:
+        error(e)
+        n = len(e.errors)
+        sys.exit(n if n < 256 else 255)
     finally:
         if 'g' in globals():
             pygithub.debug_ratelimit(g)
