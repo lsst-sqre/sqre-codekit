@@ -15,10 +15,9 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 
-from .. import codetools
+from codekit import codetools, pygithub
 from .. import debug, warn, error
 import argparse
-import codekit.pygithub as pygithub
 import copy
 import github
 import logging
@@ -35,15 +34,6 @@ eupspkg_site = 'https://eups.lsst.codes/stack/src'
 
 class GitTagExistsError(Exception):
     pass
-
-
-class DogpileError(Exception):
-    def __init__(self, errors, msg):
-        self.errors = errors
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg + "\n" + "\n".join([str(e) for e in self.errors])
 
 
 def parse_args():
@@ -260,7 +250,7 @@ def eups_products_to_gh_repos(
 
     if problems:
         msg = "{n} repo(s) have errors".format(n=len(problems))
-        raise DogpileError(problems, msg)
+        raise codetools.DogpileError(problems, msg)
 
     return gh_repos
 
@@ -477,7 +467,7 @@ def tag_gh_repos(
 
     if problems:
         msg = "{n} tag failures".format(n=len(problems))
-        raise DogpileError(problems, msg)
+        raise codetools.DogpileError(problems, msg)
 
 
 def run():
@@ -530,7 +520,7 @@ def run():
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(args.org)
-    debug("tagging repos in github org: {org}".format(org=org.login))
+    debug("tagging repos in org: {org}".format(org=org.login))
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
@@ -563,7 +553,7 @@ def run():
 def main():
     try:
         run()
-    except DogpileError as e:
+    except codetools.DogpileError as e:
         error(e)
         n = len(e.errors)
         sys.exit(n if n < 256 else 255)
