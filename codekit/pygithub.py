@@ -274,3 +274,44 @@ def debug_ratelimit(g):
     assert isinstance(g, github.MainClass.Github), type(g)
 
     debug("github ratelimit: {rl}".format(rl=g.rate_limiting))
+
+
+@public
+def check_repo_teams(repo, allow_teams, deny_teams, team_names=None):
+    """Check if repo teams match allow/deny lists
+
+    Parameters
+    ----------
+    repo: github.Repository.Repository
+        repo to check for membership
+
+    allow_teams: list(str)
+        list of team names that repo MUST belong to at least one of.
+
+    deny_teams: list(str)
+        list of team that repo MSUT NOT be a member of.
+
+    team_names: list(str)
+        list of the team name which the repo is a member of (optional).
+        Providing this list saves retriving the list of teams from the github
+        API.
+
+    Raises
+    ------
+    RepositoryTeamMembershipError
+        Upon permission error
+    """
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+
+    # fetch team names if a list was not passed
+    if not team_names:
+        team_names = [t.name for t in repo.get_teams()]
+
+    if not any(x in team_names for x in allow_teams)\
+       or any(x in team_names for x in deny_teams):
+        raise RepositoryTeamMembershipError(
+            repo,
+            team_names,
+            allow_teams=allow_teams,
+            deny_teams=deny_teams
+        )
