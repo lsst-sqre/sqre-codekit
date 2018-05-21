@@ -56,15 +56,14 @@ def parse_args():
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
         '--fail-fast',
-        default=True,
         action='store_true',
-        help='Fail immediately on github API errors. (default)')
+        help='Fail immediately on github API errors.')
     parser.add_argument(
         '--no-fail-fast',
         action='store_const',
         const=False,
         dest='fail_fast',
-        help='DO NOT Fail immediately on github API errors.')
+        help='DO NOT Fail immediately on github API errors. (default)')
     parser.add_argument(
         '-d', '--debug',
         action='count',
