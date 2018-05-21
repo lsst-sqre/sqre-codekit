@@ -226,18 +226,18 @@ def eups_products_to_gh_repos(
         repo_team_names = [t.name for t in repo.get_teams()]
         debug("  teams: {teams}".format(teams=repo_team_names))
 
-        if not any(x in repo_team_names for x in allow_teams)\
-           or any(x in repo_team_names for x in deny_teams):
-            yikes = pygithub.RepositoryTeamMembershipError(
+        try:
+            pygithub.check_repo_teams(
                 repo,
-                repo_team_names,
                 allow_teams=allow_teams,
-                deny_teams=deny_teams
+                deny_teams=deny_teams,
+                team_names=repo_team_names
             )
+        except pygithub.RepositoryTeamMembershipError as e:
             if fail_fast:
-                raise yikes
-            problems.append(yikes)
-            error(yikes)
+                raise
+            problems.append(e)
+            error(e)
 
             continue
 
