@@ -48,6 +48,16 @@ class ScmVersionAction(argparse.Action):
         parser.exit()
 
 
+class DogpileError(Exception):
+    """Aggregate list of exceptions"""
+    def __init__(self, errors, msg):
+        self.errors = errors
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg + "\n" + "\n".join([str(e) for e in self.errors])
+
+
 @public
 def lookup_email(args):
     """Return the email address to use when creating git objects or exit
