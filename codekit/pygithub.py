@@ -112,6 +112,29 @@ class CaughtUnknownObjectError(Exception):
         ))
 
 
+class RepositoryTeamMembershipError(Exception):
+    def __init__(self, repo, repo_team_names, allow_teams, deny_teams):
+        assert isinstance(repo, github.Repository.Repository), type(repo)
+
+        self.repo = repo
+        self.repo_team_names = repo_team_names
+        self.allow_teams = allow_teams
+        self.deny_teams = deny_teams
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Invalid team membership for {repo}
+              has teams:     {repo_teams}
+              allowed teams: {allow}
+              denied teams:  {deny}\
+            """.format(
+            repo=self.repo.full_name,
+            repo_teams=self.repo_team_names,
+            allow=self.allow_teams,
+            deny=self.deny_teams,
+        ))
+
+
 @public
 def login_github(token_path=None, token=None):
     """Log into GitHub using an existing token.

@@ -37,29 +37,6 @@ class GitTagExistsError(Exception):
     pass
 
 
-class RepositoryTeamMembershipError(Exception):
-    def __init__(self, repo, repo_team_names, allow_teams, deny_teams):
-        assert isinstance(repo, github.Repository.Repository), type(repo)
-
-        self.repo = repo
-        self.repo_team_names = repo_team_names
-        self.allow_teams = allow_teams
-        self.deny_teams = deny_teams
-
-    def __str__(self):
-        return textwrap.dedent("""\
-            Invalid team membership for {repo}
-              has teams:     {repo_teams}
-              allowed teams: {allow}
-              denied teams:  {deny}\
-            """.format(
-            repo=self.repo.full_name,
-            repo_teams=self.repo_team_names,
-            allow=self.allow_teams,
-            deny=self.deny_teams,
-        ))
-
-
 class DogpileError(Exception):
     def __init__(self, errors, msg):
         self.errors = errors
@@ -251,7 +228,7 @@ def eups_products_to_gh_repos(
 
         if not any(x in repo_team_names for x in allow_teams)\
            or any(x in repo_team_names for x in deny_teams):
-            yikes = RepositoryTeamMembershipError(
+            yikes = pygithub.RepositoryTeamMembershipError(
                 repo,
                 repo_team_names,
                 allow_teams=allow_teams,
