@@ -6,6 +6,7 @@ from .. import info, debug
 import argparse
 import github
 import logging
+import os
 import re
 import sys
 import textwrap
@@ -71,6 +72,7 @@ def parse_args():
     parser.add_argument(
         '-d', '--debug',
         action='count',
+        default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
     return parser.parse_args()
