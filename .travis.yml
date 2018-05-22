@@ -18,8 +18,10 @@ matrix:
           github-tag-version \
             --dry-run \
             --org 'lsst' \
-            --team 'Data Management' \
-            --team 'DM Externals' \
+            --allow-team 'Data Management' \
+            --allow-team 'DM Externals' \
+            --external-team 'DM Externals' \
+            --deny-team 'DM Auxilliaries' \
             --email 'sqre-admin@lists.lsst.org' \
             --user 'sqreadmin' \
             --token "$SQREADMIN_TOKEN" \
@@ -40,16 +42,14 @@ matrix:
           github-tag-teams \
             --dry-run \
             --org 'lsst' \
-            --team 'DM Auxilliaries' \
+            --allow-team 'DM Auxilliaries' \
+            --deny-team 'DM Externals' \
             --token "$SQREADMIN_TOKEN" \
             --user 'sqreadmin' \
             --email 'sqre-admin@lists.lsst.org' \
             --debug \
             --tag 'foo' \
-            --tag '13.0' \
-            --tag '14.0' \
-            --tag '15.0' \
-            --tag 'w.2018.18'
+            --tag 'bar'
         else
           echo "Unable to test without travis secure env vars."
         fi

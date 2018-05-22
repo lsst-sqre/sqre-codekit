@@ -43,7 +43,7 @@ setup(
         'MapGitConfig==1.1',
         'progressbar2==3.37.1',
         'public==1.0',
-        'pygithub',
+        'pygithub==1.40a3',
         'requests>=2.8.1,<3.0.0',
     ],
     setup_requires=[

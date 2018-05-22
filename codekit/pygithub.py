@@ -22,18 +22,18 @@ class CaughtRepositoryError(Exception):
     """
     def __init__(self, repo, caught):
         assert isinstance(repo, github.Repository.Repository), type(repo)
-        assert isinstance(caught, Exception)
+        assert isinstance(caught, github.GithubException), type(caught)
 
         self.repo = repo
         self.caught = caught
 
     def __str__(self):
         return textwrap.dedent("""\
-            Caught: {name}
+            Caught: {cls}
               In repo: {repo}
               Message: {e}\
             """.format(
-            name=type(self.caught),
+            cls=type(self.caught),
             repo=self.repo.full_name,
             e=str(self.caught)
         ))
@@ -45,18 +45,18 @@ class CaughtTeamError(Exception):
     """
     def __init__(self, team, caught):
         assert isinstance(team, github.Team.Team), type(team)
-        assert isinstance(caught, Exception)
+        assert isinstance(caught, github.GithubException), type(caught)
 
         self.team = team
         self.caught = caught
 
     def __str__(self):
         return textwrap.dedent("""\
-            Caught: {name}
+            Caught: {cls}
               In team: {team}@{org}
               Message: {e}\
             """.format(
-            name=type(self.caught),
+            cls=type(self.caught),
             team=self.team.slug,
             org=self.team.organization.login,
             e=str(self.caught)
@@ -69,20 +69,69 @@ class CaughtOrganizationError(Exception):
     """
     def __init__(self, org, caught):
         assert isinstance(org, github.Organization.Organization), type(org)
-        assert isinstance(caught, Exception)
+        assert isinstance(caught, github.GithubException), type(caught)
 
         self.org = org
         self.caught = caught
 
     def __str__(self):
         return textwrap.dedent("""\
-            Caught: {name}
+            Caught: {cls}
               In org: {org}
               Message: {e}\
             """.format(
-            name=type(self.caught),
+            cls=type(self.caught),
             org=self.org.login,
             e=str(self.caught)
+        ))
+
+
+class CaughtUnknownObjectError(Exception):
+    """Simple exception class intended to bundle together the name of the
+    resource that was attempted to be accessed and a thrown exception.
+    """
+    def __init__(self, name, caught):
+        assert isinstance(name, str), type(name)
+        assert isinstance(
+            caught,
+            github.UnknownObjectException
+        ), type(caught)
+
+        self.name = name
+        self.caught = caught
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Caught: {cls}
+              Name: {name}
+              Message: {e}\
+            """.format(
+            cls=type(self.caught),
+            name=self.name,
+            e=str(self.caught)
+        ))
+
+
+class RepositoryTeamMembershipError(Exception):
+    def __init__(self, repo, repo_team_names, allow_teams, deny_teams):
+        assert isinstance(repo, github.Repository.Repository), type(repo)
+
+        self.repo = repo
+        self.repo_team_names = repo_team_names
+        self.allow_teams = allow_teams
+        self.deny_teams = deny_teams
+
+    def __str__(self):
+        return textwrap.dedent("""\
+            Invalid team membership for {repo}
+              has teams:     {repo_teams}
+              allowed teams: {allow}
+              denied teams:  {deny}\
+            """.format(
+            repo=self.repo.full_name,
+            repo_teams=self.repo_team_names,
+            allow=self.allow_teams,
+            deny=self.deny_teams,
         ))
 
 
@@ -192,9 +241,7 @@ def get_teams_by_name(org, team_names):
     github.GithubException
         Upon error from github api
     """
-    assert isinstance(org, github.Organization.Organization),\
-        type(org)
-    assert isinstance(team_names, list), type(team_names)
+    assert isinstance(org, github.Organization.Organization), type(org)
 
     org_teams = list(org.get_teams())
 
@@ -227,3 +274,44 @@ def debug_ratelimit(g):
     assert isinstance(g, github.MainClass.Github), type(g)
 
     debug("github ratelimit: {rl}".format(rl=g.rate_limiting))
+
+
+@public
+def check_repo_teams(repo, allow_teams, deny_teams, team_names=None):
+    """Check if repo teams match allow/deny lists
+
+    Parameters
+    ----------
+    repo: github.Repository.Repository
+        repo to check for membership
+
+    allow_teams: list(str)
+        list of team names that repo MUST belong to at least one of.
+
+    deny_teams: list(str)
+        list of team that repo MSUT NOT be a member of.
+
+    team_names: list(str)
+        list of the team name which the repo is a member of (optional).
+        Providing this list saves retriving the list of teams from the github
+        API.
+
+    Raises
+    ------
+    RepositoryTeamMembershipError
+        Upon permission error
+    """
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+
+    # fetch team names if a list was not passed
+    if not team_names:
+        team_names = [t.name for t in repo.get_teams()]
+
+    if not any(x in team_names for x in allow_teams)\
+       or any(x in team_names for x in deny_teams):
+        raise RepositoryTeamMembershipError(
+            repo,
+            team_names,
+            allow_teams=allow_teams,
+            deny_teams=deny_teams
+        )

@@ -15,14 +15,14 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 
-from .. import codetools
+from codekit import codetools, pygithub
 from .. import debug, warn, error
 import argparse
-import codekit.pygithub as pygithub
 import copy
 import github
 import logging
 import os
+import re
 import requests
 import sys
 import textwrap
@@ -47,10 +47,19 @@ def parse_args():
         Tag all repositories in a GitHub org using a team-based scheme
 
         Examples:
-        github-tag-version --org lsst --team 'Data Management' w.2015.33 b1630
+        github-tag-version \\
+            --org lsst \\
+            --allow-team 'Data Management' \\
+            --allow-team 'DM Externals' \\
+            'w.2018.18' 'b3595'
 
-        github-tag-version --org lsst --team 'Data Management' \
-            --team 'External' --candidate v11_0_rc2 11.0.rc2 b1679
+        github-tag-version \\
+            --org lsst \\
+            --allow-team 'Data Management' \\
+            --allow-team 'DM Externals' \\
+            --external-team 'DM Externals' \\
+            --candidate v11_0_rc2 \\
+            11.0.rc2 b1679
 
         Note that the access token must have access to these oauth scopes:
             * read:org
@@ -69,10 +78,22 @@ def parse_args():
         required=True,
         help="Github organization")
     parser.add_argument(
-        '--team',
+        '--allow-team',
         action='append',
         required=True,
-        help="team whose repos may be tagged (can specify several times")
+        help='git repos to be tagged MUST be a member of ONE or more of'
+             ' these teams (can specify several times)')
+    parser.add_argument(
+        '--external-team',
+        action='append',
+        help='git repos in this team MUST not have tags that start with a'
+             ' number. Any requested tag that violates this policy will be'
+             ' prefixed with \'v\' (can specify several times)')
+    parser.add_argument(
+        '--deny-team',
+        action='append',
+        help='git repos to be tagged MUST NOT be a member of ANY of'
+             ' these teams (can specify several times)')
     parser.add_argument('--candidate')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
@@ -97,6 +118,12 @@ def parse_args():
         '--fail-fast',
         action='store_true',
         help='Fail immediately on github API errors.')
+    parser.add_argument(
+        '--no-fail-fast',
+        action='store_const',
+        const=False,
+        dest='fail_fast',
+        help='DO NOT Fail immediately on github API errors. (default)')
     parser.add_argument(
         '-d', '--debug',
         action='count',
@@ -150,43 +177,67 @@ def parse_eups_tag_file(data):
     return products
 
 
+# split out actual eups/manifest mapping / rename
 def eups_products_to_gh_repos(
     org,
-    teams,
+    allow_teams,
+    ext_teams,
+    deny_teams,
     eupsbuild,
     eups_products,
-    debug=False
+    fail_fast=False
 ):
-    gh_repos = []
+    debug("allowed teams: {allow}".format(allow=allow_teams))
+    debug("denied teams: {deny}".format(deny=deny_teams))
 
+    problems = []
+    gh_repos = []
     for prod in eups_products:
-        codetools.debug("looking for git repo for: {prod} [{ver}]".format(
+        debug("looking for git repo for: {prod} [{ver}]".format(
             prod=prod['name'],
             ver=prod['eups_version']
         ))
 
-        repo = org.get_repo(prod['name'])
+        try:
+            repo = org.get_repo(prod['name'])
+        except github.RateLimitExceededException:
+            raise
+        except github.UnknownObjectException as e:
+            yikes = pygithub.CaughtUnknownObjectError(prod['name'], e)
+            if fail_fast:
+                raise yikes from None
+            problems.append(yikes)
+            error(yikes)
 
-        codetools.debug("  found: {slug}".format(slug=repo.full_name))
-
-        repo_teams = [t.name for t in repo.get_teams()]
-        if not any(x in repo_teams for x in teams):
-            warn(textwrap.dedent("""\
-                No action for {repo}
-                  has teams: {repo_teams}
-                  does not belong to any of: {tag_teams}\
-                """).format(
-                repo=repo.full_name,
-                repo_teams=repo_teams,
-                tag_teams=teams,
-            ))
             continue
+
+        debug("  found: {slug}".format(slug=repo.full_name))
+
+        repo_team_names = [t.name for t in repo.get_teams()]
+        debug("  teams: {teams}".format(teams=repo_team_names))
+
+        try:
+            pygithub.check_repo_teams(
+                repo,
+                allow_teams=allow_teams,
+                deny_teams=deny_teams,
+                team_names=repo_team_names
+            )
+        except pygithub.RepositoryTeamMembershipError as e:
+            if fail_fast:
+                raise
+            problems.append(e)
+            error(e)
+
+            continue
+
+        has_ext_team = any(x in repo_team_names for x in ext_teams)
+        debug("  external repo: {v}".format(v=has_ext_team))
 
         sha = codetools.eups2git_ref(
             product=repo.name,
             eups_version=prod['eups_version'],
-            build_id=eupsbuild,
-            debug=debug
+            build_id=eupsbuild
         )
 
         gh_repos.append({
@@ -194,7 +245,12 @@ def eups_products_to_gh_repos(
             'product': prod['name'],
             'eups_version': prod['eups_version'],
             'sha': sha,
+            'v': has_ext_team,
         })
+
+    if problems:
+        msg = "{n} repo(s) have errors".format(n=len(problems))
+        raise codetools.DogpileError(problems, msg)
 
     return gh_repos
 
@@ -243,8 +299,8 @@ def check_existing_git_tag(repo, t_tag):
 
     Parameters
     ----------
-    repo : dict
-        dict representing a target github repo
+    repo : github.Repository.Repository
+        repo to inspect for an existing tagsdf
     t_tag: dict
         dict repesenting a target git tag
 
@@ -259,17 +315,20 @@ def check_existing_git_tag(repo, t_tag):
         If tag exists but is not in sync.
     """
 
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+    assert isinstance(t_tag, dict)
+
     debug("looking for existing tag: {tag}"
           .format(tag=t_tag['name']))
 
     # find ref/tag by name
-    e_ref = pygithub.find_tag_by_name(repo['repo'], t_tag['name'])
+    e_ref = pygithub.find_tag_by_name(repo, t_tag['name'])
     if not e_ref:
         debug("  not found: {tag}".format(tag=t_tag['name']))
         return False
 
     # find tag object pointed to by the ref
-    e_tag = repo['repo'].get_git_tag(e_ref.object.sha)
+    e_tag = repo.get_git_tag(e_ref.object.sha)
     debug("  found existing tag: {tag}".format(tag=e_tag))
 
     if cmp_existing_git_tag(t_tag, e_tag):
@@ -287,9 +346,9 @@ def check_existing_git_tag(repo, t_tag):
             tagger: {t_tagger}\
     """).format(
         tag=t_tag['name'],
-        e_sha=e_tag['sha'],
-        e_message=e_tag['message'],
-        e_tagger=e_tag['tagger'],
+        e_sha=e_tag.sha,
+        e_message=e_tag.message,
+        e_tagger=e_tag.tagger,
         t_sha=t_tag['sha'],
         t_message=t_tag['message'],
         t_tagger=t_tag['tagger'],
@@ -299,12 +358,22 @@ def check_existing_git_tag(repo, t_tag):
                             .format(tag=e_tag))
 
 
-def tag_gh_repos(gh_repos, args, tag_template):
-    tag_exceptions = []
+def tag_gh_repos(
+    gh_repos,
+    tag_template,
+    force_tag=False,
+    fail_fast=False,
+    dry_run=False,
+):
+    problems = []
     for repo in gh_repos:
         # "target tag"
         t_tag = copy.copy(tag_template)
         t_tag['sha'] = repo['sha']
+
+        # prefix tag name with `v`?
+        if repo['v'] and re.match('\d', t_tag['name']):
+            t_tag['name'] = 'v' + t_tag['name']
 
         # control whether to create a new tag or update an existing one
         update_tag = False
@@ -312,17 +381,19 @@ def tag_gh_repos(gh_repos, args, tag_template):
         debug(textwrap.dedent("""\
             tagging repo: {repo}
               sha: {sha} as {gt}
-              (eups version: {et})\
+              (eups version: {et})
+              external repo: {v}\
             """).format(
             repo=repo['repo'].full_name,
             sha=t_tag['sha'],
             gt=t_tag['name'],
-            et=repo['eups_version']
+            et=repo['eups_version'],
+            v=repo['v']
         ))
 
         try:
             # if the existing tag is in sync, do nothing
-            if check_existing_git_tag(repo, t_tag):
+            if check_existing_git_tag(repo['repo'], t_tag):
                 warn(textwrap.dedent("""\
                     No action for {repo}
                       existing tag: {tag} is already in sync\
@@ -332,19 +403,33 @@ def tag_gh_repos(gh_repos, args, tag_template):
                 ))
 
                 continue
+        except github.RateLimitExceededException:
+            raise
         except GitTagExistsError as e:
+            # if force_tag is set, and the tag already exists, set
+            # update_tag and fall through. Otherwise, treat it as any other
+            # exception.
+            if force_tag:
+                update_tag = True
+            elif fail_fast:
+                raise
+            else:
+                problems.append(e)
+                error(e)
+                continue
+        except github.GithubException as e:
             yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
 
-            if args.force_tag:
-                update_tag = True
-            elif args.fail_fast:
+            if fail_fast:
                 raise yikes from None
             else:
-                tag_exceptions.append(yikes)
+                problems.append(yikes)
+                error(yikes)
                 continue
 
         # tags are created/updated past this point
-        if args.dry_run:
+        if dry_run:
+            debug('  (noop)')
             continue
 
         try:
@@ -371,21 +456,18 @@ def tag_gh_repos(gh_repos, args, tag_template):
                     tag_obj.sha
                 )
                 debug("  created ref: {ref}".format(ref=ref))
-        except Exception as e:
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
             yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
-            if args.fail_fast:
+            if fail_fast:
                 raise yikes from None
-            tag_exceptions.append(yikes)
+            problems.append(yikes)
             error(yikes)
 
-    lp_fires = len(tag_exceptions)
-    if lp_fires:
-        error("ERROR: {failed} tag failures".format(failed=str(lp_fires)))
-
-        for e in tag_exceptions:
-            error(e)
-
-        sys.exit(lp_fires if lp_fires < 256 else 255)
+    if problems:
+        msg = "{n} tag failures".format(n=len(problems))
+        raise codetools.DogpileError(problems, msg)
 
 
 def run():
@@ -438,7 +520,7 @@ def run():
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(args.org)
-    debug("tagging repos in github org: {org}".format(org=org.login))
+    debug("tagging repos in org: {org}".format(org=org.login))
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
@@ -448,19 +530,33 @@ def run():
     manifest = fetch_eups_tag_file(args, eups_candidate)
     eups_products = parse_eups_tag_file(manifest)
 
+    # do not fail-fast on non-write operations
     gh_repos = eups_products_to_gh_repos(
-        org,
-        args.team,
-        eupsbuild,
-        eups_products,
-        args.debug
+        org=org,
+        allow_teams=args.allow_team,
+        ext_teams=args.external_team,
+        deny_teams=args.deny_team,
+        eupsbuild=eupsbuild,
+        eups_products=eups_products,
+        fail_fast=False
     )
-    tag_gh_repos(gh_repos, args, tag_template)
+
+    tag_gh_repos(
+        gh_repos,
+        tag_template,
+        force_tag=args.force_tag,
+        fail_fast=args.fail_fast,
+        dry_run=args.dry_run
+    )
 
 
 def main():
     try:
         run()
+    except codetools.DogpileError as e:
+        error(e)
+        n = len(e.errors)
+        sys.exit(n if n < 256 else 255)
     finally:
         if 'g' in globals():
             pygithub.debug_ratelimit(g)
