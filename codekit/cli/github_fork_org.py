@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
 
 from codekit.codetools import debug, error, info, warn
-from .. import codetools
+from codekit import codetools, pygithub
 import argparse
-import codekit.pygithub as pygithub
+import codekit.progressbar as pbar
 import datetime
 import github
 import itertools
-import logging
 import os
-import progressbar
 import sys
 import textwrap
-
-progressbar.streams.wrap_stderr()
-logging.basicConfig()
-logger = logging.getLogger('codekit')
 
 
 def parse_args():
@@ -207,20 +201,13 @@ def create_forks(
 
     repo_count = len(src_repos)
 
-    widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
-
     dst_repos = []
     skipped_repos = []
     problems = []
-    # XXX progressbar is not playing nicely with debug output and the advice in
-    # the docs for working with logging don't have any effect.
-    with progressbar.ProgressBar(
-            widgets=widgets,
-            max_value=repo_count) as pbar:
-
+    with pbar.eta_bar(msg='forking', max_value=repo_count) as progress:
         repo_idx = 0
         for r in src_repos:
-            pbar.update(repo_idx)
+            progress.update(repo_idx)
             repo_idx += 1
 
             # XXX per
@@ -268,10 +255,7 @@ def create_forks(
 def run():
     args = parse_args()
 
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-    if args.debug > 1:
-        github.enable_console_debug_logging()
+    codetools.setup_logging(args.debug)
 
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)

@@ -15,20 +15,17 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 
+from codekit.codetools import debug, warn, error
 from codekit import codetools, pygithub
-from .. import debug, warn, error
 import argparse
 import copy
 import github
-import logging
 import os
 import re
 import requests
 import sys
 import textwrap
 
-logging.basicConfig()
-logger = logging.getLogger('codekit')
 eupspkg_site = 'https://eups.lsst.codes/stack/src'
 
 
@@ -475,10 +472,7 @@ def run():
 
     args = parse_args()
 
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-    if args.debug > 1:
-        github.enable_console_debug_logging()
+    codetools.setup_logging(args.debug)
 
     version = args.tag
 
