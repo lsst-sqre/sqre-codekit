@@ -7,16 +7,10 @@
 # Known Bugs
 # ----------
 
-from .. import codetools
+from codekit import codetools, pygithub
 import argparse
-import codekit.pygithub as pygithub
-import github
-import logging
 import os
 import textwrap
-
-logging.basicConfig()
-logger = logging.getLogger('codekit')
 
 
 def parse_args():
@@ -79,13 +73,11 @@ def parse_args():
 def run():
     """List repos and teams"""
     args = parse_args()
+
+    codetools.setup_logging(args.debug)
+
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
-
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-    if args.debug > 1:
-        github.enable_console_debug_logging()
 
     if not args.hide:
         args.hide = []

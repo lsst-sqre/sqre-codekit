@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
 
 from codekit.codetools import debug, error, info, warn
-from codekit import codetools
-from codekit import pygithub
+from codekit import codetools, pygithub
 from time import sleep
 import argparse
-import functools
+import codekit.progressbar as pbar
 import github
 import itertools
-import logging
 import os
-import progressbar
 import sys
 import textwrap
-
-logging.basicConfig()
-logger = logging.getLogger('codekit')
 
 
 def parse_args():
@@ -185,10 +179,7 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
 def run():
     args = parse_args()
 
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-    if args.debug > 1:
-        github.enable_console_debug_logging()
+    codetools.setup_logging(args.debug)
 
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)

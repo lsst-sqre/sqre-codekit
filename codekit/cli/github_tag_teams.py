@@ -4,14 +4,10 @@ from codekit.codetools import debug, error, info, warn
 from codekit import codetools, pygithub
 import argparse
 import github
-import logging
 import os
 import re
 import sys
 import textwrap
-
-logger = logging.getLogger('codekit')
-logging.basicConfig()
 
 
 class GitTagExistsError(Exception):
@@ -271,10 +267,7 @@ def create_tags(repo, tags, tagger, dry_run=False):
 def run():
     args = parse_args()
 
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-    if args.debug > 1:
-        github.enable_console_debug_logging()
+    codetools.setup_logging(args.debug)
 
     gh_org_name = args.org
     tags = args.tag

@@ -4,18 +4,13 @@
 # -------------
 # - will need updating to be new permissions model aware
 
-from codekit import pygithub
-from .. import codetools
 from codekit.codetools import info, debug, warn, error
+from codekit import codetools, pygithub
 import argparse
 import github
-import logging
 import os
 import sys
 import textwrap
-
-logger = logging.getLogger('codekit')
-logging.basicConfig()
 
 
 def parse_args():
@@ -90,10 +85,7 @@ def run():
     """Move the repos"""
     args = parse_args()
 
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-    if args.debug > 1:
-        github.enable_console_debug_logging()
+    codetools.setup_logging(args.debug)
 
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)

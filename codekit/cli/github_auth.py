@@ -5,19 +5,14 @@
 # - add command line option to override default user
 # - add command line option for delete scope
 
-from codekit import pygithub
+from codekit import codetools, pygithub
 from getpass import getpass
-from .. import codetools
 import argparse
 import github
-import logging
 import os
 import platform
 import sys
 import textwrap
-
-logging.basicConfig()
-logger = logging.getLogger('codekit')
 
 
 def parse_args():
@@ -65,10 +60,7 @@ def run():
     appname = sys.argv[0]
     hostname = platform.node()
 
-    if args.debug:
-        logger.setLevel(logging.DEBUG)
-    if args.debug > 1:
-        github.enable_console_debug_logging()
+    codetools.setup_logging(args.debug)
 
     password = ''
 
