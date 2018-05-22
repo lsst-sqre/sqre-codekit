@@ -91,7 +91,7 @@ def run():
 
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
-    org = g.organization(args.org)
+    org = g.get_organization(args.org)
 
     # only iterate over all teams once
     teams = list(org.get_teams())
