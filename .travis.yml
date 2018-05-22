@@ -53,6 +53,27 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+    - env: TEST='github-decimate-org --dry-run'
+      language: python
+      python: '3.6'
+      install:
+      - pip install --upgrade 'pip>=9' setuptools_scm
+      - python setup.py sdist
+      - pip install dist/sqre-codekit-*.tar.gz
+      script: |
+        if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
+          github-decimate-org \
+            --dry-run \
+            --debug \
+            --org 'batmanuel-sandbox' \
+            --token "$SQREADMIN_TOKEN" \
+            --delete-repos-limit 3 \
+            --delete-repos \
+            --delete-teams \
+            --delete-teams-limit 3
+        else
+          echo "Unable to test without travis secure env vars."
+        fi
     - env: TEST=hadolint
       language: c
       services:
