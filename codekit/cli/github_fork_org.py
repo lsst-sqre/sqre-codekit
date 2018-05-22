@@ -168,6 +168,8 @@ def create_teams(
                         dst_t.add_to_repos(r)
             else:
                 dst_t = org.create_team(name)
+        except github.RateLimitExceededException:
+            raise
         except github.GithubException as e:
             for oops in e.data['errors']:
                 msg = oops['message']
@@ -229,6 +231,8 @@ def create_forks(
                 fork = dst_org.create_fork(r)
                 dst_repos.append(fork)
                 debug("  -> {r}".format(r=fork.full_name))
+            except github.RateLimitExceededException:
+                raise
             except github.GithubException as e:
                 if 'Empty repositories cannot be forked.' in e.data['message']:
                     warn("{r} is empty and can not be forked".format(

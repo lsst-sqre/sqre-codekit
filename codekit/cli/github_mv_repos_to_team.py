@@ -115,6 +115,8 @@ def run():
                 new_team.add_to_repos(r)
                 added += r.full_name
                 debug('  ok')
+            except github.RateLimitExceededException:
+                raise
             except github.GithubException as e:
                 debug('  FAILED')
 
@@ -132,6 +134,8 @@ def run():
                 old_team.remove_from_repos(r)
                 removed += r.full_name
                 debug('  ok')
+            except github.RateLimitExceededException:
+                raise
             except github.GithubException as e:
                 debug('  FAILED')
 

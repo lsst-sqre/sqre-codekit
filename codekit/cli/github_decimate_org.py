@@ -98,6 +98,8 @@ def delete_repos(repos, fail_fast=False, dry_run=False, delay=0):
                 info('  (noop)')
                 continue
             r.delete()
+        except github.RateLimitExceededException:
+            raise
         except github.GithubException as e:
             error('FAILED - does your token have delete_repo scope?')
             yikes = pygithub.CaughtRepositoryError(r, e)
@@ -138,6 +140,8 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
                 info('  (noop)')
                 continue
             t.delete()
+        except github.RateLimitExceededException:
+            raise
         except github.GithubException as e:
             yikes = pygithub.CaughtTeamError(t, e)
             if fail_fast:
