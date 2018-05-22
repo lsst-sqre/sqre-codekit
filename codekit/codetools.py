@@ -3,22 +3,91 @@
 # --------------
 # - package
 
+
 from datetime import datetime
 from pkg_resources import get_distribution
 from public import public
 import argparse
 import functools
 import gitconfig
-import logging
 import os
 import requests
 import shutil
 import sys
 import tempfile
 
+# configured by setup_logging() -- this is declared only as a friendly reminder
+# that something unusual is going on this with this var.
+logger = None
 
-logging.basicConfig()
-logger = logging.getLogger('codekit')
+
+@public
+def setup_logging(verbosity=0):
+    """Configure python `logging`.  This is required before the `debug()`,
+    `info()`, etc. functions may be used.
+
+    If any other `codekit.*` modules, which are not a "package", have been
+    imported, and they have a `setup_logging()` function, that is called before
+    `logging` is configured.  This gives other modules a chance to configure
+    their own logging.
+
+    As an example, if `progressbar2` is being used, it needs to be configure a
+    `sys.stderr` wrapper before `logging` is configured.  Thus, some gymnastics
+    are being done to delay `logging` setup while simultanously not requiring
+    that `progressbar2` be imported unless it is actually being used.
+
+    Parameters
+    ----------
+    verbosity: int
+        Logging / output verbosity level. 1 is useful for more purposes while
+        2+ is generaly TMI.
+    """
+    import pkgutil
+    import logging
+    import codekit
+
+    # https://packaging.python.org/guides/creating-and-discovering-plugins/#using-namespace-packages
+    def iter_namespace(ns_pkg):
+        # Specifying the second argument (prefix) to iter_modules makes the
+        # returned name an absolute name instead of a relative one. This allows
+        # import_module to work without having to do additional modification to
+        # the name.
+        return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
+
+    # find codekit modules that are not a package
+    codekit_mods = [name for finder, name, ispkg in iter_namespace(codekit)
+                    if ispkg is False]
+
+    # filter out the current module
+    # XXX `is not` doesn't work here but `!=` does... why???
+    codekit_mods = [m for m in codekit_mods
+                    if m != __name__]
+
+    # filter out modules that have not been imported
+    codekit_mods = [m for m in codekit_mods
+                    if m in sys.modules]
+
+    # record funcs successfully called
+    logging_funcs = []
+    for m in codekit_mods:
+        try:
+            lsetup = getattr(sys.modules[m], 'setup_logging')
+            lsetup(verbosity=verbosity)
+            logging_funcs.append(lsetup)
+        except AttributeError:
+            # ignore modules that do have a setup_logging()
+            pass
+
+    logging.basicConfig()
+    # configure `logger` for the entire module
+    global logger
+    logger = logging.getLogger('codekit')
+
+    if verbosity:
+        logger.setLevel(logging.DEBUG)
+
+    [debug("{m}.{f}()".format(m=f.__module__, f=f.__name__))
+        for f in logging_funcs]
 
 
 # based on _VersionAction() from:
