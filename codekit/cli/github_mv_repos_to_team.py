@@ -4,13 +4,16 @@
 # -------------
 # - will need updating to be new permissions model aware
 
-from codekit.codetools import info, debug, warn, error
+from codekit.codetools import info, debug, warn
 from codekit import codetools, pygithub
 import argparse
 import github
 import os
-import sys
 import textwrap
+
+
+class TeamError(Exception):
+    pass
 
 
 def parse_args():
@@ -75,8 +78,7 @@ def find_team(teams, name):
 
     t = [t for t in teams if t.name in name]
     if not t:
-        error("unable to find team {team}".format(team=name))
-        sys.exit(1)
+        raise TeamError("unable to find team {team}".format(team=name))
 
     return t
 
@@ -89,7 +91,7 @@ def run():
 
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
-    org = g.organization(args.org)
+    org = g.get_organization(args.org)
 
     # only iterate over all teams once
     teams = list(org.get_teams())
@@ -115,6 +117,8 @@ def run():
                 new_team.add_to_repos(r)
                 added += r.full_name
                 debug('  ok')
+            except github.RateLimitExceededException:
+                raise
             except github.GithubException as e:
                 debug('  FAILED')
 
@@ -132,6 +136,8 @@ def run():
                 old_team.remove_from_repos(r)
                 removed += r.full_name
                 debug('  ok')
+            except github.RateLimitExceededException:
+                raise
             except github.GithubException as e:
                 debug('  FAILED')
 

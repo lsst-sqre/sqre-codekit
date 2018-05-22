@@ -18,6 +18,17 @@ def parse_args():
         prog='github-decimate-org',
         description=textwrap.dedent("""\
             Delete all repos (and optionally teams) in a GitHub organization.\
+
+            github-decimate-org \\
+                --dry-run \\
+                --debug \\
+                --org 'example' \\
+                --token "$GITHUB_TOKEN" \\
+                --delete-repos-limit 3 \\
+                --delete-repos \\
+                --delete-teams \\
+                --delete-teams-limit 3
+
         """),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
@@ -34,14 +45,18 @@ def parse_args():
         default=None,
         help='Literal github personal access token string')
     parser.add_argument(
-        '--limit',
+        '--delete-repos',
+        action='store_true',
+        help='Delete *ALL* repos in org')
+    parser.add_argument(
+        '--delete-repos-limit',
         default=None,
         type=int,
         help='Maximum number of repos to delete')
     parser.add_argument(
         '--delete-teams',
         action='store_true',
-        help='Delete *ALL* teams in org in addition to removing repos')
+        help='Delete *ALL* teams in org')
     parser.add_argument(
         '--delete-teams-limit',
         default=None,
@@ -98,6 +113,8 @@ def delete_repos(repos, fail_fast=False, dry_run=False, delay=0):
                 info('  (noop)')
                 continue
             r.delete()
+        except github.RateLimitExceededException:
+            raise
         except github.GithubException as e:
             error('FAILED - does your token have delete_repo scope?')
             yikes = pygithub.CaughtRepositoryError(r, e)
@@ -138,6 +155,8 @@ def delete_teams(teams, fail_fast=False, dry_run=False, delay=0):
                 info('  (noop)')
                 continue
             t.delete()
+        except github.RateLimitExceededException:
+            raise
         except github.GithubException as e:
             yikes = pygithub.CaughtTeamError(t, e)
             if fail_fast:
@@ -161,12 +180,13 @@ def run():
     # list of exceptions
     problems = []
 
-    problems += delete_all_repos(
-        org,
-        fail_fast=args.fail_fast,
-        limit=args.limit,
-        dry_run=args.dry_run
-    )
+    if args.delete_repos:
+        problems += delete_all_repos(
+            org,
+            fail_fast=args.fail_fast,
+            limit=args.delete_repos_limit,
+            dry_run=args.dry_run
+        )
 
     if args.delete_teams:
         problems += delete_all_teams(
@@ -177,10 +197,9 @@ def run():
         )
 
     if problems:
-        error("ERROR: {n} failures".format(n=str(len(problems))))
-        [error(e) for e in problems]
-
-        sys.exit(1)
+        msg = "{n} errors removing repo(s)/teams(s)".format(
+            n=len(problems))
+        raise codetools.DogpileError(problems, msg)
 
     info("Consider deleting your privileged auth token @ {path}".format(
         path=args.token_path))
@@ -189,6 +208,10 @@ def run():
 def main():
     try:
         run()
+    except codetools.DogpileError as e:
+        error(e)
+        n = len(e.errors)
+        sys.exit(n if n < 256 else 255)
     finally:
         if 'g' in globals():
             pygithub.debug_ratelimit(g)

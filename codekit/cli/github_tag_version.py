@@ -197,8 +197,6 @@ def eups_products_to_gh_repos(
 
         try:
             repo = org.get_repo(prod['name'])
-        except github.RateLimitExceededException:
-            raise
         except github.UnknownObjectException as e:
             yikes = pygithub.CaughtUnknownObjectError(prod['name'], e)
             if fail_fast:

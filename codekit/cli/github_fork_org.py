@@ -12,6 +12,10 @@ import sys
 import textwrap
 
 
+class TeamError(Exception):
+    pass
+
+
 def parse_args():
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
@@ -168,6 +172,8 @@ def create_teams(
                         dst_t.add_to_repos(r)
             else:
                 dst_t = org.create_team(name)
+        except github.RateLimitExceededException:
+            raise
         except github.GithubException as e:
             for oops in e.data['errors']:
                 msg = oops['message']
@@ -229,6 +235,8 @@ def create_forks(
                 fork = dst_org.create_fork(r)
                 dst_repos.append(fork)
                 debug("  -> {r}".format(r=fork.full_name))
+            except github.RateLimitExceededException:
+                raise
             except github.GithubException as e:
                 if 'Empty repositories cannot be forked.' in e.data['message']:
                     warn("{r} is empty and can not be forked".format(
@@ -276,7 +284,7 @@ def run():
         if missing_teams:
             error("{n} team(s) do not exist:".format(n=len(missing_teams)))
             [error("  '{t}'".format(t=n)) for n in missing_teams]
-            sys.exit(0)
+            return
         fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
         repos = pygithub.get_repos_by_team(fork_teams)
         debug('selecting repos by membership in team(s):')
@@ -289,7 +297,7 @@ def run():
     repo_count = len(src_repos)
     if not repo_count:
         debug('nothing to do -- exiting')
-        sys.exit(0)
+        return
 
     debug("found {n} repos to be forked from org {src_org}:".format(
         n=repo_count,
@@ -321,12 +329,12 @@ def run():
             list(src_teams.keys())
         )
         if conflicting_teams:
-            error("found {n} conflicting teams in {o}:".format(
-                n=len(conflicting_teams),
-                o=dst_org.login
-            ))
-            [error("  '{t}'".format(t=t.name)) for t in conflicting_teams]
-            sys.exit(1)
+            raise TeamError(
+                "found {n} conflicting teams in {o}: {teams}".format(
+                    n=len(conflicting_teams),
+                    o=dst_org.login,
+                    teams=[t.name for t in conflicting_teams]
+                ))
 
     debug('there is no spoon...')
     problems = []
@@ -362,15 +370,18 @@ def run():
             problems += err
 
     if problems:
-        error("ERROR: {n} failures".format(n=str(len(problems))))
-        [error(e) for e in problems]
-
-        sys.exit(1)
+        msg = "{n} errors forking repo(s)/teams(s)".format(
+            n=len(problems))
+        raise codetools.DogpileError(problems, msg)
 
 
 def main():
     try:
         run()
+    except codetools.DogpileError as e:
+        error(e)
+        n = len(e.errors)
+        sys.exit(n if n < 256 else 255)
     finally:
         if 'g' in globals():
             pygithub.debug_ratelimit(g)
