@@ -4,13 +4,16 @@
 # -------------
 # - will need updating to be new permissions model aware
 
-from codekit.codetools import info, debug, warn, error
+from codekit.codetools import info, debug, warn
 from codekit import codetools, pygithub
 import argparse
 import github
 import os
-import sys
 import textwrap
+
+
+class TeamError(Exception):
+    pass
 
 
 def parse_args():
@@ -75,8 +78,7 @@ def find_team(teams, name):
 
     t = [t for t in teams if t.name in name]
     if not t:
-        error("unable to find team {team}".format(team=name))
-        sys.exit(1)
+        raise TeamError("unable to find team {team}".format(team=name))
 
     return t
 

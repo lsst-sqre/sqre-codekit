@@ -15,6 +15,7 @@ import requests
 import shutil
 import sys
 import tempfile
+import textwrap
 
 # configured by setup_logging() -- this is declared only as a friendly reminder
 # that something unusual is going on this with this var.
@@ -146,8 +147,10 @@ def lookup_email(args):
         email = gituseremail()
 
     if email is None:
-        error('unable to determine a git email')
-        sys.exit('Specify --email option')
+        raise RuntimeError(textwrap.dedent("""\
+            unable to determine a git email
+            Specify --email option\
+        """))
 
     debug("email is {email}".format(email=email))
 
@@ -173,8 +176,10 @@ def lookup_user(args):
         user = gitusername()
 
     if user is None:
-        error('unable to determine a git user name')
-        sys.exit("Specify --user option")
+        raise RuntimeError(textwrap.dedent("""\
+            unable to determine a git user name
+            Specify --user option\
+        """))
 
     debug("user name is {user}".format(user=user))
 

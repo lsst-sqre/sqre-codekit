@@ -181,10 +181,9 @@ def run():
         )
 
     if problems:
-        error("ERROR: {n} failures".format(n=str(len(problems))))
-        [error(e) for e in problems]
-
-        sys.exit(1)
+        msg = "{n} errors removing repo(s)/teams(s)".format(
+            n=len(problems))
+        raise codetools.DogpileError(problems, msg)
 
     info("Consider deleting your privileged auth token @ {path}".format(
         path=args.token_path))
@@ -193,6 +192,10 @@ def run():
 def main():
     try:
         run()
+    except codetools.DogpileError as e:
+        error(e)
+        n = len(e.errors)
+        sys.exit(n if n < 256 else 255)
     finally:
         if 'g' in globals():
             pygithub.debug_ratelimit(g)
