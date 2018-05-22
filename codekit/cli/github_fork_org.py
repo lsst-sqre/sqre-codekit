@@ -201,20 +201,13 @@ def create_forks(
 
     repo_count = len(src_repos)
 
-    widgets = ['Forking: ', progressbar.Bar(), ' ', progressbar.AdaptiveETA()]
-
     dst_repos = []
     skipped_repos = []
     problems = []
-    # XXX progressbar is not playing nicely with debug output and the advice in
-    # the docs for working with logging don't have any effect.
-    with progressbar.ProgressBar(
-            widgets=widgets,
-            max_value=repo_count) as pbar:
-
+    with pbar.eta_bar(msg='forking', max_value=repo_count) as progress:
         repo_idx = 0
         for r in src_repos:
-            pbar.update(repo_idx)
+            progress.update(repo_idx)
             repo_idx += 1
 
             # XXX per

@@ -67,34 +67,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def countdown_timer(seconds=10):
-    """Show countdown bar"""
-
-    tick = 0.1  # seconds
-    n_ticks = int(seconds / tick)
-
-    widgets = ['Pause for panic: ', progressbar.ETA(), ' ', progressbar.Bar()]
-    pbar = progressbar.ProgressBar(
-        widgets=widgets, max_value=n_ticks
-    ).start()
-
-    for i in range(n_ticks):
-        pbar.update(i)
-        sleep(tick)
-
-    pbar.finish()
-
-
-def wait_for_user_panic():
-    warn('Now is the time to panic and Ctrl-C')
-    countdown_timer()
-
-
-@functools.lru_cache()
-def wait_for_user_panic_once():
-    wait_for_user_panic()
-
-
 def delete_all_repos(org, **kwargs):
     assert isinstance(org, github.Organization.Organization), type(org)
     limit = kwargs.pop('limit', None)
@@ -105,7 +77,7 @@ def delete_all_repos(org, **kwargs):
 
     if repos:
         warn("Deleting all repos in {org}".format(org=org.login))
-        wait_for_user_panic_once()
+        pbar.wait_for_user_panic_once()
 
     return delete_repos(repos, **kwargs)
 
@@ -147,7 +119,7 @@ def delete_all_teams(org, **kwargs):
 
     if teams:
         warn("Deleting all teams in {org}".format(org=org.login))
-        wait_for_user_panic_once()
+        pbar.wait_for_user_panic_once()
 
     return delete_teams(teams, **kwargs)
 
