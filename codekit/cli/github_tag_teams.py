@@ -109,7 +109,7 @@ def check_tags(repos, tags, ignore_existing=False, fail_fast=False):
                 'need_tags': missing_tags,
             }
         else:
-            warn("nothing to for {r}".format(r=r.full_name))
+            warn("nothing to do for {r}".format(r=r.full_name))
 
     return target_tags, problems
 
