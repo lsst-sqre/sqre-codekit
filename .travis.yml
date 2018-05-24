@@ -39,7 +39,9 @@ matrix:
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
+          # create
           github-tag-teams \
+            --debug \
             --dry-run \
             --org 'lsst' \
             --allow-team 'DM Auxilliaries' \
@@ -47,7 +49,20 @@ matrix:
             --token "$SQREADMIN_TOKEN" \
             --user 'sqreadmin' \
             --email 'sqre-admin@lists.lsst.org' \
+            --tag 'foo' \
+            --tag 'bar'
+
+          # --delete
+          github-tag-teams \
             --debug \
+            --dry-run \
+            --delete \
+            --org 'lsst' \
+            --allow-team 'DM Auxilliaries' \
+            --deny-team 'DM Externals' \
+            --token "$SQREADMIN_TOKEN" \
+            --user 'sqreadmin' \
+            --email 'sqre-admin@lists.lsst.org' \
             --tag 'foo' \
             --tag 'bar'
         else
