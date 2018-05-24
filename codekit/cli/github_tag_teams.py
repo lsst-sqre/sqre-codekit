@@ -3,6 +3,7 @@
 from codekit.codetools import debug, error, info, warn
 from codekit import codetools, pygithub
 import argparse
+import codekit.progressbar as pbar
 import github
 import os
 import re
@@ -28,6 +29,8 @@ def parse_args():
 
         Examples:
         {prog} --org lsst --team 'DM Auxilliaries' --tag w.2015.33
+
+        {prog} --org lsst --team 'DM Auxilliaries' --tag w.2015.33 --delete
 
         Note that the access token must have access to these oauth scopes:
             * read:org
@@ -67,6 +70,10 @@ def parse_args():
         '--email',
         help='Email address of tagger - defaults to gitconfig value')
     parser.add_argument(
+        '--delete',
+        action='store_true',
+        help='*Delete* instead of create tag(s)')
+    parser.add_argument(
         '--token-path',
         default='~/.sq_github_token_delete',
         help='Use a token (made with github-auth) in a non-standard location')
@@ -83,51 +90,82 @@ def parse_args():
     return parser.parse_args()
 
 
+def tag_name_from_ref(ref):
+    assert isinstance(ref, github.GitRef.GitRef), type(ref)
+    return re.sub(r'^refs/tags/', '', ref.ref)
+
+
 def check_tags(repos, tags, ignore_existing=False, fail_fast=False):
     """ check if tags already exist in repos"""
 
-    debug("looking for tags {tags} in repos".format(tags=tags))
-    target_tags = {}
+    debug("looking for {n} tag(s):".format(n=len(tags)))
+    [debug("  {t}".format(t=t)) for t in tags]
+    debug("in {n} repo(s):".format(n=len(repos)))
+    [debug("  {r}".format(r=r.full_name)) for r in repos]
+
+    # present/missing tags by repo name
+    present_tags = {}
+    absent_tags = {}
+
     problems = []
     for r in repos:
         has_tags = find_tags_in_repo(r, tags)
-        if has_tags and not ignore_existing:
-            yikes = GitTagExistsError(
-                "tag(s) {tag} already exists in repos {r}".format(
-                    tag=has_tags,
-                    r=r.full_name
-                ))
-            if fail_fast:
-                raise yikes
-            problems.append(yikes)
-            error(yikes)
+        if has_tags:
+            if not ignore_existing:
+                yikes = GitTagExistsError(
+                    "tag(s) {tag} already exists in repos {r}".format(
+                        tag=list(has_tags.keys()),
+                        r=r.full_name
+                    ))
+                if fail_fast:
+                    raise yikes
+                problems.append(yikes)
+                error(yikes)
+
+            present_tags[r.full_name] = {
+                'repo': r,
+                'tags': list(has_tags.values()),
+            }
 
         missing_tags = [x for x in tags if x not in has_tags]
         if missing_tags:
-            target_tags[r.full_name] = {
+            absent_tags[r.full_name] = {
                 'repo': r,
                 'need_tags': missing_tags,
             }
-        else:
-            warn("nothing to for {r}".format(r=r.full_name))
 
-    return target_tags, problems
+    debug(textwrap.dedent("""\
+        found:
+          {n_with:>4} repos with tag(s)
+          {n_none:>4} repos with no tag(s)
+          {errors:>4} repos with error(s)\
+        """).format(
+        n_with=len(present_tags),
+        n_none=len(absent_tags),
+        errors=len(problems),
+    ))
+
+    return present_tags, absent_tags, problems
 
 
 def find_tags_in_repo(repo, tags):
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+
     debug(textwrap.dedent("""\
-        looking for tag(s): {tags}
-          in repo: {repo}\
+        looking in repo: {repo}
+          for tag(s): {tags}\
         """).format(
+        repo=repo.full_name,
         tags=tags,
-        repo=repo.full_name
     ))
-    found_tags = []
+
+    found_tags = {}
     for t in tags:
         ref = pygithub.find_tag_by_name(repo, t)
         if ref and ref.ref:
-            debug("  found: {tag}".format(tag=t))
-            found_tags.append(re.sub(r'^refs/tags/', '', ref.ref))
+            debug("  found: {tag} ({ref})".format(tag=t, ref=ref.ref))
+            name = tag_name_from_ref(ref)
+            found_tags[name] = ref
             continue
 
         debug("  not found: {tag}".format(tag=t))
@@ -174,7 +212,7 @@ def get_candidate_repos(teams):
     max_name_len = len(max(names, key=len))
 
     team_names = [t.name for t in teams]
-    info('found repo [select by team(s)]:')
+    info("found {n} repo(s) [selected by team(s)]:".format(n=len(repos)))
     for r in repos:
         # list only teams which were used to select the repo as a candiate
         # for tagging
@@ -210,23 +248,30 @@ def check_repos(repos, allow_teams, deny_teams, fail_fast=False):
     return problems
 
 
-def tag_repos(tag_repos, **kwargs):
-    info('missing repo [tags]:')
-    max_name_len = len(max(tag_repos, key=len))
-    for k in tag_repos:
+def tag_repos(absent_tags, **kwargs):
+    if not absent_tags:
+        info('nothing to do')
+        return
+
+    info("tagging {n} repo(s) [tags]:".format(n=len(absent_tags)))
+
+    max_name_len = len(max(absent_tags, key=len))
+    for k in absent_tags:
         info("  {repo: >{w}} {tags}".format(
             w=max_name_len,
             repo=k,
-            tags=tag_repos[k]['need_tags']
+            tags=absent_tags[k]['need_tags']
         ))
 
-    for k in tag_repos:
-        r = tag_repos[k]['repo']
-        tags = tag_repos[k]['need_tags']
+    for k in absent_tags:
+        r = absent_tags[k]['repo']
+        tags = absent_tags[k]['need_tags']
         create_tags(r, tags, **kwargs)
 
 
 def create_tags(repo, tags, tagger, dry_run=False):
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+
     # tag the head of the designated "default branch"
     # XXX this probably should be resolved via repos.yaml
     default_branch = repo.default_branch
@@ -246,7 +291,7 @@ def create_tags(repo, tags, tagger, dry_run=False):
     ))
 
     for t in tags:
-        debug("  adding tag {t}".format(t=t))
+        debug("  creating 'annotated tag' {t}".format(t=t))
         if dry_run:
             debug('    (noop)')
             continue
@@ -261,7 +306,51 @@ def create_tags(repo, tags, tagger, dry_run=False):
         debug("  created tag object {tag_obj}".format(tag_obj=tag_obj))
 
         ref = repo.create_git_ref("refs/tags/{t}".format(t=t), tag_obj.sha)
-        debug("  created ref: {ref}".format(ref=ref))
+        debug("  created ref: {ref}".format(ref=ref.ref))
+
+
+def untag_repos(present_tags, **kwargs):
+    if not present_tags:
+        info('nothing to do')
+        return
+
+    warn('Deleting tag(s)')
+    pbar.wait_for_user_panic_once()
+
+    info("untagging {n} repo(s) [tags]:".format(n=len(present_tags)))
+
+    max_name_len = len(max(present_tags, key=len))
+    for k in present_tags:
+        info("  {repo: >{w}} {tags}".format(
+            w=max_name_len,
+            repo=k,
+            tags=[tag_name_from_ref(ref) for ref in present_tags[k]['tags']]
+        ))
+
+    for k in present_tags:
+        r = present_tags[k]['repo']
+        tags = present_tags[k]['tags']
+        delete_refs(r, tags, **kwargs)
+
+
+def delete_refs(repo, refs, dry_run=False):
+    """Note that only the ref to a tag can be explicitly removed.  The tag
+    object will leave on until it's gargabe collected."""
+
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+
+    debug("removing {n} refs from {repo}".format(
+        n=len(refs),
+        repo=repo.full_name)
+    )
+
+    for r in refs:
+        debug("  deleting {ref}".format(ref=r.ref))
+        if dry_run:
+            debug('    (noop)')
+            continue
+
+        r.delete()
 
 
 def run():
@@ -285,7 +374,7 @@ def run():
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(gh_org_name)
-    debug("tagging repos in org: {org}".format(org=org.login))
+    info("tagging repos in org: {org}".format(org=org.login))
 
     tag_teams = get_candidate_teams(org, args.allow_team)
     target_repos = get_candidate_repos(tag_teams)
@@ -299,14 +388,21 @@ def run():
     )
 
     # dict
-    target_tags, err = check_tags(target_repos, tags)
+    present_tags, absent_tags, err = check_tags(
+        target_repos,
+        tags,
+        ignore_existing=args.delete,
+    )
     problems += err
 
     if problems:
         msg = "{n} repo(s) have errors".format(n=len(problems))
         raise codetools.DogpileError(problems, msg)
 
-    tag_repos(target_tags, tagger=tagger, dry_run=args.dry_run)
+    if args.delete:
+        untag_repos(present_tags, dry_run=args.dry_run)
+    else:
+        tag_repos(absent_tags, tagger=tagger, dry_run=args.dry_run)
 
 
 def main():
