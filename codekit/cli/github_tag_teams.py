@@ -285,7 +285,7 @@ def run():
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(gh_org_name)
-    debug("tagging repos in org: {org}".format(org=org.login))
+    info("tagging repos in org: {org}".format(org=org.login))
 
     tag_teams = get_candidate_teams(org, args.allow_team)
     target_repos = get_candidate_repos(tag_teams)
