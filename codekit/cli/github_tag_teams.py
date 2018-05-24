@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from codekit.codetools import debug, error, info, warn
+from codekit.codetools import debug, error, info
 from codekit import codetools, pygithub
 import argparse
 import github
@@ -86,15 +86,22 @@ def parse_args():
 def check_tags(repos, tags, ignore_existing=False, fail_fast=False):
     """ check if tags already exist in repos"""
 
-    debug("looking for tags {tags} in repos".format(tags=tags))
-    target_tags = {}
+    debug("looking for {n} tag(s):".format(n=len(tags)))
+    [debug("  {t}".format(t=t)) for t in tags]
+    debug("in {n} repo(s):".format(n=len(repos)))
+    [debug("  {r}".format(r=r.full_name)) for r in repos]
+
+    # present/missing tags by repo name
+    present_tags = {}
+    absent_tags = {}
+
     problems = []
     for r in repos:
         has_tags = find_tags_in_repo(r, tags)
         if has_tags and not ignore_existing:
             yikes = GitTagExistsError(
                 "tag(s) {tag} already exists in repos {r}".format(
-                    tag=has_tags,
+                    tag=list(has_tags.keys()),
                     r=r.full_name
                 ))
             if fail_fast:
@@ -102,32 +109,50 @@ def check_tags(repos, tags, ignore_existing=False, fail_fast=False):
             problems.append(yikes)
             error(yikes)
 
+        present_tags[r.full_name] = {
+            'repo': r,
+            'tags': list(has_tags.values()),
+        }
+
         missing_tags = [x for x in tags if x not in has_tags]
         if missing_tags:
-            target_tags[r.full_name] = {
+            absent_tags[r.full_name] = {
                 'repo': r,
                 'need_tags': missing_tags,
             }
-        else:
-            warn("nothing to do for {r}".format(r=r.full_name))
 
-    return target_tags, problems
+    debug(textwrap.dedent("""\
+        found:
+          {n_with:>4} repos with tag(s)
+          {n_none:>4} repos with no tag(s)
+          {errors:>4} repos with error(s)\
+        """).format(
+        n_with=len(present_tags),
+        n_none=len(absent_tags),
+        errors=len(problems),
+    ))
+
+    return present_tags, absent_tags, problems
 
 
 def find_tags_in_repo(repo, tags):
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+
     debug(textwrap.dedent("""\
-        looking for tag(s): {tags}
-          in repo: {repo}\
+        looking in repo: {repo}
+          for tag(s): {tags}\
         """).format(
+        repo=repo.full_name,
         tags=tags,
-        repo=repo.full_name
     ))
-    found_tags = []
+
+    found_tags = {}
     for t in tags:
         ref = pygithub.find_tag_by_name(repo, t)
         if ref and ref.ref:
-            debug("  found: {tag}".format(tag=t))
-            found_tags.append(re.sub(r'^refs/tags/', '', ref.ref))
+            debug("  found: {tag} ({ref})".format(tag=t, ref=ref.ref))
+            name = re.sub(r'^refs/tags/', '', ref.ref)
+            found_tags[name] = ref
             continue
 
         debug("  not found: {tag}".format(tag=t))
@@ -174,7 +199,7 @@ def get_candidate_repos(teams):
     max_name_len = len(max(names, key=len))
 
     team_names = [t.name for t in teams]
-    info('found repo [select by team(s)]:')
+    info("found {n} repo(s) [select by team(s)]:".format(n=len(repos)))
     for r in repos:
         # list only teams which were used to select the repo as a candiate
         # for tagging
@@ -211,7 +236,8 @@ def check_repos(repos, allow_teams, deny_teams, fail_fast=False):
 
 
 def tag_repos(tag_repos, **kwargs):
-    info('missing repo [tags]:')
+    info("tagging {n} repo(s) [tags]:".format(n=len(tag_repos)))
+
     max_name_len = len(max(tag_repos, key=len))
     for k in tag_repos:
         info("  {repo: >{w}} {tags}".format(
@@ -299,14 +325,22 @@ def run():
     )
 
     # dict
-    target_tags, err = check_tags(target_repos, tags)
+    present_tags, absent_tags, err = check_tags(
+        target_repos,
+        tags,
+        ignore_existing=False
+    )
     problems += err
 
     if problems:
         msg = "{n} repo(s) have errors".format(n=len(problems))
         raise codetools.DogpileError(problems, msg)
 
-    tag_repos(target_tags, tagger=tagger, dry_run=args.dry_run)
+    if not absent_tags:
+        info('nothing to do')
+        return
+
+    tag_repos(absent_tags, tagger=tagger, dry_run=args.dry_run)
 
 
 def main():
