@@ -19,6 +19,7 @@ from codekit import codetools, eups, pygithub, versiondb
 import argparse
 import copy
 import github
+import itertools
 import os
 import re
 import sys
@@ -107,6 +108,11 @@ def parse_args():
         '--force-tag',
         action='store_true',
         help='Force moving pre-existing annotated git tags.')
+    parser.add_argument(
+        '--limit',
+        default=None,
+        type=int,
+        help='Maximum number of products/repos to tags. (useful for testing)')
     parser.add_argument(
         '--fail-fast',
         action='store_true',
@@ -547,6 +553,9 @@ def run():
         manifest_products,
         fail_fast=False,
     )
+
+    if args.limit:
+        products = dict(itertools.islice(products.items(), args.limit))
 
     # do not fail-fast on non-write operations
     products = get_repo_for_products(
