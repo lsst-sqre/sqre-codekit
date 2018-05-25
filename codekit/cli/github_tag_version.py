@@ -14,7 +14,7 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 # Yeah, the candidate logic is broken, will fix
 
 
-from codekit.codetools import debug, warn, error
+from codekit.codetools import debug, info, warn, error
 from codekit import codetools, eups, pygithub, versiondb
 import argparse
 import github
@@ -267,7 +267,7 @@ def get_repo_for_products(
         resolved_products[name]['v'] = has_ext_team
 
     if problems:
-        msg = "{n} repo(s) have errors".format(n=len(problems))
+        msg = "{n} product(s) have errors".format(n=len(problems))
         raise codetools.DogpileError(problems, msg)
 
     return resolved_products
@@ -376,14 +376,14 @@ def check_existing_git_tag(repo, t_tag):
                             .format(tag=e_tag))
 
 
-# split out check if tag already exists
-def tag_products(
+def check_product_tags(
     products,
     tag_template,
     force_tag=False,
     fail_fast=False,
-    dry_run=False,
 ):
+    checked_products = {}
+
     problems = []
     for name, data in products.items():
         # "target tag"
@@ -396,19 +396,6 @@ def tag_products(
 
         # control whether to create a new tag or update an existing one
         update_tag = False
-
-        debug(textwrap.dedent("""\
-            tagging repo: {repo}
-              sha: {sha} as {gt}
-              (eups version: {et})
-              external repo: {v}\
-            """).format(
-            repo=data['repo'].full_name,
-            sha=t_tag['sha'],
-            gt=t_tag['name'],
-            et=data['eups_version'],
-            v=data['v']
-        ))
 
         try:
             # if the existing tag is in sync, do nothing
@@ -429,7 +416,12 @@ def tag_products(
             # update_tag and fall through. Otherwise, treat it as any other
             # exception.
             if force_tag:
-                update_tag = True
+                warn(textwrap.dedent("""\
+                      existing tag: {tag} WILL BE MOVED\
+                    """).format(
+                    repo=data['repo'].full_name,
+                    tag=t_tag['name'],
+                ))
             elif fail_fast:
                 raise
             else:
@@ -446,9 +438,43 @@ def tag_products(
                 error(yikes)
                 continue
 
-        # tags are created/updated past this point
+        checked_products[name] = data.copy()
+        checked_products[name]['target_tag'] = t_tag
+        checked_products[name]['update_tag'] = update_tag
+
+    if problems:
+        msg = "{n} product(s) have errors".format(n=len(problems))
+        raise codetools.DogpileError(problems, msg)
+
+    return checked_products
+
+
+def tag_products(
+    products,
+    fail_fast=False,
+    dry_run=False,
+):
+    problems = []
+    for name, data in products.items():
+        t_tag = data['target_tag']
+
+        info(textwrap.dedent("""\
+            tagging repo: {repo}
+              sha: {sha} as {gt}
+              (eups version: {et})
+              external repo: {v}
+              replace existing tag: {update}\
+            """).format(
+            repo=data['repo'].full_name,
+            sha=t_tag['sha'],
+            gt=t_tag['name'],
+            et=data['eups_version'],
+            v=data['v'],
+            update=data['update_tag'],
+        ))
+
         if dry_run:
-            debug('  (noop)')
+            info('  (noop)')
             continue
 
         try:
@@ -461,7 +487,7 @@ def tag_products(
             )
             debug("  created tag object {tag_obj}".format(tag_obj=tag_obj))
 
-            if update_tag:
+            if data['update_tag']:
                 ref = pygithub.find_tag_by_name(
                     data['repo'],
                     t_tag['name'],
@@ -566,12 +592,18 @@ def run():
         fail_fast=False
     )
 
-    tag_products(
+    # do not fail-fast on non-write operations
+    products_to_tag = check_product_tags(
         products,
         tag_template,
         force_tag=args.force_tag,
+        fail_fast=False,
+    )
+
+    tag_products(
+        products_to_tag,
         fail_fast=args.fail_fast,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
     )
 
 
