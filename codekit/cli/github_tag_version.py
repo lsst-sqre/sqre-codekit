@@ -175,7 +175,7 @@ def cross_reference_products(
         try:
             manifest_data = manifest_products[name]
         except KeyError:
-            yikes = RuntimeError(textwrap.dedent("""
+            yikes = RuntimeError(textwrap.dedent("""\
                 failed to find record in manifest for:
                   {product} {eups_version}\
                 """).format(
@@ -195,7 +195,7 @@ def cross_reference_products(
             manifest_data['eups_version'] = eups_data['eups_version']
 
         if eups_data['eups_version'] != manifest_data['eups_version']:
-            yikes = RuntimeError(textwrap.dedent("""
+            yikes = RuntimeError(textwrap.dedent("""\
                 eups version string mismatch:
                   eups tag: {product} {eups_eups_version}
                   manifest: {product} {manifest_eups_version}\
@@ -359,7 +359,10 @@ def check_existing_git_tag(repo, t_tag):
 
     # find tag object pointed to by the ref
     e_tag = repo.get_git_tag(e_ref.object.sha)
-    debug("  found existing tag: {tag}".format(tag=e_tag))
+    debug("  found existing tag: {tag} [sha]".format(
+        tag=e_tag.tag,
+        sha=e_tag.sha
+    ))
 
     if cmp_existing_git_tag(t_tag, e_tag):
         return True
@@ -384,8 +387,8 @@ def check_existing_git_tag(repo, t_tag):
         t_tagger=t_tag['tagger'],
     ))
 
-    raise GitTagExistsError("tag {tag} alreaday exists"
-                            .format(tag=e_tag))
+    raise GitTagExistsError("tag already exists: {tag} [{sha}]"
+                            .format(tag=e_tag.tag, sha=e_tag.sha))
 
 
 def check_product_tags(
@@ -471,7 +474,7 @@ def tag_products(
         t_tag = data['target_tag']
 
         info(textwrap.dedent("""\
-            tagging repo: {repo}
+            tagging repo: {repo} @
               sha: {sha} as {gt}
               (eups version: {et})
               external repo: {v}
