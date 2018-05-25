@@ -17,7 +17,6 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 from codekit.codetools import debug, warn, error
 from codekit import codetools, eups, pygithub, versiondb
 import argparse
-import copy
 import github
 import itertools
 import os
@@ -388,7 +387,7 @@ def tag_products(
     problems = []
     for name, data in products.items():
         # "target tag"
-        t_tag = copy.copy(tag_template)
+        t_tag = tag_template.copy()
         t_tag['sha'] = data['sha']
 
         # prefix tag name with `v`?
