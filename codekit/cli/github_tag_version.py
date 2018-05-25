@@ -15,7 +15,7 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 
 
 from codekit.codetools import debug, warn, error
-from codekit import codetools, eups, pygithub
+from codekit import codetools, eups, pygithub, versiondb
 import argparse
 import copy
 import github
@@ -133,31 +133,100 @@ def cmp_dict(d1, d2, ignore_keys=[]):
         == {k: v for k, v in d2.items() if k not in ignore_keys}
 
 
-# split out actual eups/manifest mapping / rename
-def eups_products_to_gh_repos(
+def cross_reference_products(
+    eups_products,
+    manifest_products,
+    fail_fast=False
+):
+    """
+    Cross reference EupsTag and Manifest data and return a merged result
+
+    Parameters
+    ----------
+    eups_products:
+    manifest:
+    fail_fast: bool
+
+    Returns
+    -------
+    products: dict
+
+    Raises
+    ------
+    RuntimeError
+        Upon error if `fail_fast` is `True`.
+    """
+    products = {}
+
+    problems = []
+    for name, eups_data in eups_products.items():
+        try:
+            manifest_data = manifest_products[name]
+        except KeyError:
+            yikes = RuntimeError(textwrap.dedent("""
+                failed to find record in manifest for:
+                  {product} {eups_version}\
+                """).format(
+                product=name,
+                eups_version=eups_data['eups_version'],
+            ))
+            if fail_fast:
+                raise yikes from None
+            problems.append(yikes)
+            error(yikes)
+
+        if eups_data['eups_version'] != manifest_data['eups_version']:
+            yikes = RuntimeError(textwrap.dedent("""
+                eups version string mismatch:
+                  eups tag:
+                    {product} {eups_eups_version}\
+                  manifest:
+                    {product} {manifest_eups_version}\
+                """).format(
+                product=name,
+                eups_eups_version=eups_data['eups_version'],
+                manifest_eups_version=manifest_data['eups_version'],
+            ))
+            if fail_fast:
+                raise yikes
+            problems.append(yikes)
+            error(yikes)
+
+        products[name] = eups_data.copy()
+        products[name].update(manifest_data)
+
+    if problems:
+        msg = "{n} product(s) have errors".format(n=len(problems))
+        raise codetools.DogpileError(problems, msg)
+
+    return products
+
+
+def get_repo_for_products(
     org,
+    products,
     allow_teams,
     ext_teams,
     deny_teams,
-    eupsbuild,
-    eups_products,
     fail_fast=False
 ):
     debug("allowed teams: {allow}".format(allow=allow_teams))
+    debug("external teams: {ext}".format(ext=ext_teams))
     debug("denied teams: {deny}".format(deny=deny_teams))
 
+    resolved_products = {}
+
     problems = []
-    gh_repos = []
-    for prod in eups_products:
-        debug("looking for git repo for: {prod} [{ver}]".format(
-            prod=prod['name'],
-            ver=prod['eups_version']
+    for name, data in products.items():
+        debug("looking for git repo for: {name} [{ver}]".format(
+            name=name,
+            ver=data['eups_version']
         ))
 
         try:
-            repo = org.get_repo(prod['name'])
+            repo = org.get_repo(name)
         except github.UnknownObjectException as e:
-            yikes = pygithub.CaughtUnknownObjectError(prod['name'], e)
+            yikes = pygithub.CaughtUnknownObjectError(name, e)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)
@@ -188,25 +257,15 @@ def eups_products_to_gh_repos(
         has_ext_team = any(x in repo_team_names for x in ext_teams)
         debug("  external repo: {v}".format(v=has_ext_team))
 
-        sha = codetools.eups2git_ref(
-            product=repo.name,
-            eups_version=prod['eups_version'],
-            build_id=eupsbuild
-        )
-
-        gh_repos.append({
-            'repo': repo,
-            'product': prod['name'],
-            'eups_version': prod['eups_version'],
-            'sha': sha,
-            'v': has_ext_team,
-        })
+        resolved_products[name] = data.copy()
+        resolved_products[name]['repo'] = repo
+        resolved_products[name]['v'] = has_ext_team
 
     if problems:
         msg = "{n} repo(s) have errors".format(n=len(problems))
         raise codetools.DogpileError(problems, msg)
 
-    return gh_repos
+    return resolved_products
 
 
 def author_to_dict(obj):
@@ -312,21 +371,22 @@ def check_existing_git_tag(repo, t_tag):
                             .format(tag=e_tag))
 
 
-def tag_gh_repos(
-    gh_repos,
+# split out check if tag already exists
+def tag_products(
+    products,
     tag_template,
     force_tag=False,
     fail_fast=False,
     dry_run=False,
 ):
     problems = []
-    for repo in gh_repos:
+    for name, data in products.items():
         # "target tag"
         t_tag = copy.copy(tag_template)
-        t_tag['sha'] = repo['sha']
+        t_tag['sha'] = data['sha']
 
         # prefix tag name with `v`?
-        if repo['v'] and re.match('\d', t_tag['name']):
+        if data['v'] and re.match('\d', t_tag['name']):
             t_tag['name'] = 'v' + t_tag['name']
 
         # control whether to create a new tag or update an existing one
@@ -338,21 +398,21 @@ def tag_gh_repos(
               (eups version: {et})
               external repo: {v}\
             """).format(
-            repo=repo['repo'].full_name,
+            repo=data['repo'].full_name,
             sha=t_tag['sha'],
             gt=t_tag['name'],
-            et=repo['eups_version'],
-            v=repo['v']
+            et=data['eups_version'],
+            v=data['v']
         ))
 
         try:
             # if the existing tag is in sync, do nothing
-            if check_existing_git_tag(repo['repo'], t_tag):
+            if check_existing_git_tag(data['repo'], t_tag):
                 warn(textwrap.dedent("""\
                     No action for {repo}
                       existing tag: {tag} is already in sync\
                     """).format(
-                    repo=repo['repo'].full_name,
+                    repo=data['repo'].full_name,
                     tag=t_tag['name'],
                 ))
 
@@ -372,7 +432,7 @@ def tag_gh_repos(
                 error(e)
                 continue
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(data['repo'], e)
 
             if fail_fast:
                 raise yikes from None
@@ -387,7 +447,7 @@ def tag_gh_repos(
             continue
 
         try:
-            tag_obj = repo['repo'].create_git_tag(
+            tag_obj = data['repo'].create_git_tag(
                 t_tag['name'],
                 t_tag['message'],
                 t_tag['sha'],
@@ -398,14 +458,14 @@ def tag_gh_repos(
 
             if update_tag:
                 ref = pygithub.find_tag_by_name(
-                    repo['repo'],
+                    data['repo'],
                     t_tag['name'],
                     safe=False
                 )
                 ref.edit(tag_obj.sha, force=True)
                 debug("  updated existing ref: {ref}".format(ref=ref))
             else:
-                ref = repo['repo'].create_git_ref(
+                ref = data['repo'].create_git_ref(
                     "refs/tags/{t}".format(t=t_tag['name']),
                     tag_obj.sha
                 )
@@ -413,7 +473,7 @@ def tag_gh_repos(
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(repo['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(data['repo'], e)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)
@@ -447,9 +507,9 @@ def run():
     # official versions in the eups ref.
     candidate = args.candidate if args.candidate else args.tag
 
-    eupsbuild = args.manifest  # sadly we need to "just" know this
+    manifest = args.manifest  # sadly we need to "just" know this
     message_template = 'Version {v} release from {c}/{b}'
-    message = message_template.format(v=version, c=candidate, b=eupsbuild)
+    message = message_template.format(v=version, c=candidate, b=manifest)
 
     tagger = github.InputGitAuthor(
         git_user,
@@ -479,20 +539,27 @@ def run():
     eups_candidate = candidate.translate(cmap)
 
     eups_products = eups.EupsTag(eups_candidate).products
+    manifest_products = versiondb.Manifest(manifest).products
 
     # do not fail-fast on non-write operations
-    gh_repos = eups_products_to_gh_repos(
+    products = cross_reference_products(
+        eups_products,
+        manifest_products,
+        fail_fast=False,
+    )
+
+    # do not fail-fast on non-write operations
+    products = get_repo_for_products(
         org=org,
+        products=products,
         allow_teams=args.allow_team,
         ext_teams=args.external_team,
         deny_teams=args.deny_team,
-        eupsbuild=eupsbuild,
-        eups_products=eups_products,
         fail_fast=False
     )
 
-    tag_gh_repos(
-        gh_repos,
+    tag_products(
+        products,
         tag_template,
         force_tag=args.force_tag,
         fail_fast=args.fail_fast,
