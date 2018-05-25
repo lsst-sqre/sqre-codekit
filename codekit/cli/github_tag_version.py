@@ -108,6 +108,11 @@ def parse_args():
         action='store_true',
         help='Force moving pre-existing annotated git tags.')
     parser.add_argument(
+        '--ignore-version',
+        action='store_true',
+        help='Ignore version strings'
+             ' when cross referencing eups tag and manifest data.')
+    parser.add_argument(
         '--limit',
         default=None,
         type=int,
@@ -141,7 +146,8 @@ def cmp_dict(d1, d2, ignore_keys=[]):
 def cross_reference_products(
     eups_products,
     manifest_products,
-    fail_fast=False
+    ignore_version=False,
+    fail_fast=False,
 ):
     """
     Cross reference EupsTag and Manifest data and return a merged result
@@ -151,6 +157,7 @@ def cross_reference_products(
     eups_products:
     manifest:
     fail_fast: bool
+    ignore_versions: bool
 
     Returns
     -------
@@ -180,13 +187,18 @@ def cross_reference_products(
             problems.append(yikes)
             error(yikes)
 
+        if ignore_version:
+            # ignore the manifest eups_version string by simply setting it to
+            # the eups tag value.  This ensures that the eups tag value will be
+            # passed though.
+            manifest_data = manifest_data.copy()
+            manifest_data['eups_version'] = eups_data['eups_version']
+
         if eups_data['eups_version'] != manifest_data['eups_version']:
             yikes = RuntimeError(textwrap.dedent("""
                 eups version string mismatch:
-                  eups tag:
-                    {product} {eups_eups_version}\
-                  manifest:
-                    {product} {manifest_eups_version}\
+                  eups tag: {product} {eups_eups_version}
+                  manifest: {product} {manifest_eups_version}\
                 """).format(
                 product=name,
                 eups_eups_version=eups_data['eups_version'],
@@ -491,7 +503,7 @@ def tag_products(
                 ref = pygithub.find_tag_by_name(
                     data['repo'],
                     t_tag['name'],
-                    safe=False
+                    safe=False,
                 )
                 ref.edit(tag_obj.sha, force=True)
                 debug("  updated existing ref: {ref}".format(ref=ref))
@@ -545,7 +557,7 @@ def run():
     tagger = github.InputGitAuthor(
         git_user,
         git_email,
-        codetools.current_timestamp()
+        codetools.current_timestamp(),
     )
     debug(tagger)
 
@@ -576,6 +588,7 @@ def run():
     products = cross_reference_products(
         eups_products,
         manifest_products,
+        ignore_version=args.ignore_version,
         fail_fast=False,
     )
 
@@ -589,7 +602,7 @@ def run():
         allow_teams=args.allow_team,
         ext_teams=args.external_team,
         deny_teams=args.deny_team,
-        fail_fast=False
+        fail_fast=False,
     )
 
     # do not fail-fast on non-write operations
