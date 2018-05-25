@@ -5,7 +5,6 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 
 # Technical Debt
 # --------------
-# - completely hide eups-specifics from this file
 # - support repos.yaml for github repo resolution
 # - worth doing the smart thing for externals? (yes for Sims)
 # - deal with authentication version
@@ -16,17 +15,14 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 
 
 from codekit.codetools import debug, warn, error
-from codekit import codetools, pygithub
+from codekit import codetools, eups, pygithub
 import argparse
 import copy
 import github
 import os
 import re
-import requests
 import sys
 import textwrap
-
-eupspkg_site = 'https://eups.lsst.codes/stack/src'
 
 
 class GitTagExistsError(Exception):
@@ -135,43 +131,6 @@ def cmp_dict(d1, d2, ignore_keys=[]):
     # https://stackoverflow.com/questions/10480806/compare-dictionaries-ignoring-specific-keys
     return {k: v for k, v in d1.items() if k not in ignore_keys} \
         == {k: v for k, v in d2.items() if k not in ignore_keys}
-
-
-def fetch_eups_tag_file(args, eups_candidate):
-    # construct url
-    eupspkg_taglist = '/'.join((eupspkg_site, 'tags',
-                                eups_candidate + '.list'))
-    debug("fetching: {url}".format(url=eupspkg_taglist))
-
-    r = requests.get(eupspkg_taglist)
-    r.raise_for_status()
-
-    return r.text
-
-
-def parse_eups_tag_file(data):
-    products = []
-
-    for line in data.splitlines():
-        if not isinstance(line, str):
-            line = str(line, 'utf-8')
-        # skip commented out and blank lines
-        if line.startswith('#'):
-            continue
-        if line.startswith('EUPS'):
-            continue
-        if line == '':
-            continue
-
-        # extract the repo and eups tag
-        (product, _, eups_version) = line.split()[0:3]
-
-        products.append({
-            'name': product,
-            'eups_version': eups_version,
-        })
-
-    return products
 
 
 # split out actual eups/manifest mapping / rename
@@ -519,8 +478,7 @@ def run():
     cmap = str.maketrans('.-', '__')
     eups_candidate = candidate.translate(cmap)
 
-    manifest = fetch_eups_tag_file(args, eups_candidate)
-    eups_products = parse_eups_tag_file(manifest)
+    eups_products = eups.EupsTag(eups_candidate).products
 
     # do not fail-fast on non-write operations
     gh_repos = eups_products_to_gh_repos(
