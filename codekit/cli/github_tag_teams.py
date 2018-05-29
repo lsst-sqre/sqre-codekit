@@ -279,7 +279,7 @@ def create_tags(repo, tags, tagger, dry_run=False):
         ref=default_branch))
 
     debug(textwrap.dedent("""\
-        tagging {repo} @
+        tagging repo: {repo} @
           default branch: {db}
           type: {obj_type}
           sha: {obj_sha}\

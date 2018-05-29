@@ -8,10 +8,8 @@ from datetime import datetime
 from pkg_resources import get_distribution
 from public import public
 import argparse
-import functools
 import gitconfig
 import os
-import requests
 import shutil
 import sys
 import tempfile
@@ -259,77 +257,6 @@ def github_2fa_callback():
         # let's protect them from doing that.
         code = input('Enter 2FA code: ')
     return code
-
-
-@functools.lru_cache(maxsize=1024)
-@public
-def fetch_manifest_file(
-    build_id,
-    versiondb='https://raw.githubusercontent.com'
-              '/lsst/versiondb/master/manifests'
-):
-    # eg. https://raw.githubusercontent.com/lsst/versiondb/master/manifests/b1108.txt  # NOQA
-    shafile = versiondb + '/' + build_id + '.txt'
-    debug("fetching: {url}".format(url=shafile))
-
-    # Get the file tying shas to eups versions
-    r = requests.get(shafile)
-    r.raise_for_status()
-
-    return r.text
-
-
-@functools.lru_cache(maxsize=1024)
-@public
-def parse_manifest_file(data):
-    products = {}
-
-    for line in data.splitlines():
-        if not isinstance(line, str):
-            line = str(line, 'utf-8')
-        # skip commented out and blank lines
-        if line.startswith('#'):
-            continue
-        if line.startswith('BUILD'):
-            continue
-        if line == '':
-            continue
-
-        (product, sha, eups_version) = line.split()[0:3]
-
-        products[product] = {
-            'name': product,
-            'sha': sha,
-            'eups_version': eups_version,
-        }
-
-    return products
-
-
-@functools.lru_cache(maxsize=1024)
-@public
-def eups2git_ref(
-    product,
-    eups_version,
-    build_id
-):
-    """Provide the sha1 for an EUPS product."""
-
-    manifest = fetch_manifest_file(build_id)
-    products = parse_manifest_file(manifest)
-
-    entry = products[product]
-    if entry['eups_version'] == eups_version:
-        return entry['sha']
-    else:
-        raise RuntimeError(
-            "failed to find record in manifest {build_id} for:\n"
-            "  {product} {eups_version}".format(
-                build_id=build_id,
-                product=product,
-                eups_version=eups_version
-            )
-        )
 
 
 @public
