@@ -64,7 +64,8 @@ matrix:
             --email 'sqre-admin@lists.lsst.org' \
             --user 'sqreadmin' \
             --token "$SQREADMIN_TOKEN" \
-            --ignore-verions \
+            --ignore-manifest-versions \
+            --ignore-git-tagger \
             --limit 10 \
             '15.0' 'b3504'
         else

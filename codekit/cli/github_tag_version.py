@@ -117,9 +117,9 @@ def parse_args():
         action='store_true',
         help='Force moving pre-existing annotated git tags.')
     parser.add_argument(
-        '--ignore-version',
+        '--ignore-manifest-versions',
         action='store_true',
-        help='Ignore version strings'
+        help='Ignore manifest version strings'
              ' when cross referencing eups tag and manifest data.')
     parser.add_argument(
         '--limit',
@@ -155,7 +155,7 @@ def cmp_dict(d1, d2, ignore_keys=[]):
 def cross_reference_products(
     eups_products,
     manifest_products,
-    ignore_version=False,
+    ignore_manifest_versions=False,
     fail_fast=False,
 ):
     """
@@ -166,7 +166,7 @@ def cross_reference_products(
     eups_products:
     manifest:
     fail_fast: bool
-    ignore_versions: bool
+    ignore_manifest_versions: bool
 
     Returns
     -------
@@ -196,7 +196,7 @@ def cross_reference_products(
             problems.append(yikes)
             error(yikes)
 
-        if ignore_version:
+        if ignore_manifest_versions:
             # ignore the manifest eups_version string by simply setting it to
             # the eups tag value.  This ensures that the eups tag value will be
             # passed though.
@@ -635,7 +635,7 @@ def run():
     products = cross_reference_products(
         eups_products,
         manifest_products,
-        ignore_version=args.ignore_version,
+        ignore_manifest_versions=args.ignore_manifest_versions,
         fail_fast=False,
     )
 
