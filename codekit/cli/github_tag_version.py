@@ -105,6 +105,7 @@ def parse_args():
         help='Literal github personal access token string')
     parser.add_argument(
         '--versiondb-base-url',
+        default=os.getenv('LSST_VERSIONDB_BASE_URL'),
         help='Override the default versiondb base url')
     parser.add_argument(
         '--eupstag-base-url',
