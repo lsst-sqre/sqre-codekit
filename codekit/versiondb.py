@@ -61,7 +61,7 @@ class Manifest(object):
     def __parse_manifest_text(self):
         products = {}
 
-        for line in self.__text.splitlines():
+        for n, line in enumerate(self.__text.splitlines(), start=1):
             if not isinstance(line, str):
                 line = str(line, 'utf-8')
 
@@ -81,9 +81,17 @@ class Manifest(object):
                 parsed_name = m.group(1)
                 continue
 
-            # min of 3, max of 4 fields
-            fields = line.split()[0:4]
-            (name, sha, eups_version) = fields[0:3]
+            try:
+                # min of 3, max of 4 fields
+                fields = line.split()[0:4]
+                (name, sha, eups_version) = fields[0:3]
+            except ValueError as e:
+                raise ValueError(
+                    "error parsing manifest {name} at line {n}:\n{e}".format(
+                        name=self.name,
+                        n=n,
+                        e=e,
+                    ))
 
             products[name] = {
                 'name': name,
