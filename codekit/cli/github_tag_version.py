@@ -122,6 +122,10 @@ def parse_args():
         help='Ignore manifest version strings'
              ' when cross referencing eups tag and manifest data.')
     parser.add_argument(
+        '--ignore-git-message',
+        action='store_true',
+        help='Ignore git tag message when verifying an existing tag.')
+    parser.add_argument(
         '--limit',
         default=None,
         type=int,
@@ -323,7 +327,7 @@ def cmp_gitauthor(a, b):
 def cmp_existing_git_tag(
     t_tag,
     e_tag,
-    ignore_message=False,
+    ignore_git_message=False,
     ignore_tagger=False,
 ):
     assert isinstance(t_tag, codekit.pygithub.TargetTag), type(t_tag)
@@ -332,7 +336,7 @@ def cmp_existing_git_tag(
     if t_tag.sha != e_tag.object.sha:
         return False
 
-    if not ignore_message:
+    if not ignore_git_message:
         if t_tag.message != e_tag.message:
             return False
 
@@ -421,7 +425,7 @@ def check_product_tags(
     tagger,
     force_tag=False,
     fail_fast=False,
-    ignore_message=False,
+    ignore_git_message=False,
     ignore_tagger=False,
 ):
     assert isinstance(tagger, github.InputGitAuthor), type(tagger)
@@ -458,7 +462,7 @@ def check_product_tags(
             if check_existing_git_tag(
                 repo,
                 t_tag,
-                ignore_message=ignore_message,
+                ignore_git_message=ignore_git_message,
                 ignore_tagger=ignore_tagger,
             ):
                 warn(textwrap.dedent("""\
@@ -660,7 +664,7 @@ def run():
         tagger=tagger,
         force_tag=args.force_tag,
         fail_fast=False,
-        ignore_message=False,
+        ignore_git_message=args.ignore_git_message,
         ignore_tagger=False,
     )
 

@@ -66,6 +66,7 @@ matrix:
             --token "$SQREADMIN_TOKEN" \
             --ignore-manifest-versions \
             --ignore-git-tagger \
+            --ignore-git-message \
             --limit 10 \
             '15.0' 'b3504'
         else
