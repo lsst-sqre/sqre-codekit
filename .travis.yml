@@ -14,6 +14,7 @@ matrix:
       - python setup.py sdist
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
+        set -e
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           # verify a past weekly tag -- the eups tag name and git tag names are
           # in sync except for s/_/-/
@@ -84,6 +85,7 @@ matrix:
       - python setup.py sdist
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
+        set -e
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           # create
           github-tag-teams \
@@ -122,6 +124,7 @@ matrix:
       - python setup.py sdist
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
+        set -e
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           github-decimate-org \
             --dry-run \
@@ -143,6 +146,7 @@ matrix:
       - python setup.py sdist
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
+        set -e
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           github-fork-org \
             --dry-run \
