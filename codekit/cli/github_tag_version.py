@@ -389,7 +389,7 @@ def check_existing_git_tag(repo, t_tag, **kwargs):
 
     # find tag object pointed to by the ref
     e_tag = repo.get_git_tag(e_ref.object.sha)
-    debug("  found existing: {tag} [sha]".format(
+    debug("  found existing: {tag} [{sha}]".format(
         tag=e_tag.tag,
         sha=e_tag.sha
     ))
