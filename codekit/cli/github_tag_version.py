@@ -126,6 +126,10 @@ def parse_args():
         action='store_true',
         help='Ignore git tag message when verifying an existing tag.')
     parser.add_argument(
+        '--ignore-git-tagger',
+        action='store_true',
+        help='Ignore git tag "tagger"/author when verifying an existing tag.')
+    parser.add_argument(
         '--limit',
         default=None,
         type=int,
@@ -328,7 +332,7 @@ def cmp_existing_git_tag(
     t_tag,
     e_tag,
     ignore_git_message=False,
-    ignore_tagger=False,
+    ignore_git_tagger=False,
 ):
     assert isinstance(t_tag, codekit.pygithub.TargetTag), type(t_tag)
     assert isinstance(e_tag, github.GitTag.GitTag)
@@ -340,7 +344,7 @@ def cmp_existing_git_tag(
         if t_tag.message != e_tag.message:
             return False
 
-    if not ignore_tagger:
+    if not ignore_git_tagger:
         # ignore date when comparing tag objects
         if not cmp_gitauthor(t_tag.tagger, e_tag.tagger):
             return False
@@ -426,7 +430,7 @@ def check_product_tags(
     force_tag=False,
     fail_fast=False,
     ignore_git_message=False,
-    ignore_tagger=False,
+    ignore_git_tagger=False,
 ):
     assert isinstance(tagger, github.InputGitAuthor), type(tagger)
 
@@ -463,7 +467,7 @@ def check_product_tags(
                 repo,
                 t_tag,
                 ignore_git_message=ignore_git_message,
-                ignore_tagger=ignore_tagger,
+                ignore_git_tagger=ignore_git_tagger,
             ):
                 warn(textwrap.dedent("""\
                     No action for {repo}
@@ -665,7 +669,7 @@ def run():
         force_tag=args.force_tag,
         fail_fast=False,
         ignore_git_message=args.ignore_git_message,
-        ignore_tagger=False,
+        ignore_git_tagger=args.ignore_git_tagger,
     )
 
     tag_products(
