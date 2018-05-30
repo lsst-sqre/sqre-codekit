@@ -105,7 +105,12 @@ def parse_args():
         help='Literal github personal access token string')
     parser.add_argument(
         '--versiondb-base-url',
+        default=os.getenv('LSST_VERSIONDB_BASE_URL'),
         help='Override the default versiondb base url')
+    parser.add_argument(
+        '--eupstag-base-url',
+        default=os.getenv('LSST_EUPSTAG_BASE_URL'),
+        help='Override the default eupstag base url')
     parser.add_argument(
         '--force-tag',
         action='store_true',
@@ -134,7 +139,7 @@ def parse_args():
         '-d', '--debug',
         action='count',
         default=os.getenv('DM_SQUARE_DEBUG'),
-        help='Debug mode')
+        help='Debug mode (can specify several times)')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
     return parser.parse_args()
 
@@ -580,18 +585,19 @@ def run():
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(args.org)
-    debug("tagging repos in org: {org}".format(org=org.login))
+    info("tagging repos in org: {org}".format(org=org.login))
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
     cmap = str.maketrans('.-', '__')
     eups_candidate = candidate.translate(cmap)
 
-    eups_products = eups.EupsTag(eups_candidate).products
+    eups_products = eups.EupsTag(
+        eups_candidate,
+        base_url=args.eupstag_base_url).products
     manifest_products = versiondb.Manifest(
         manifest,
-        base_url=args.versiondb_base_url
-    ).products
+        base_url=args.versiondb_base_url).products
 
     # do not fail-fast on non-write operations
     products = cross_reference_products(

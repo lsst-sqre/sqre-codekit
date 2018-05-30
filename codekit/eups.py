@@ -59,7 +59,7 @@ class EupsTag(object):
         products = {}
 
         parsed_name = None
-        for line in self.__text.splitlines():
+        for n, line in enumerate(self.__text.splitlines(), start=1):
             if not isinstance(line, str):
                 line = str(line, 'utf-8')
 
@@ -92,8 +92,16 @@ class EupsTag(object):
             if line.startswith('#') or line == '':
                 continue
 
-            # extract the repo and eups tag
-            (name, flavor, eups_version) = line.split()[0:3]
+            try:
+                # extract the repo and eups tag
+                (name, flavor, eups_version) = line.split()[0:3]
+            except ValueError as e:
+                raise ValueError(
+                    "error parsing eups tag {name} at line {n}:\n{e}".format(
+                        name=self.name,
+                        n=n,
+                        e=e,
+                    ))
 
             products[name] = {
                 'name': name,
