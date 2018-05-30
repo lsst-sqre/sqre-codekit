@@ -30,7 +30,6 @@ matrix:
             --token "$SQREADMIN_TOKEN" \
             --ignore-git-tagger \
             --ignore-git-message \
-            --limit 10 \
             --manifest 'b3595' \
             'w.2018.18'
 
@@ -50,7 +49,6 @@ matrix:
             --token "$SQREADMIN_TOKEN" \
             --ignore-git-tagger \
             --ignore-git-message \
-            --limit 10 \
             --eups-tag 'v15_0_rc3' \
             --manifest 'b3504' \
             '15.0'
@@ -73,7 +71,6 @@ matrix:
             --ignore-manifest-versions \
             --ignore-git-tagger \
             --ignore-git-message \
-            --limit 10 \
             --manifest 'b3504' \
             '15.0'
         else
