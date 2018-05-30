@@ -409,6 +409,8 @@ def check_product_tags(
 
     problems = []
     for name, data in products.items():
+        repo = data['repo']
+
         # "target tag"
         t_tag = tag_template.copy()
         t_tag['sha'] = data['sha']
@@ -422,12 +424,12 @@ def check_product_tags(
 
         try:
             # if the existing tag is in sync, do nothing
-            if check_existing_git_tag(data['repo'], t_tag):
+            if check_existing_git_tag(repo, t_tag):
                 warn(textwrap.dedent("""\
                     No action for {repo}
                       existing tag: {tag} is already in sync\
                     """).format(
-                    repo=data['repo'].full_name,
+                    repo=repo.full_name,
                     tag=t_tag['name'],
                 ))
 
@@ -442,7 +444,7 @@ def check_product_tags(
                 warn(textwrap.dedent("""\
                       existing tag: {tag} WILL BE MOVED\
                     """).format(
-                    repo=data['repo'].full_name,
+                    repo=repo.full_name,
                     tag=t_tag['name'],
                 ))
             elif fail_fast:
@@ -452,7 +454,7 @@ def check_product_tags(
                 error(e)
                 continue
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(data['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(repo, e)
 
             if fail_fast:
                 raise yikes from None
@@ -479,6 +481,7 @@ def tag_products(
 ):
     problems = []
     for name, data in products.items():
+        repo = data['repo']
         t_tag = data['target_tag']
 
         info(textwrap.dedent("""\
@@ -488,7 +491,7 @@ def tag_products(
               external repo: {v}
               replace existing tag: {update}\
             """).format(
-            repo=data['repo'].full_name,
+            repo=repo.full_name,
             sha=t_tag['sha'],
             gt=t_tag['name'],
             et=data['eups_version'],
@@ -501,7 +504,7 @@ def tag_products(
             continue
 
         try:
-            tag_obj = data['repo'].create_git_tag(
+            tag_obj = repo.create_git_tag(
                 t_tag['name'],
                 t_tag['message'],
                 t_tag['sha'],
@@ -512,14 +515,14 @@ def tag_products(
 
             if data['update_tag']:
                 ref = pygithub.find_tag_by_name(
-                    data['repo'],
+                    repo,
                     t_tag['name'],
                     safe=False,
                 )
                 ref.edit(tag_obj.sha, force=True)
                 debug("  updated existing ref: {ref}".format(ref=ref))
             else:
-                ref = data['repo'].create_git_ref(
+                ref = repo.create_git_ref(
                     "refs/tags/{t}".format(t=t_tag['name']),
                     tag_obj.sha
                 )
@@ -527,7 +530,7 @@ def tag_products(
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(data['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(repo, e)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)
