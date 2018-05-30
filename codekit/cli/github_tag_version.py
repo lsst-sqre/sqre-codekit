@@ -611,12 +611,13 @@ def run():
     eups_tag = args.eups_tag
     if not eups_tag:
         # generate eups-style version
-        # eups no likey semantic versioning markup, wants underscores
-        eups_tag = git_tag.translate(str.maketrans('.-', '__'))
+        eups_tag = eups.git_tag2eups_tag(git_tag)
+    debug("using eups tag: {eups_tag}".format(eups_tag=eups_tag))
 
     # sadly we need to "just" know this
     # XXX this can be parsed from the eups tag file post d_2018_05_08
     manifest = args.manifest
+    debug("using manifest: {manifest}".format(manifest=manifest))
 
     message_template = "Version {{git_tag}}"\
         " release from {eups_tag}/{manifest}".format(
