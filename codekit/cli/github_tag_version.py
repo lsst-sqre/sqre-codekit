@@ -585,7 +585,7 @@ def run():
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(args.org)
-    debug("tagging repos in org: {org}".format(org=org.login))
+    info("tagging repos in org: {org}".format(org=org.login))
 
     # generate eups-style version
     # eups no likey semantic versioning markup, wants underscores
