@@ -104,6 +104,9 @@ def parse_args():
         default=None,
         help='Literal github personal access token string')
     parser.add_argument(
+        '--versiondb-base-url',
+        help='Override the default versiondb base url')
+    parser.add_argument(
         '--force-tag',
         action='store_true',
         help='Force moving pre-existing annotated git tags.')
@@ -585,7 +588,10 @@ def run():
     eups_candidate = candidate.translate(cmap)
 
     eups_products = eups.EupsTag(eups_candidate).products
-    manifest_products = versiondb.Manifest(manifest).products
+    manifest_products = versiondb.Manifest(
+        manifest,
+        base_url=args.versiondb_base_url
+    ).products
 
     # do not fail-fast on non-write operations
     products = cross_reference_products(
