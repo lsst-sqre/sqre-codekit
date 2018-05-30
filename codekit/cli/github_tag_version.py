@@ -64,12 +64,15 @@ def parse_args():
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
 
-    parser.add_argument('tag')
-    parser.add_argument('manifest')
+    parser.add_argument(
+        '--manifest',
+        required=True,
+        help='Name of versiondb manifest for git repo sha resolution'
+             ' AKA bNNNN')
     parser.add_argument(
         '--org',
         required=True,
-        help="Github organization")
+        help='Github organization')
     parser.add_argument(
         '--allow-team',
         action='append',
@@ -149,6 +152,8 @@ def parse_args():
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode (can specify several times)')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
+    parser.add_argument('tag')
+
     return parser.parse_args()
 
 
@@ -616,7 +621,7 @@ def run():
     message_template = "Version {{git_tag}}"\
         " release from {eups_tag}/{manifest}".format(
             eups_tag=eups_tag,
-            manifestb=manifest,
+            manifest=manifest,
         )
     debug("using tag message: {msg}".format(msg=message_template))
 

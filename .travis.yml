@@ -29,8 +29,10 @@ matrix:
             --user 'sqreadmin' \
             --token "$SQREADMIN_TOKEN" \
             --ignore-git-tagger \
+            --ignore-git-message \
             --limit 10 \
-            'w.2018.18' 'b3595'
+            --manifest 'b3595' \
+            'w.2018.18'
 
           # verify a past official release where the git tag was generated from
           # an rcX eups tag.  This validates the location of the git tags but
@@ -47,9 +49,11 @@ matrix:
             --user 'sqreadmin' \
             --token "$SQREADMIN_TOKEN" \
             --ignore-git-tagger \
+            --ignore-git-message \
             --limit 10 \
             --eups-tag 'v15_0_rc3' \
-            '15.0' 'b3504'
+            --manifest 'b3504' \
+            '15.0'
 
           # verify a past official release using the eups tag. As the eups
           # product version strings will be out of sync between the versiondb
@@ -70,7 +74,8 @@ matrix:
             --ignore-git-tagger \
             --ignore-git-message \
             --limit 10 \
-            '15.0' 'b3504'
+            --manifest 'b3504' \
+            '15.0'
         else
           echo "Unable to test without travis secure env vars."
         fi
