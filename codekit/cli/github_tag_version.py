@@ -11,7 +11,6 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 
 # Known Bugs
 # ----------
-# Yeah, the candidate logic is broken, will fix
 
 
 from codekit.codetools import debug, info, warn, error
@@ -52,7 +51,7 @@ def parse_args():
             --allow-team 'Data Management' \\
             --allow-team 'DM Externals' \\
             --external-team 'DM Externals' \\
-            --candidate v11_0_rc2 \\
+            --eups-tag v11_0_rc2 \\
             11.0.rc2 b1679
 
         Note that the access token must have access to these oauth scopes:
@@ -88,7 +87,7 @@ def parse_args():
         action='append',
         help='git repos to be tagged MUST NOT be a member of ANY of'
              ' these teams (can specify several times)')
-    parser.add_argument('--candidate')
+    parser.add_argument('--eups-tag')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument(
         '--user',
@@ -587,7 +586,6 @@ def tag_products(
 
 def run():
     """Create the tag"""
-
     args = parse_args()
 
     codetools.setup_logging(args.debug)
@@ -599,20 +597,27 @@ def run():
     # ditto for the name of the git user
     git_user = codetools.lookup_user(args)
 
-    # The candidate is assumed to be the requested EUPS tag unless
-    # otherwise specified with the --candidate option The reason to
-    # currently do this is that for weeklies and other internal builds,
-    # it's okay to eups publish the weekly and git tag post-facto. However
-    # for official releases, we don't want to publish until the git tag
-    # goes down, because we want to eups publish the build that has the
-    # official versions in the eups ref.
-    candidate = args.candidate if args.candidate else git_tag
-    manifest = args.manifest  # sadly we need to "just" know this
+    # The default eups tag is derived from the git tag, otherwise specified
+    # with the --eups-tag option. The reason to currently do this is that for
+    # weeklies and other internal builds, it's okay to eups publish the weekly
+    # and git tag post-facto. However for official releases, we don't want to
+    # publish until the git tag goes down, because we want to eups publish the
+    # build that has the official versions in the eups ref.
+    eups_tag = args.eups_tag
+    if not eups_tag:
+        # generate eups-style version
+        # eups no likey semantic versioning markup, wants underscores
+        eups_tag = git_tag.translate(str.maketrans('.-', '__'))
 
-    message_template = "Version {{git_tag}} release from {c}/{b}".format(
-        c=candidate,
-        b=manifest,
-    )
+    # sadly we need to "just" know this
+    # XXX this can be parsed from the eups tag file post d_2018_05_08
+    manifest = args.manifest
+
+    message_template = "Version {{git_tag}}"\
+        " release from {eups_tag}/{manifest}".format(
+            eups_tag=eups_tag,
+            manifestb=manifest,
+        )
     debug("using tag message: {msg}".format(msg=message_template))
 
     tagger = github.InputGitAuthor(
@@ -627,13 +632,8 @@ def run():
     org = g.get_organization(args.org)
     info("tagging repos in org: {org}".format(org=org.login))
 
-    # generate eups-style version
-    # eups no likey semantic versioning markup, wants underscores
-    cmap = str.maketrans('.-', '__')
-    eups_candidate = candidate.translate(cmap)
-
     eups_products = eups.EupsTag(
-        eups_candidate,
+        eups_tag,
         base_url=args.eupstag_base_url).products
     manifest_products = versiondb.Manifest(
         manifest,

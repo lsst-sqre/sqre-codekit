@@ -48,7 +48,7 @@ matrix:
             --token "$SQREADMIN_TOKEN" \
             --ignore-git-tagger \
             --limit 10 \
-            --candidate 'v15_0_rc3' \
+            --eups-tag 'v15_0_rc3' \
             '15.0' 'b3504'
 
           # verify a past official release using the eups tag. As the eups
