@@ -15,8 +15,11 @@ matrix:
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
+          # verify a past weekly tag -- the eups tag name and git tag names are
+          # in sync except for s/_/-/
           github-tag-version \
             --dry-run \
+            --debug \
             --org 'lsst' \
             --allow-team 'Data Management' \
             --allow-team 'DM Externals' \
@@ -25,8 +28,45 @@ matrix:
             --email 'sqre-admin@lists.lsst.org' \
             --user 'sqreadmin' \
             --token "$SQREADMIN_TOKEN" \
-            --debug \
+            --limit 10 \
             'w.2018.18' 'b3595'
+
+          # verify a past official release where the git tag was generated from
+          # an rcX eups tag.  This validates the location of the git tags but
+          # does not inspect the official eups release tag at all.
+          github-tag-version \
+            --dry-run \
+            --debug \
+            --org 'lsst' \
+            --allow-team 'Data Management' \
+            --allow-team 'DM Externals' \
+            --external-team 'DM Externals' \
+            --deny-team 'DM Auxilliaries' \
+            --email 'sqre-admin@lists.lsst.org' \
+            --user 'sqreadmin' \
+            --token "$SQREADMIN_TOKEN" \
+            --candidate 'v15_0_rc3' \
+            --limit 10 \
+            '15.0' 'b3504'
+
+          # verify a past official release using the eups tag. As the eups
+          # product version strings will be out of sync between the versiondb
+          # manifest it was based on and the eups tag, the version strings have
+          # to be ignored.
+          github-tag-version \
+            --dry-run \
+            --debug \
+            --org 'lsst' \
+            --allow-team 'Data Management' \
+            --allow-team 'DM Externals' \
+            --external-team 'DM Externals' \
+            --deny-team 'DM Auxilliaries' \
+            --email 'sqre-admin@lists.lsst.org' \
+            --user 'sqreadmin' \
+            --token "$SQREADMIN_TOKEN" \
+            --ignore-verions \
+            --limit 10 \
+            '15.0' 'b3504'
         else
           echo "Unable to test without travis secure env vars."
         fi
