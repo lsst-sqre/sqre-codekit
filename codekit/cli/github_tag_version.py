@@ -17,6 +17,7 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 from codekit.codetools import debug, info, warn, error
 from codekit import codetools, eups, pygithub, versiondb
 import argparse
+import codekit
 import github
 import itertools
 import os
@@ -306,6 +307,7 @@ def author_to_dict(obj):
         # GitAuthor has name,email,date properties
         'GitAuthor': lambda x: {'name': x.name, 'email': x.email},
         # InputGitAuthor only has _identity, which returns a dict
+        # XXX consider trying to rationalize this upstream...
         'InputGitAuthor': lambda x: x._identity,
     }.get(type(obj).__name__, lambda x: default())(obj)
 
@@ -318,20 +320,31 @@ def cmp_gitauthor(a, b):
     return False
 
 
-def cmp_existing_git_tag(t_tag, e_tag):
-    assert isinstance(t_tag, dict)
+def cmp_existing_git_tag(
+    t_tag,
+    e_tag,
+    ignore_message=False,
+    ignore_tagger=False,
+):
+    assert isinstance(t_tag, codekit.pygithub.TargetTag), type(t_tag)
     assert isinstance(e_tag, github.GitTag.GitTag)
 
-    # ignore date when comparing tag objects
-    if t_tag['sha'] == e_tag.object.sha and \
-       t_tag['message'] == e_tag.message and \
-       cmp_gitauthor(t_tag['tagger'], e_tag.tagger):
-        return True
+    if t_tag.sha != e_tag.object.sha:
+        return False
 
-    return False
+    if not ignore_message:
+        if t_tag.message != e_tag.message:
+            return False
+
+    if not ignore_tagger:
+        # ignore date when comparing tag objects
+        if not cmp_gitauthor(t_tag.tagger, e_tag.tagger):
+            return False
+
+    return True
 
 
-def check_existing_git_tag(repo, t_tag):
+def check_existing_git_tag(repo, t_tag, **kwargs):
     """
     Check for a pre-existng tag in the github repo.
 
@@ -339,7 +352,7 @@ def check_existing_git_tag(repo, t_tag):
     ----------
     repo : github.Repository.Repository
         repo to inspect for an existing tagsdf
-    t_tag: dict
+    t_tag: codekit.pygithub.TargetTag
         dict repesenting a target git tag
 
     Returns
@@ -354,29 +367,31 @@ def check_existing_git_tag(repo, t_tag):
     """
 
     assert isinstance(repo, github.Repository.Repository), type(repo)
-    assert isinstance(t_tag, dict)
+    assert isinstance(t_tag, codekit.pygithub.TargetTag), type(t_tag)
 
-    debug("looking for existing tag: {tag}"
-          .format(tag=t_tag['name']))
+    debug("looking for existing tag: {tag} in repo: {repo}".format(
+        repo=repo.full_name,
+        tag=t_tag.name,
+    ))
 
     # find ref/tag by name
-    e_ref = pygithub.find_tag_by_name(repo, t_tag['name'])
+    e_ref = pygithub.find_tag_by_name(repo, t_tag.name)
     if not e_ref:
-        debug("  not found: {tag}".format(tag=t_tag['name']))
+        debug("  not found: {tag}".format(tag=t_tag.name))
         return False
 
     # find tag object pointed to by the ref
     e_tag = repo.get_git_tag(e_ref.object.sha)
-    debug("  found existing tag: {tag} [sha]".format(
+    debug("  found existing: {tag} [sha]".format(
         tag=e_tag.tag,
         sha=e_tag.sha
     ))
 
-    if cmp_existing_git_tag(t_tag, e_tag):
+    if cmp_existing_git_tag(t_tag, e_tag, **kwargs):
         return True
 
-    warn(textwrap.dedent("""\
-        tag {tag} already exists with conflicting values:
+    yikes = GitTagExistsError(textwrap.dedent("""\
+        tag: {tag} already exists in repo: {repo} with conflicting values:
           existing:
             sha: {e_sha}
             message: {e_message}
@@ -386,51 +401,72 @@ def check_existing_git_tag(repo, t_tag):
             message: {t_message}
             tagger: {t_tagger}\
     """).format(
-        tag=t_tag['name'],
-        e_sha=e_tag.sha,
+        tag=t_tag.name,
+        repo=repo.full_name,
+        e_sha=e_tag.object.sha,
         e_message=e_tag.message,
         e_tagger=e_tag.tagger,
-        t_sha=t_tag['sha'],
-        t_message=t_tag['message'],
-        t_tagger=t_tag['tagger'],
+        t_sha=t_tag.sha,
+        t_message=t_tag.message,
+        t_tagger=t_tag.tagger,
     ))
 
-    raise GitTagExistsError("tag already exists: {tag} [{sha}]"
-                            .format(tag=e_tag.tag, sha=e_tag.sha))
+    raise yikes
 
 
 def check_product_tags(
     products,
-    tag_template,
+    git_tag,
+    tag_message_template,
+    tagger,
     force_tag=False,
     fail_fast=False,
+    ignore_message=False,
+    ignore_tagger=False,
 ):
+    assert isinstance(tagger, github.InputGitAuthor), type(tagger)
+
     checked_products = {}
 
     problems = []
     for name, data in products.items():
         repo = data['repo']
-
-        # "target tag"
-        t_tag = tag_template.copy()
-        t_tag['sha'] = data['sha']
+        tag_name = git_tag
 
         # prefix tag name with `v`?
-        if data['v'] and re.match('\d', t_tag['name']):
-            t_tag['name'] = 'v' + t_tag['name']
+        if data['v'] and re.match('\d', tag_name):
+            tag_name = "v{git_tag}".format(git_tag=tag_name)
+
+        # message can not be formatted until we've determined if the tag must
+        # be prefixed.  The 'v' prefix appearing in the tag message is required
+        # to match historical behavior and allow verification of past releases.
+        message = tag_message_template.format(git_tag=tag_name)
+
+        # "target tag"
+        t_tag = codekit.pygithub.TargetTag(
+            name=tag_name,
+            sha=data['sha'],
+            message=message,
+            tagger=tagger,
+        )
 
         # control whether to create a new tag or update an existing one
         update_tag = False
 
         try:
             # if the existing tag is in sync, do nothing
-            if check_existing_git_tag(repo, t_tag):
+            if check_existing_git_tag(
+                repo,
+                t_tag,
+                ignore_message=ignore_message,
+                ignore_tagger=ignore_tagger,
+            ):
                 warn(textwrap.dedent("""\
                     No action for {repo}
                       existing tag: {tag} is already in sync\
                     """).format(
                     repo=repo.full_name,
-                    tag=t_tag['name'],
+                    tag=t_tag.name,
                 ))
 
                 continue
@@ -445,7 +481,7 @@ def check_product_tags(
                       existing tag: {tag} WILL BE MOVED\
                     """).format(
                     repo=repo.full_name,
-                    tag=t_tag['name'],
+                    tag=t_tag.name,
                 ))
             elif fail_fast:
                 raise
@@ -492,8 +528,8 @@ def tag_products(
               replace existing tag: {update}\
             """).format(
             repo=repo.full_name,
-            sha=t_tag['sha'],
-            gt=t_tag['name'],
+            sha=t_tag.sha,
+            gt=t_tag.name,
             et=data['eups_version'],
             v=data['v'],
             update=data['update_tag'],
@@ -505,25 +541,25 @@ def tag_products(
 
         try:
             tag_obj = repo.create_git_tag(
-                t_tag['name'],
-                t_tag['message'],
-                t_tag['sha'],
+                t_tag.name,
+                t_tag.message,
+                t_tag.sha,
                 'commit',
-                tagger=t_tag['tagger'],
+                tagger=t_tag.tagger,
             )
             debug("  created tag object {tag_obj}".format(tag_obj=tag_obj))
 
             if data['update_tag']:
                 ref = pygithub.find_tag_by_name(
                     repo,
-                    t_tag['name'],
+                    t_tag.name,
                     safe=False,
                 )
                 ref.edit(tag_obj.sha, force=True)
                 debug("  updated existing ref: {ref}".format(ref=ref))
             else:
                 ref = repo.create_git_ref(
-                    "refs/tags/{t}".format(t=t_tag['name']),
+                    "refs/tags/{t}".format(t=t_tag.name),
                     tag_obj.sha
                 )
                 debug("  created ref: {ref}".format(ref=ref))
@@ -548,7 +584,7 @@ def run():
 
     codetools.setup_logging(args.debug)
 
-    version = args.tag
+    git_tag = args.tag
 
     # if email not specified, try getting it from the gitconfig
     git_email = codetools.lookup_email(args)
@@ -562,28 +598,21 @@ def run():
     # for official releases, we don't want to publish until the git tag
     # goes down, because we want to eups publish the build that has the
     # official versions in the eups ref.
-    candidate = args.candidate if args.candidate else args.tag
-
+    candidate = args.candidate if args.candidate else git_tag
     manifest = args.manifest  # sadly we need to "just" know this
-    message_template = 'Version {v} release from {c}/{b}'
-    message = message_template.format(v=version, c=candidate, b=manifest)
+
+    message_template = "Version {{git_tag}} release from {c}/{b}".format(
+        c=candidate,
+        b=manifest,
+    )
+    debug("using tag message: {msg}".format(msg=message_template))
 
     tagger = github.InputGitAuthor(
         git_user,
         git_email,
         codetools.current_timestamp(),
     )
-    debug(tagger)
-
-    # all tags should be the same across repos -- just add the 'sha' key and
-    # stir
-    tag_template = {
-        'name': version,
-        'message': message,
-        'tagger': tagger,
-    }
-
-    debug(tag_template)
+    debug("using taggger: {tagger}".format(tagger=tagger))
 
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
@@ -626,9 +655,13 @@ def run():
     # do not fail-fast on non-write operations
     products_to_tag = check_product_tags(
         products,
-        tag_template,
+        git_tag,
+        tag_message_template=message_template,
+        tagger=tagger,
         force_tag=args.force_tag,
         fail_fast=False,
+        ignore_message=False,
+        ignore_tagger=False,
     )
 
     tag_products(
