@@ -109,6 +109,7 @@ def parse_args():
         help='Override the default versiondb base url')
     parser.add_argument(
         '--eupstag-base-url',
+        default=os.getenv('LSST_EUPSTAG_BASE_URL'),
         help='Override the default eupstag base url')
     parser.add_argument(
         '--force-tag',
