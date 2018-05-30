@@ -137,7 +137,7 @@ def parse_args():
         '-d', '--debug',
         action='count',
         default=os.getenv('DM_SQUARE_DEBUG'),
-        help='Debug mode')
+        help='Debug mode (can specify several times)')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
     return parser.parse_args()
 
