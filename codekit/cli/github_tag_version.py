@@ -107,6 +107,9 @@ def parse_args():
         '--versiondb-base-url',
         help='Override the default versiondb base url')
     parser.add_argument(
+        '--eupstag-base-url',
+        help='Override the default eupstag base url')
+    parser.add_argument(
         '--force-tag',
         action='store_true',
         help='Force moving pre-existing annotated git tags.')
@@ -587,11 +590,12 @@ def run():
     cmap = str.maketrans('.-', '__')
     eups_candidate = candidate.translate(cmap)
 
-    eups_products = eups.EupsTag(eups_candidate).products
+    eups_products = eups.EupsTag(
+        eups_candidate,
+        base_url=args.eupstag_base_url).products
     manifest_products = versiondb.Manifest(
         manifest,
-        base_url=args.versiondb_base_url
-    ).products
+        base_url=args.versiondb_base_url).products
 
     # do not fail-fast on non-write operations
     products = cross_reference_products(
