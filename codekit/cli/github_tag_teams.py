@@ -380,18 +380,20 @@ def run():
     target_repos = get_candidate_repos(tag_teams)
 
     problems = []
+    # do not fail-fast on non-write operations
     problems += check_repos(
         target_repos,
         args.allow_team,
         args.deny_team,
-        fail_fast=False
+        fail_fast=False,
     )
 
-    # dict
+    # do not fail-fast on non-write operations
     present_tags, absent_tags, err = check_tags(
         target_repos,
         tags,
         ignore_existing=args.delete,
+        fail_fast=False,
     )
     problems += err
 
