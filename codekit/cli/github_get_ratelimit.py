@@ -3,6 +3,7 @@
 from codekit.codetools import debug, error, info
 from codekit import codetools, pygithub
 import argparse
+import datetime
 import os
 import sys
 import textwrap
@@ -50,6 +51,9 @@ def run():
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     info("github ratelimit: {rl}".format(rl=g.rate_limiting))
+
+    reset = datetime.datetime.fromtimestamp(int(g.rate_limiting_resettime))
+    info("github ratelimit reset: {time}".format(time=reset))
 
 
 def main():
