@@ -84,6 +84,8 @@ def setup_logging(verbosity=0):
 
     if verbosity:
         logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     [debug("{m}.{f}()".format(m=f.__module__, f=f.__name__))
         for f in logging_funcs]
