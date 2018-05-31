@@ -65,8 +65,8 @@ running any command, or use the `-d` debug flag on the command line.
 - `github-fork-org`: fork repositories from one GitHub organization to another.
 - `github-list-repos`: list repositories in a GitHub organization, showing teams.
 - `github-mv-repos-to-team`: move repositories from one team to another.
-- `github-tag-version`: tag all repositories in a GitHub org using a team-based scheme.
-- `lsst-bp`: upgrade LSST DM code to [RFC-45](https://jira.lsstcorp.org/browse/RFC-45)-style.
+- `github-tag-release`: Tag git repositories, in a GitHub org, that correspond
+    to the products in a published eups distrib tag.
 
 Use the `--help` flag with any command to learn more.
 

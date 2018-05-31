@@ -298,7 +298,7 @@ def create_tags(repo, tags, tagger, dry_run=False):
 
         tag_obj = repo.create_git_tag(
             t,
-            "Version {t}".format(t=t),  # fmt similar to github-tag-version
+            "Version {t}".format(t=t),  # fmt similar to github-tag-release
             head.object.sha,
             head.object.type,
             tagger=tagger
