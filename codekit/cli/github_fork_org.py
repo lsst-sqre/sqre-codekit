@@ -21,8 +21,20 @@ def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-fork-org',
         description=textwrap.dedent("""
-        Fork repos (and optionally copy teams) between a source and destination
-        Github organization.
+        Fork repositories from one GitHub organization to another.
+
+        Example:
+
+            {prog} \\
+                --dry-run \\
+                --debug \\
+                --src-org 'lsst' \\
+                --dst-org 'example' \\
+                --token "$GITHUB_TOKEN" \\
+                --team 'DM Auxilliaries' \\
+                --team 'DM Externals' \\
+                --team 'Data Management' \\
+                --copy-teams
         """),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')

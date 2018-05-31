@@ -135,8 +135,8 @@ matrix:
             --debug \
             --org 'batmanuel-sandbox' \
             --token "$SQREADMIN_TOKEN" \
-            --delete-repos-limit 3 \
             --delete-repos \
+            --delete-repos-limit 3 \
             --delete-teams \
             --delete-teams-limit 3
         else

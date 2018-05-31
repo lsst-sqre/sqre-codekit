@@ -14,20 +14,23 @@ import textwrap
 
 def parse_args():
     """Parse command-line arguments"""
+
     parser = argparse.ArgumentParser(
         prog='github-decimate-org',
-        description=textwrap.dedent("""\
-            Delete all repos (and optionally teams) in a GitHub organization.\
+        description=textwrap.dedent("""
+            Delete repos and/or teams from a GitHub organization.
 
-            github-decimate-org \\
-                --dry-run \\
-                --debug \\
-                --org 'example' \\
-                --token "$GITHUB_TOKEN" \\
-                --delete-repos-limit 3 \\
-                --delete-repos \\
-                --delete-teams \\
-                --delete-teams-limit 3
+            Example:
+
+                {prog} \\
+                    --dry-run \\
+                    --debug \\
+                    --org 'example' \\
+                    --token "$GITHUB_TOKEN" \\
+                    --delete-repos \\
+                    --delete-repos-limit 3 \\
+                    --delete-teams \\
+                    --delete-teams-limit 3
 
         """),
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -16,11 +16,11 @@ def parse_args():
         prog='github-get-ratelimit',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""
+            Display the current github ReST API request ratelimit.
 
-        Display the current github ReST API requests ratelimit.
+            Examples:
 
-        Examples:
-        github-get-ratelimit
+                {prog}
         """),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
