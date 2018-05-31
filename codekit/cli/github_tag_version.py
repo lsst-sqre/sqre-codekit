@@ -11,12 +11,12 @@ Use URL to EUPS candidate tag file to git tag repos with official version
 
 # Known Bugs
 # ----------
-# Yeah, the candidate logic is broken, will fix
 
 
 from codekit.codetools import debug, info, warn, error
 from codekit import codetools, eups, pygithub, versiondb
 import argparse
+import codekit
 import github
 import itertools
 import os
@@ -26,6 +26,10 @@ import textwrap
 
 
 class GitTagExistsError(Exception):
+    pass
+
+
+class GitTagMissingError(Exception):
     pass
 
 
@@ -51,7 +55,7 @@ def parse_args():
             --allow-team 'Data Management' \\
             --allow-team 'DM Externals' \\
             --external-team 'DM Externals' \\
-            --candidate v11_0_rc2 \\
+            --eups-tag v11_0_rc2 \\
             11.0.rc2 b1679
 
         Note that the access token must have access to these oauth scopes:
@@ -64,12 +68,15 @@ def parse_args():
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
 
-    parser.add_argument('tag')
-    parser.add_argument('manifest')
+    parser.add_argument(
+        '--manifest',
+        required=True,
+        help='Name of versiondb manifest for git repo sha resolution'
+             ' AKA bNNNN')
     parser.add_argument(
         '--org',
         required=True,
-        help="Github organization")
+        help='Github organization')
     parser.add_argument(
         '--allow-team',
         action='append',
@@ -87,8 +94,12 @@ def parse_args():
         action='append',
         help='git repos to be tagged MUST NOT be a member of ANY of'
              ' these teams (can specify several times)')
-    parser.add_argument('--candidate')
-    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--eups-tag')
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Do not create/update tag(s) or modify any state.'
+             ' (has no effect if specified in addition to --verify)')
     parser.add_argument(
         '--user',
         help='Name of person making the tag - defaults to gitconfig value')
@@ -116,31 +127,47 @@ def parse_args():
         action='store_true',
         help='Force moving pre-existing annotated git tags.')
     parser.add_argument(
-        '--ignore-version',
+        '--ignore-manifest-versions',
         action='store_true',
-        help='Ignore version strings'
+        help='Ignore manifest version strings'
              ' when cross referencing eups tag and manifest data.')
+    parser.add_argument(
+        '--ignore-git-message',
+        action='store_true',
+        help='Ignore git tag message when verifying an existing tag.')
+    parser.add_argument(
+        '--ignore-git-tagger',
+        action='store_true',
+        help='Ignore git tag "tagger"/author when verifying an existing tag.')
     parser.add_argument(
         '--limit',
         default=None,
         type=int,
         help='Maximum number of products/repos to tags. (useful for testing)')
     parser.add_argument(
+        '--verify',
+        action='store_true',
+        help='Verify that all git tags for a release are present and correct.'
+             ' (will not create/update tag(s) or modify any state)'
+             ' (has precedence over --dry-run)')
+    parser.add_argument(
         '--fail-fast',
         action='store_true',
-        help='Fail immediately on github API errors.')
+        help='Fail immediately on github API error.')
     parser.add_argument(
         '--no-fail-fast',
         action='store_const',
         const=False,
         dest='fail_fast',
-        help='DO NOT Fail immediately on github API errors. (default)')
+        help='DO NOT Fail immediately on github API error(s). (default)')
     parser.add_argument(
         '-d', '--debug',
         action='count',
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode (can specify several times)')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
+    parser.add_argument('tag')
+
     return parser.parse_args()
 
 
@@ -154,7 +181,7 @@ def cmp_dict(d1, d2, ignore_keys=[]):
 def cross_reference_products(
     eups_products,
     manifest_products,
-    ignore_version=False,
+    ignore_manifest_versions=False,
     fail_fast=False,
 ):
     """
@@ -165,7 +192,7 @@ def cross_reference_products(
     eups_products:
     manifest:
     fail_fast: bool
-    ignore_versions: bool
+    ignore_manifest_versions: bool
 
     Returns
     -------
@@ -195,7 +222,7 @@ def cross_reference_products(
             problems.append(yikes)
             error(yikes)
 
-        if ignore_version:
+        if ignore_manifest_versions:
             # ignore the manifest eups_version string by simply setting it to
             # the eups tag value.  This ensures that the eups tag value will be
             # passed though.
@@ -221,10 +248,9 @@ def cross_reference_products(
         products[name].update(manifest_data)
 
     if problems:
-        msg = "{n} product(s) have errors".format(n=len(problems))
-        raise codetools.DogpileError(problems, msg)
+        error("{n} product(s) have error(s)".format(n=len(problems)))
 
-    return products
+    return products, problems
 
 
 def get_repo_for_products(
@@ -287,10 +313,9 @@ def get_repo_for_products(
         resolved_products[name]['v'] = has_ext_team
 
     if problems:
-        msg = "{n} product(s) have errors".format(n=len(problems))
-        raise codetools.DogpileError(problems, msg)
+        error("{n} product(s) have error(s)".format(n=len(problems)))
 
-    return resolved_products
+    return resolved_products, problems
 
 
 def author_to_dict(obj):
@@ -306,6 +331,7 @@ def author_to_dict(obj):
         # GitAuthor has name,email,date properties
         'GitAuthor': lambda x: {'name': x.name, 'email': x.email},
         # InputGitAuthor only has _identity, which returns a dict
+        # XXX consider trying to rationalize this upstream...
         'InputGitAuthor': lambda x: x._identity,
     }.get(type(obj).__name__, lambda x: default())(obj)
 
@@ -318,20 +344,31 @@ def cmp_gitauthor(a, b):
     return False
 
 
-def cmp_existing_git_tag(t_tag, e_tag):
-    assert isinstance(t_tag, dict)
+def cmp_existing_git_tag(
+    t_tag,
+    e_tag,
+    ignore_git_message=False,
+    ignore_git_tagger=False,
+):
+    assert isinstance(t_tag, codekit.pygithub.TargetTag), type(t_tag)
     assert isinstance(e_tag, github.GitTag.GitTag)
 
-    # ignore date when comparing tag objects
-    if t_tag['sha'] == e_tag.object.sha and \
-       t_tag['message'] == e_tag.message and \
-       cmp_gitauthor(t_tag['tagger'], e_tag.tagger):
-        return True
+    if t_tag.sha != e_tag.object.sha:
+        return False
 
-    return False
+    if not ignore_git_message:
+        if t_tag.message != e_tag.message:
+            return False
+
+    if not ignore_git_tagger:
+        # ignore date when comparing tag objects
+        if not cmp_gitauthor(t_tag.tagger, e_tag.tagger):
+            return False
+
+    return True
 
 
-def check_existing_git_tag(repo, t_tag):
+def check_existing_git_tag(repo, t_tag, **kwargs):
     """
     Check for a pre-existng tag in the github repo.
 
@@ -339,7 +376,7 @@ def check_existing_git_tag(repo, t_tag):
     ----------
     repo : github.Repository.Repository
         repo to inspect for an existing tagsdf
-    t_tag: dict
+    t_tag: codekit.pygithub.TargetTag
         dict repesenting a target git tag
 
     Returns
@@ -354,29 +391,32 @@ def check_existing_git_tag(repo, t_tag):
     """
 
     assert isinstance(repo, github.Repository.Repository), type(repo)
-    assert isinstance(t_tag, dict)
+    assert isinstance(t_tag, codekit.pygithub.TargetTag), type(t_tag)
 
-    debug("looking for existing tag: {tag}"
-          .format(tag=t_tag['name']))
+    debug("looking for existing tag: {tag} in repo: {repo}".format(
+        repo=repo.full_name,
+        tag=t_tag.name,
+    ))
 
     # find ref/tag by name
-    e_ref = pygithub.find_tag_by_name(repo, t_tag['name'])
+    e_ref = pygithub.find_tag_by_name(repo, t_tag.name)
     if not e_ref:
-        debug("  not found: {tag}".format(tag=t_tag['name']))
+        debug("  not found: {tag}".format(tag=t_tag.name))
         return False
 
     # find tag object pointed to by the ref
     e_tag = repo.get_git_tag(e_ref.object.sha)
-    debug("  found existing tag: {tag} [sha]".format(
+    debug("  found existing: {tag} [{sha}]".format(
         tag=e_tag.tag,
         sha=e_tag.sha
     ))
 
-    if cmp_existing_git_tag(t_tag, e_tag):
+    if cmp_existing_git_tag(t_tag, e_tag, **kwargs):
         return True
 
-    warn(textwrap.dedent("""\
-        tag {tag} already exists with conflicting values:
+    yikes = GitTagExistsError(textwrap.dedent("""\
+        tag: {tag} already exists in repo: {repo}
+        with conflicting values:
           existing:
             sha: {e_sha}
             message: {e_message}
@@ -386,49 +426,72 @@ def check_existing_git_tag(repo, t_tag):
             message: {t_message}
             tagger: {t_tagger}\
     """).format(
-        tag=t_tag['name'],
-        e_sha=e_tag.sha,
+        tag=t_tag.name,
+        repo=repo.full_name,
+        e_sha=e_tag.object.sha,
         e_message=e_tag.message,
         e_tagger=e_tag.tagger,
-        t_sha=t_tag['sha'],
-        t_message=t_tag['message'],
-        t_tagger=t_tag['tagger'],
+        t_sha=t_tag.sha,
+        t_message=t_tag.message,
+        t_tagger=t_tag.tagger,
     ))
 
-    raise GitTagExistsError("tag already exists: {tag} [{sha}]"
-                            .format(tag=e_tag.tag, sha=e_tag.sha))
+    raise yikes
 
 
 def check_product_tags(
     products,
-    tag_template,
+    git_tag,
+    tag_message_template,
+    tagger,
     force_tag=False,
     fail_fast=False,
+    ignore_git_message=False,
+    ignore_git_tagger=False,
 ):
+    assert isinstance(tagger, github.InputGitAuthor), type(tagger)
+
     checked_products = {}
 
     problems = []
     for name, data in products.items():
-        # "target tag"
-        t_tag = tag_template.copy()
-        t_tag['sha'] = data['sha']
+        repo = data['repo']
+        tag_name = git_tag
 
         # prefix tag name with `v`?
-        if data['v'] and re.match('\d', t_tag['name']):
-            t_tag['name'] = 'v' + t_tag['name']
+        if data['v'] and re.match('\d', tag_name):
+            tag_name = "v{git_tag}".format(git_tag=tag_name)
+
+        # message can not be formatted until we've determined if the tag must
+        # be prefixed.  The 'v' prefix appearing in the tag message is required
+        # to match historical behavior and allow verification of past releases.
+        message = tag_message_template.format(git_tag=tag_name)
+
+        # "target tag"
+        t_tag = codekit.pygithub.TargetTag(
+            name=tag_name,
+            sha=data['sha'],
+            message=message,
+            tagger=tagger,
+        )
 
         # control whether to create a new tag or update an existing one
         update_tag = False
 
         try:
             # if the existing tag is in sync, do nothing
-            if check_existing_git_tag(data['repo'], t_tag):
+            if check_existing_git_tag(
+                repo,
+                t_tag,
+                ignore_git_message=ignore_git_message,
+                ignore_git_tagger=ignore_git_tagger,
+            ):
                 warn(textwrap.dedent("""\
                     No action for {repo}
                       existing tag: {tag} is already in sync\
                     """).format(
-                    repo=data['repo'].full_name,
-                    tag=t_tag['name'],
+                    repo=repo.full_name,
+                    tag=t_tag.name,
                 ))
 
                 continue
@@ -439,11 +502,12 @@ def check_product_tags(
             # update_tag and fall through. Otherwise, treat it as any other
             # exception.
             if force_tag:
+                update_tag = True
                 warn(textwrap.dedent("""\
                       existing tag: {tag} WILL BE MOVED\
                     """).format(
-                    repo=data['repo'].full_name,
-                    tag=t_tag['name'],
+                    repo=repo.full_name,
+                    tag=t_tag.name,
                 ))
             elif fail_fast:
                 raise
@@ -452,7 +516,7 @@ def check_product_tags(
                 error(e)
                 continue
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(data['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(repo, e)
 
             if fail_fast:
                 raise yikes from None
@@ -466,10 +530,38 @@ def check_product_tags(
         checked_products[name]['update_tag'] = update_tag
 
     if problems:
-        msg = "{n} product(s) have errors".format(n=len(problems))
-        raise codetools.DogpileError(problems, msg)
+        error("{n} product(s) have error(s)".format(n=len(problems)))
 
-    return checked_products
+    return checked_products, problems
+
+
+def identify_products_missing_tags(products_to_tag):
+    problems = []
+    for name, data in products_to_tag.items():
+        repo = data['repo']
+        t_tag = data['target_tag']
+
+        yikes = GitTagMissingError(textwrap.dedent("""\
+            tag: {gt} missing from repo: {repo} @
+              sha: {sha}
+              (eups version: {et})
+              external repo: {v}
+              replace existing tag: {update}\
+            """).format(
+            repo=repo.full_name,
+            sha=t_tag.sha,
+            gt=t_tag.name,
+            et=data['eups_version'],
+            v=data['v'],
+            update=data['update_tag'],
+        ))
+        problems.append(yikes)
+        error(yikes)
+
+    if problems:
+        error("{n} product(s) have error(s)".format(n=len(problems)))
+
+    return problems
 
 
 def tag_products(
@@ -479,6 +571,7 @@ def tag_products(
 ):
     problems = []
     for name, data in products.items():
+        repo = data['repo']
         t_tag = data['target_tag']
 
         info(textwrap.dedent("""\
@@ -488,9 +581,9 @@ def tag_products(
               external repo: {v}
               replace existing tag: {update}\
             """).format(
-            repo=data['repo'].full_name,
-            sha=t_tag['sha'],
-            gt=t_tag['name'],
+            repo=repo.full_name,
+            sha=t_tag.sha,
+            gt=t_tag.name,
             et=data['eups_version'],
             v=data['v'],
             update=data['update_tag'],
@@ -501,33 +594,33 @@ def tag_products(
             continue
 
         try:
-            tag_obj = data['repo'].create_git_tag(
-                t_tag['name'],
-                t_tag['message'],
-                t_tag['sha'],
+            tag_obj = repo.create_git_tag(
+                t_tag.name,
+                t_tag.message,
+                t_tag.sha,
                 'commit',
-                tagger=t_tag['tagger'],
+                tagger=t_tag.tagger,
             )
             debug("  created tag object {tag_obj}".format(tag_obj=tag_obj))
 
             if data['update_tag']:
                 ref = pygithub.find_tag_by_name(
-                    data['repo'],
-                    t_tag['name'],
+                    repo,
+                    t_tag.name,
                     safe=False,
                 )
                 ref.edit(tag_obj.sha, force=True)
                 debug("  updated existing ref: {ref}".format(ref=ref))
             else:
-                ref = data['repo'].create_git_ref(
-                    "refs/tags/{t}".format(t=t_tag['name']),
+                ref = repo.create_git_ref(
+                    "refs/tags/{t}".format(t=t_tag.name),
                     tag_obj.sha
                 )
                 debug("  created ref: {ref}".format(ref=ref))
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(data['repo'], e)
+            yikes = pygithub.CaughtRepositoryError(repo, e)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)
@@ -540,78 +633,75 @@ def tag_products(
 
 def run():
     """Create the tag"""
-
     args = parse_args()
 
     codetools.setup_logging(args.debug)
 
-    version = args.tag
+    git_tag = args.tag
 
     # if email not specified, try getting it from the gitconfig
     git_email = codetools.lookup_email(args)
     # ditto for the name of the git user
     git_user = codetools.lookup_user(args)
 
-    # The candidate is assumed to be the requested EUPS tag unless
-    # otherwise specified with the --candidate option The reason to
-    # currently do this is that for weeklies and other internal builds,
-    # it's okay to eups publish the weekly and git tag post-facto. However
-    # for official releases, we don't want to publish until the git tag
-    # goes down, because we want to eups publish the build that has the
-    # official versions in the eups ref.
-    candidate = args.candidate if args.candidate else args.tag
+    # The default eups tag is derived from the git tag, otherwise specified
+    # with the --eups-tag option. The reason to currently do this is that for
+    # weeklies and other internal builds, it's okay to eups publish the weekly
+    # and git tag post-facto. However for official releases, we don't want to
+    # publish until the git tag goes down, because we want to eups publish the
+    # build that has the official versions in the eups ref.
+    eups_tag = args.eups_tag
+    if not eups_tag:
+        # generate eups-style version
+        eups_tag = eups.git_tag2eups_tag(git_tag)
+    debug("using eups tag: {eups_tag}".format(eups_tag=eups_tag))
 
-    manifest = args.manifest  # sadly we need to "just" know this
-    message_template = 'Version {v} release from {c}/{b}'
-    message = message_template.format(v=version, c=candidate, b=manifest)
+    # sadly we need to "just" know this
+    # XXX this can be parsed from the eups tag file post d_2018_05_08
+    manifest = args.manifest
+    debug("using manifest: {manifest}".format(manifest=manifest))
+
+    message_template = "Version {{git_tag}}"\
+        " release from {eups_tag}/{manifest}".format(
+            eups_tag=eups_tag,
+            manifest=manifest,
+        )
+    debug("using tag message: {msg}".format(msg=message_template))
 
     tagger = github.InputGitAuthor(
         git_user,
         git_email,
         codetools.current_timestamp(),
     )
-    debug(tagger)
-
-    # all tags should be the same across repos -- just add the 'sha' key and
-    # stir
-    tag_template = {
-        'name': version,
-        'message': message,
-        'tagger': tagger,
-    }
-
-    debug(tag_template)
+    debug("using taggger: {tagger}".format(tagger=tagger))
 
     global g
     g = pygithub.login_github(token_path=args.token_path, token=args.token)
     org = g.get_organization(args.org)
     info("tagging repos in org: {org}".format(org=org.login))
 
-    # generate eups-style version
-    # eups no likey semantic versioning markup, wants underscores
-    cmap = str.maketrans('.-', '__')
-    eups_candidate = candidate.translate(cmap)
-
     eups_products = eups.EupsTag(
-        eups_candidate,
+        eups_tag,
         base_url=args.eupstag_base_url).products
     manifest_products = versiondb.Manifest(
         manifest,
         base_url=args.versiondb_base_url).products
 
+    problems = []
     # do not fail-fast on non-write operations
-    products = cross_reference_products(
+    products, err = cross_reference_products(
         eups_products,
         manifest_products,
-        ignore_version=args.ignore_version,
+        ignore_manifest_versions=args.ignore_manifest_versions,
         fail_fast=False,
     )
+    problems += err
 
     if args.limit:
         products = dict(itertools.islice(products.items(), args.limit))
 
     # do not fail-fast on non-write operations
-    products = get_repo_for_products(
+    products, err = get_repo_for_products(
         org=org,
         products=products,
         allow_teams=args.allow_team,
@@ -619,14 +709,30 @@ def run():
         deny_teams=args.deny_team,
         fail_fast=False,
     )
+    problems += err
 
     # do not fail-fast on non-write operations
-    products_to_tag = check_product_tags(
+    products_to_tag, err = check_product_tags(
         products,
-        tag_template,
+        git_tag,
+        tag_message_template=message_template,
+        tagger=tagger,
         force_tag=args.force_tag,
         fail_fast=False,
+        ignore_git_message=args.ignore_git_message,
+        ignore_git_tagger=args.ignore_git_tagger,
     )
+    problems += err
+
+    if args.verify:
+        # in verify mode, it is an error if there are products that need to be
+        # tagged.
+        err = identify_products_missing_tags(products_to_tag)
+        problems += err
+
+    if problems:
+        msg = "{n} pre-flight error(s)".format(n=len(problems))
+        raise codetools.DogpileError(problems, msg)
 
     tag_products(
         products_to_tag,
@@ -637,14 +743,20 @@ def run():
 
 def main():
     try:
-        run()
-    except codetools.DogpileError as e:
-        error(e)
-        n = len(e.errors)
-        sys.exit(n if n < 256 else 255)
-    finally:
-        if 'g' in globals():
-            pygithub.debug_ratelimit(g)
+        try:
+            run()
+        except codetools.DogpileError as e:
+            error(e)
+            n = len(e.errors)
+            sys.exit(n if n < 256 else 255)
+        else:
+            sys.exit(0)
+        finally:
+            if 'g' in globals():
+                pygithub.debug_ratelimit(g)
+    except SystemExit as e:
+        debug("exit {status}".format(status=str(e)))
+        raise e
 
 
 if __name__ == '__main__':

@@ -380,18 +380,20 @@ def run():
     target_repos = get_candidate_repos(tag_teams)
 
     problems = []
+    # do not fail-fast on non-write operations
     problems += check_repos(
         target_repos,
         args.allow_team,
         args.deny_team,
-        fail_fast=False
+        fail_fast=False,
     )
 
-    # dict
+    # do not fail-fast on non-write operations
     present_tags, absent_tags, err = check_tags(
         target_repos,
         tags,
         ignore_existing=args.delete,
+        fail_fast=False,
     )
     problems += err
 
@@ -407,14 +409,20 @@ def run():
 
 def main():
     try:
-        run()
-    except codetools.DogpileError as e:
-        error(e)
-        n = len(e.errors)
-        sys.exit(n if n < 256 else 255)
-    finally:
-        if 'g' in globals():
-            pygithub.debug_ratelimit(g)
+        try:
+            run()
+        except codetools.DogpileError as e:
+            error(e)
+            n = len(e.errors)
+            sys.exit(n if n < 256 else 255)
+        else:
+            sys.exit(0)
+        finally:
+            if 'g' in globals():
+                pygithub.debug_ratelimit(g)
+    except SystemExit as e:
+        debug("exit {status}".format(status=str(e)))
+        raise e
 
 
 if __name__ == '__main__':

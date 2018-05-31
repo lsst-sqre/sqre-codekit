@@ -6,6 +6,7 @@ from codekit.codetools import debug
 from github import Github
 from public import public
 import codekit.codetools as codetools
+import collections
 import github
 import itertools
 import textwrap
@@ -15,7 +16,7 @@ github.MainClass.DEFAULT_TIMEOUT = 15  # timeouts creating teams w/ many repos
 
 def setup_logging(verbosity=0):
     """Enable pygithub HTTP request tracing if verbosity is 2+."""
-    if verbosity > 1:
+    if verbosity and verbosity > 1:
         github.enable_console_debug_logging()
 
 
@@ -136,6 +137,41 @@ class RepositoryTeamMembershipError(Exception):
             allow=self.allow_teams,
             deny=self.deny_teams,
         ))
+
+
+class TargetTag(collections.UserDict):
+    """Represents an abstract git tag that is independent of a git repository.
+    This is an a rough analog of `pygithub`s `github.GitTag.GitTag` class but
+    is intended to be directly instatiated while `GitTag` is not.
+
+    Objects of this class may generally be treated as a `dict`.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """These named parameters are required:
+            - `name`
+            - `sha`
+            - `message`
+            - `tagger`
+
+        The value of `tagger` must be a `github.InputGitAuthor`.
+        """
+
+        required_keys = ['name', 'sha', 'message', 'tagger']
+        for rk in required_keys:
+            if rk not in kwargs:
+                raise KeyError("missing required key: {rk}".format(rk=rk))
+
+        # pygithub requires that the authorship on a tag be set with a
+        # github.InputGitAuthor object
+        tagger = kwargs['tagger']
+        assert isinstance(tagger, github.InputGitAuthor), type(tagger)
+
+        super(TargetTag, self).__init__(*args, **kwargs)
+
+    def __getattr__(self, item):
+        """Allow keys to be looked up as attributes."""
+        return self[item]
 
 
 @public

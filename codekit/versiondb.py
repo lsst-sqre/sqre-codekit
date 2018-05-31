@@ -15,7 +15,7 @@ default_base_url =\
 def setup_logging(verbosity=0):
     # enable requests debugging
     # based on http://docs.python-requests.org/en/latest/api/?highlight=debug
-    if verbosity > 1:
+    if verbosity and verbosity > 1:
         from http.client import HTTPConnection
         HTTPConnection.debuglevel = 1
 

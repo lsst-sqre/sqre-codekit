@@ -14,7 +14,7 @@ default_pkgroot = 'https://eups.lsst.codes/stack/src'
 def setup_logging(verbosity=0):
     # enable requests debugging
     # based on http://docs.python-requests.org/en/latest/api/?highlight=debug
-    if verbosity > 1:
+    if verbosity and verbosity > 1:
         from http.client import HTTPConnection
         HTTPConnection.debuglevel = 1
 
@@ -154,3 +154,32 @@ class EupsTag(object):
         self.__process()
 
         return self.__manifest
+
+
+@public
+def git_tag2eups_tag(git_tag):
+    """Convert git tag to an acceptable eups tag format
+
+    I.e., eups no likey semantic versioning markup, wants underscores
+
+    Parameters
+    ----------
+    git_tag: str
+        literal git tag string
+
+    Returns
+    -------
+    eups_tag: string
+        A string suitable for use as an eups tag name
+    """
+    eups_tag = git_tag
+
+    # eups tags should not start with a numeric value -- prefix `v` if
+    # it does
+    if re.match('\d', eups_tag):
+        eups_tag = "v{eups_tag}".format(eups_tag=eups_tag)
+
+    # convert '.'s and '-'s to '_'s
+    eups_tag = eups_tag.translate(str.maketrans('.-', '__'))
+
+    return eups_tag

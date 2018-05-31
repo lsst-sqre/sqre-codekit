@@ -4,11 +4,12 @@
 # -------------
 # - will need updating to be new permissions model aware
 
-from codekit.codetools import info, debug, warn
+from codekit.codetools import debug, error, info, warn
 from codekit import codetools, pygithub
 import argparse
 import github
 import os
+import sys
 import textwrap
 
 
@@ -147,10 +148,20 @@ def run():
 
 def main():
     try:
-        run()
-    finally:
-        if 'g' in globals():
-            pygithub.debug_ratelimit(g)
+        try:
+            run()
+        except codetools.DogpileError as e:
+            error(e)
+            n = len(e.errors)
+            sys.exit(n if n < 256 else 255)
+        else:
+            sys.exit(0)
+        finally:
+            if 'g' in globals():
+                pygithub.debug_ratelimit(g)
+    except SystemExit as e:
+        debug("exit {status}".format(status=str(e)))
+        raise e
 
 
 if __name__ == '__main__':
