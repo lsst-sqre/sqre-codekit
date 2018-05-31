@@ -1,8 +1,6 @@
-TODO
-===
+# TODO
 
-codekit
----
+## codekit
 
 ### `github-tag-release`
 
@@ -16,13 +14,11 @@ codekit
 
 - (MAYBE) insert eups product version string into git tag message?
 
-
 ### `github-tag-teams`
 
 - (MAYBE) add list of refs to `github-tag-teams` to try before falling back to
   tagging the github default branch. This would allow branches to be created
   before release tags are created.
-
 
 ### general
 
@@ -33,16 +29,16 @@ codekit
 
 - README
 
-    * review technical debt comments in console scripts
+    - review technical debt comments in console scripts
 
-    * example of creating/tearing down test org w/ blurb on github manual org
+    - example of creating/tearing down test org w/ blurb on github manual org
      creation
 
-    * debug levels
+    - debug levels
 
-    * `<service>-<verb>-<noun>` naming pattern???
+    - `<service>-<verb>-<noun>` naming pattern???
 
-    * mention `github.GithubException.RateLimitExceededException`
+    - mention `github.GithubException.RateLimitExceededException`
 
 - automated acceptance tests -- possible use live github by initializing an
   org(s) as needed for the test?
