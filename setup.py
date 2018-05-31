@@ -47,12 +47,12 @@ setup(
         'requests>=2.8.1,<3.0.0',
     ],
     setup_requires=[
-        'pytest-runner>=2.11.1,<3'
+        'pytest-runner>=2.11.1,<3',
         'setuptools_scm',
     ],
     tests_require=[
         'pytest>=3,<4',
-        'pytest-flake8>=0.8.1,<1'
+        'pytest-flake8>=0.8.1,<1',
     ],
     # package_data={},
     entry_points={
