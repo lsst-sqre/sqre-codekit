@@ -6,7 +6,7 @@ matrix:
       python: '3.6'
       install: pip install --upgrade 'pip>=9' setuptools_scm
       script: python setup.py test
-    - env: TEST='github-tag-version --dry-run'
+    - env: TEST='github-tag-release --dry-run'
       language: python
       python: '3.6'
       install:
@@ -18,7 +18,7 @@ matrix:
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           # verify a past weekly tag -- the eups tag name and git tag names are
           # in sync except for s/_/-/
-          github-tag-version \
+          github-tag-release \
             --dry-run \
             --verify \
             --debug \
@@ -39,7 +39,7 @@ matrix:
           # verify a past official release where the git tag was generated from
           # an rcX eups tag.  This validates the location of the git tags but
           # does not inspect the official eups release tag at all.
-          github-tag-version \
+          github-tag-release \
             --dry-run \
             --verify \
             --debug \
@@ -61,7 +61,7 @@ matrix:
           # product version strings will be out of sync between the versiondb
           # manifest it was based on and the eups tag, the eups product version
           # strings have to be ignored.
-          github-tag-version \
+          github-tag-release \
             --dry-run \
             --verify \
             --debug \

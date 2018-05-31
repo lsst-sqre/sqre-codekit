@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-Use URL to EUPS candidate tag file to git tag repos with official version
-"""
 
 # Technical Debt
 # --------------
@@ -37,20 +34,21 @@ def parse_args():
     """Parse command-line arguments"""
 
     parser = argparse.ArgumentParser(
-        prog='github-tag-version',
+        prog='github-tag-release',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""
 
-        Tag all repositories in a GitHub org using a team-based scheme
+        Tag git repositories, in a GitHub org, that correspond to the products
+        in a published eups distrib tag.
 
         Examples:
-        github-tag-version \\
+        github-tag-release \\
             --org lsst \\
             --allow-team 'Data Management' \\
             --allow-team 'DM Externals' \\
             'w.2018.18' 'b3595'
 
-        github-tag-version \\
+        github-tag-release \\
             --org lsst \\
             --allow-team 'Data Management' \\
             --allow-team 'DM Externals' \\

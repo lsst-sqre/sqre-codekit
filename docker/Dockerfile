@@ -8,4 +8,4 @@ RUN pip install sqre-codekit=="$CODEKIT_VER" --no-cache-dir
 RUN useradd -m codekit
 USER codekit
 
-CMD ["/usr/local/bin/github-tag-version"]
+CMD ["/usr/local/bin/github-tag-release"]
