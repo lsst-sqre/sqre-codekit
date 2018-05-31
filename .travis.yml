@@ -32,6 +32,7 @@ matrix:
             --token "$SQREADMIN_TOKEN" \
             --ignore-git-tagger \
             --ignore-git-message \
+            --limit 10 \
             --manifest 'b3595' \
             'w.2018.18'
 
