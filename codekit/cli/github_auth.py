@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Generate a github auth token"""
+
 # technical debt:
 # --------------
-# - add command line option to override default user
 # - add command line option for delete scope
 
 from codekit.codetools import debug, error
@@ -18,17 +17,25 @@ import textwrap
 
 def parse_args():
     """Parse command line arguments"""
+
     parser = argparse.ArgumentParser(
         prog='github-auth',
-        description=textwrap.dedent("""Generate a GitHub auth token.
+        description=textwrap.dedent("""
+            Generate a GitHub authentication token.
 
-           By default this token will not allow you to delete repositories.
-           Use the --delete-role flag to create a delete-enabled token.
+            By default this token will not allow you to delete repositories.
+            Use the --delete-role flag to create a delete-enabled token.
 
-           By default, regular and delete-enabled tokens will be stored
-           in separate locations (~/.sq_github_token vs
-           ~/.sq_github_token_delete).
-           """),
+            By default, regular and delete-enabled tokens will be stored in
+            separate locations (~/.sq_github_token vs
+            ~/.sq_github_token_delete).
+
+            Example:
+
+                {prog} \\
+                    --debug \\
+                    --user sqreadmin
+        """),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(

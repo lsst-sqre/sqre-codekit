@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Moves a bunch of Github repos to a team"""
+
 # Technical Debt
 # -------------
 # - will need updating to be new permissions model aware
@@ -22,14 +22,17 @@ def parse_args():
     parser = argparse.ArgumentParser(
         prog='github-mv-repos-to-team',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent("""Move repo(s) from one team to another.
+        description=textwrap.dedent("""
+            Move repo(s) from one team to another.
 
             Note that --from and --to are required "options".
 
-            Examples:
+            Example:
 
-            ./github_mv_repos_to_team.py --from test_ext2 \
-                --to test_ext pipe_tasks apr_util
+                {prog} \\
+                    --from test_ext2 \\
+                    --to test_ext \\
+                    pipe_tasks apr_util
         """),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )

@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""List repositories on Github belonging to organisations, teams, etc.
-"""
-# Technical Debt
-# --------------
-
-# Known Bugs
-# ----------
 
 from codekit.codetools import debug, error
 from codekit import codetools, pygithub
@@ -21,19 +14,22 @@ def parse_args():
         prog='github-list-repos',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""
-
-        List repositories on Github using various criteria
+        List repositories on Github using various criteria.
 
         Examples:
 
-          github_list_repos --org lsst
+            {prog} --org lsst
 
-          github_list_repos --hide 'Data Management' --hide 'Owners' --org lsst
+            {prog} \\
+                    --hide 'Data Management' \\
+                    --hide 'Owners' \\
+                    --org lsst
 
         Note: --mint and --maxt limits are applied after --hide.
+
         So for example,
 
-          github_list_repos --maxt 0 --hide Owners --org lsst
+            {prog} --maxt 0 --hide Owners --org lsst
 
         returns the list of repos that are owned by no team besides Owners.
         """),

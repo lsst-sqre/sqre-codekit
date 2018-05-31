@@ -263,22 +263,26 @@ def github_2fa_callback():
 
 @public
 def info(*args):
-    logger.info(*args)
+    if logger:
+        logger.info(*args)
 
 
 @public
 def debug(*args):
-    logger.debug(*args)
+    if logger:
+        logger.debug(*args)
 
 
 @public
 def warn(*args):
-    logger.warn(*args)
+    if logger:
+        logger.warn(*args)
 
 
 @public
 def error(*args):
-    logger.error(*args)
+    if logger:
+        logger.error(*args)
 
 
 @public
