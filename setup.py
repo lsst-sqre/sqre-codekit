@@ -53,6 +53,7 @@ setup(
     tests_require=[
         'pytest>=3,<4',
         'pytest-flake8>=0.8.1,<1',
+        'responses>=0.9.0,<1',
     ],
     # package_data={},
     entry_points={
