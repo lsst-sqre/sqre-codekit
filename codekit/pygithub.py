@@ -16,7 +16,7 @@ github.MainClass.DEFAULT_TIMEOUT = 15  # timeouts creating teams w/ many repos
 
 def setup_logging(verbosity=0):
     """Enable pygithub HTTP request tracing if verbosity is 2+."""
-    if verbosity > 1:
+    if verbosity and verbosity > 1:
         github.enable_console_debug_logging()
 
 
