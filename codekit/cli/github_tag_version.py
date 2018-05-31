@@ -153,13 +153,13 @@ def parse_args():
     parser.add_argument(
         '--fail-fast',
         action='store_true',
-        help='Fail immediately on github API errors.')
+        help='Fail immediately on github API error.')
     parser.add_argument(
         '--no-fail-fast',
         action='store_const',
         const=False,
         dest='fail_fast',
-        help='DO NOT Fail immediately on github API errors. (default)')
+        help='DO NOT Fail immediately on github API error(s). (default)')
     parser.add_argument(
         '-d', '--debug',
         action='count',
@@ -248,10 +248,9 @@ def cross_reference_products(
         products[name].update(manifest_data)
 
     if problems:
-        msg = "{n} product(s) have errors".format(n=len(problems))
-        raise codetools.DogpileError(problems, msg)
+        error("{n} product(s) have error(s)".format(n=len(problems)))
 
-    return products
+    return products, problems
 
 
 def get_repo_for_products(
@@ -314,10 +313,9 @@ def get_repo_for_products(
         resolved_products[name]['v'] = has_ext_team
 
     if problems:
-        msg = "{n} product(s) have errors".format(n=len(problems))
-        raise codetools.DogpileError(problems, msg)
+        error("{n} product(s) have error(s)".format(n=len(problems)))
 
-    return resolved_products
+    return resolved_products, problems
 
 
 def author_to_dict(obj):
@@ -531,24 +529,20 @@ def check_product_tags(
         checked_products[name]['update_tag'] = update_tag
 
     if problems:
-        msg = "{n} product(s) have errors".format(n=len(problems))
-        raise codetools.DogpileError(problems, msg)
+        error("{n} product(s) have error(s)".format(n=len(problems)))
 
-    return checked_products
+    return checked_products, problems
 
 
-def fail_missing_tags(products):
-    if not products:
-        raise RuntimeError('called without products that are missing tags')
-
+def identify_products_missing_tags(products_to_tag):
     problems = []
-    for name, data in products.items():
+    for name, data in products_to_tag.items():
         repo = data['repo']
         t_tag = data['target_tag']
 
         yikes = GitTagMissingError(textwrap.dedent("""\
-            tag missing from repo: {repo} @
-              sha: {sha} as {gt}
+            tag: {gt} missing from repo: {repo} @
+              sha: {sha}
               (eups version: {et})
               external repo: {v}
               replace existing tag: {update}\
@@ -563,8 +557,10 @@ def fail_missing_tags(products):
         problems.append(yikes)
         error(yikes)
 
-    msg = "{n} tag failures".format(n=len(problems))
-    raise codetools.DogpileError(problems, msg)
+    if problems:
+        error("{n} product(s) have error(s)".format(n=len(problems)))
+
+    return problems
 
 
 def tag_products(
@@ -690,19 +686,21 @@ def run():
         manifest,
         base_url=args.versiondb_base_url).products
 
+    problems = []
     # do not fail-fast on non-write operations
-    products = cross_reference_products(
+    products, err = cross_reference_products(
         eups_products,
         manifest_products,
         ignore_manifest_versions=args.ignore_manifest_versions,
         fail_fast=False,
     )
+    problems += err
 
     if args.limit:
         products = dict(itertools.islice(products.items(), args.limit))
 
     # do not fail-fast on non-write operations
-    products = get_repo_for_products(
+    products, err = get_repo_for_products(
         org=org,
         products=products,
         allow_teams=args.allow_team,
@@ -710,9 +708,10 @@ def run():
         deny_teams=args.deny_team,
         fail_fast=False,
     )
+    problems += err
 
     # do not fail-fast on non-write operations
-    products_to_tag = check_product_tags(
+    products_to_tag, err = check_product_tags(
         products,
         git_tag,
         tag_message_template=message_template,
@@ -722,21 +721,17 @@ def run():
         ignore_git_message=args.ignore_git_message,
         ignore_git_tagger=args.ignore_git_tagger,
     )
+    problems += err
 
-    # in verify mode, it is an error if there are products that need to be
-    # tagged.
     if args.verify:
-        if not products_to_tag:
-            info('release verified with no errors')
-            return
+        # in verify mode, it is an error if there are products that need to be
+        # tagged.
+        err = identify_products_missing_tags(products_to_tag)
+        problems += err
 
-        error(textwrap.dedent("""\
-            release verfication failed:
-              {n} product(s) have errors\
-            """).format(
-            n=len(products_to_tag),
-        ))
-        fail_missing_tags(products_to_tag)
+    if problems:
+        msg = "{n} pre-flight error(s)".format(n=len(problems))
+        raise codetools.DogpileError(problems, msg)
 
     tag_products(
         products_to_tag,
