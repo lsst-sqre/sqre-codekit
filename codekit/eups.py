@@ -105,7 +105,7 @@ class EupsTag(object):
 
             products[name] = {
                 'name': name,
-                'favor': flavor,
+                'flavor': flavor,
                 'eups_version': eups_version,
             }
 

@@ -91,7 +91,7 @@ class Manifest(object):
                         name=self.name,
                         n=n,
                         e=e,
-                    ))
+                    )) from None
 
             products[name] = {
                 'name': name,
