@@ -60,10 +60,11 @@ setup(
             'github-auth = codekit.cli.github_auth:main',
             'github-decimate-org = codekit.cli.github_decimate_org:main',
             'github-fork-org = codekit.cli.github_fork_org:main',
+            'github-get-ratelimit= codekit.cli.github_get_ratelimit:main',
             'github-list-repos = codekit.cli.github_list_repos:main',
             'github-mv-repos-to-team = codekit.cli.github_mv_repos_to_team:main',  # NOQA
-            'github-tag-version = codekit.cli.github_tag_version:main',
             'github-tag-teams = codekit.cli.github_tag_teams:main',
+            'github-tag-version = codekit.cli.github_tag_version:main',
         ]
     }
 )
