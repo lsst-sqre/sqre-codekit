@@ -29,6 +29,10 @@ class GitTagExistsError(Exception):
     pass
 
 
+class GitTagMissingError(Exception):
+    pass
+
+
 def parse_args():
     """Parse command-line arguments"""
 
@@ -91,7 +95,11 @@ def parse_args():
         help='git repos to be tagged MUST NOT be a member of ANY of'
              ' these teams (can specify several times)')
     parser.add_argument('--eups-tag')
-    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Do not create/update tag(s) or modify any state.'
+             ' (has no effect if specified in addition to --verify)')
     parser.add_argument(
         '--user',
         help='Name of person making the tag - defaults to gitconfig value')
@@ -136,6 +144,12 @@ def parse_args():
         default=None,
         type=int,
         help='Maximum number of products/repos to tags. (useful for testing)')
+    parser.add_argument(
+        '--verify',
+        action='store_true',
+        help='Verify that all git tags for a release are present and correct.'
+             ' (will not create/update tag(s) or modify any state)'
+             ' (has precedence over --dry-run)')
     parser.add_argument(
         '--fail-fast',
         action='store_true',
@@ -403,7 +417,8 @@ def check_existing_git_tag(repo, t_tag, **kwargs):
         return True
 
     yikes = GitTagExistsError(textwrap.dedent("""\
-        tag: {tag} already exists in repo: {repo} with conflicting values:
+        tag: {tag} already exists in repo: {repo}
+        with conflicting values:
           existing:
             sha: {e_sha}
             message: {e_message}
@@ -520,6 +535,36 @@ def check_product_tags(
         raise codetools.DogpileError(problems, msg)
 
     return checked_products
+
+
+def fail_missing_tags(products):
+    if not products:
+        raise RuntimeError('called without products that are missing tags')
+
+    problems = []
+    for name, data in products.items():
+        repo = data['repo']
+        t_tag = data['target_tag']
+
+        yikes = GitTagMissingError(textwrap.dedent("""\
+            tag missing from repo: {repo} @
+              sha: {sha} as {gt}
+              (eups version: {et})
+              external repo: {v}
+              replace existing tag: {update}\
+            """).format(
+            repo=repo.full_name,
+            sha=t_tag.sha,
+            gt=t_tag.name,
+            et=data['eups_version'],
+            v=data['v'],
+            update=data['update_tag'],
+        ))
+        problems.append(yikes)
+        error(yikes)
+
+    msg = "{n} tag failures".format(n=len(problems))
+    raise codetools.DogpileError(problems, msg)
 
 
 def tag_products(
@@ -677,6 +722,21 @@ def run():
         ignore_git_message=args.ignore_git_message,
         ignore_git_tagger=args.ignore_git_tagger,
     )
+
+    # in verify mode, it is an error if there are products that need to be
+    # tagged.
+    if args.verify:
+        if not products_to_tag:
+            info('release verified with no errors')
+            return
+
+        error(textwrap.dedent("""\
+            release verfication failed:
+              {n} product(s) have errors\
+            """).format(
+            n=len(products_to_tag),
+        ))
+        fail_missing_tags(products_to_tag)
 
     tag_products(
         products_to_tag,

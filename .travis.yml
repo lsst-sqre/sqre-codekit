@@ -20,6 +20,7 @@ matrix:
           # in sync except for s/_/-/
           github-tag-version \
             --dry-run \
+            --verify \
             --debug \
             --org 'lsst' \
             --allow-team 'Data Management' \
@@ -39,6 +40,7 @@ matrix:
           # does not inspect the official eups release tag at all.
           github-tag-version \
             --dry-run \
+            --verify \
             --debug \
             --org 'lsst' \
             --allow-team 'Data Management' \
@@ -56,10 +58,11 @@ matrix:
 
           # verify a past official release using the eups tag. As the eups
           # product version strings will be out of sync between the versiondb
-          # manifest it was based on and the eups tag, the version strings have
-          # to be ignored.
+          # manifest it was based on and the eups tag, the eups product version
+          # strings have to be ignored.
           github-tag-version \
             --dry-run \
+            --verify \
             --debug \
             --org 'lsst' \
             --allow-team 'Data Management' \
