@@ -502,6 +502,7 @@ def check_product_tags(
             # update_tag and fall through. Otherwise, treat it as any other
             # exception.
             if force_tag:
+                update_tag = True
                 warn(textwrap.dedent("""\
                       existing tag: {tag} WILL BE MOVED\
                     """).format(
