@@ -187,20 +187,25 @@ def create_teams(
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:
-            for oops in e.data['errors']:
-                msg = oops['message']
-                if ignore_existing and 'Name has already been taken' in msg:
-                    # find existing team
-                    dst_t = next(t for t in org.get_teams() if t.name in name)
-                else:
-                    # if the error is for any cause other than the team already
-                    # existing, puke.
-                    yikes = pygithub.CaughtOrganizationError(org, e)
-                    if fail_fast:
-                        raise yikes from None
-                    problems.append(yikes)
-                    error(yikes)
-                    break
+            # if the error is for any cause other than the team already
+            # existing, puke.
+            team_exists = False
+            if ignore_existing and 'errors' in e.data:
+                for oops in e.data['errors']:
+                    msg = oops['message']
+                    if 'Name has already been taken' in msg:
+                        # find existing team
+                        dst_t = next(t for t in org.get_teams()
+                                     if t.name in name)
+                        team_exists = True
+            if not (ignore_existing and team_exists):
+                msg = "error creating team: {t}".format(t=name)
+                yikes = pygithub.CaughtOrganizationError(org, e, msg)
+                if fail_fast:
+                    raise yikes from None
+                problems.append(yikes)
+                error(yikes)
+                break
         else:
             dst_teams[dst_t.name] = dst_t
 
@@ -257,7 +262,8 @@ def create_forks(
                     skipped_repos.append(r)
                     continue
 
-                yikes = pygithub.CaughtOrganizationError(dst_org, e)
+                msg = "error forking repo {r}".format(r=r.full_name)
+                yikes = pygithub.CaughtOrganizationError(dst_org, e, msg)
                 if fail_fast:
                     raise yikes from None
                 problems.append(yikes)
