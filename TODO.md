@@ -20,6 +20,11 @@
   tagging the github default branch. This would allow branches to be created
   before release tags are created.
 
+### `github-fork-org`
+
+- Support forking of addition repos into destination org when member teams
+  already exist.
+
 ### general
 
 - check github ratelimit prior to starting operations and bail out if the
