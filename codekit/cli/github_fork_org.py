@@ -257,7 +257,8 @@ def create_forks(
                     skipped_repos.append(r)
                     continue
 
-                yikes = pygithub.CaughtOrganizationError(dst_org, e)
+                msg = "error forking repo {r}".format(r=r.full_name)
+                yikes = pygithub.CaughtOrganizationError(dst_org, e, msg)
                 if fail_fast:
                     raise yikes from None
                 problems.append(yikes)

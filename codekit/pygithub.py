@@ -71,21 +71,24 @@ class CaughtOrganizationError(Exception):
     """Simple exception class intended to bundle together a
     github.Organization.Organization object and a thrown exception
     """
-    def __init__(self, org, caught):
+    def __init__(self, org, caught, msg):
         assert isinstance(org, github.Organization.Organization), type(org)
         assert isinstance(caught, github.GithubException), type(caught)
 
         self.org = org
         self.caught = caught
+        self.msg = msg
 
     def __str__(self):
         return textwrap.dedent("""\
             Caught: {cls}
               In org: {org}
-              Message: {e}\
+              Message: {msg}
+              Exception Message: {e}\
             """.format(
             cls=type(self.caught),
             org=self.org.login,
+            msg=self.msg,
             e=str(self.caught)
         ))
 
