@@ -182,6 +182,23 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+    - env: TEST='github-get-ratelimit'
+      language: python
+      python: '3.6'
+      os: osx
+      install:
+      - pip install --upgrade 'pip>=9' setuptools_scm
+      - python setup.py sdist
+      - pip install dist/sqre-codekit-*.tar.gz
+      script: |
+        set -e
+        if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
+          github-get-ratelimit \
+            --debug \
+            --token "$SQREADMIN_TOKEN"
+        else
+          echo "Unable to test without travis secure env vars."
+        fi
     - env: TEST=hadolint
       language: c
       services:
