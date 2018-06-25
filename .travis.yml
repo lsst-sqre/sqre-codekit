@@ -77,6 +77,25 @@ matrix:
             --ignore-git-message \
             --manifest 'b3504' \
             '15.0'
+
+          github-tag-release \
+            --dry-run \
+            --debug \
+            --limit 10 \
+            --org 'lsst' \
+            --allow-team 'Data Management' \
+            --allow-team 'DM Externals' \
+            --external-team 'DM Externals' \
+            --deny-team 'DM Auxilliaries' \
+            --email 'sqre-admin@lists.lsst.org' \
+            --user 'sqreadmin' \
+            --token "$SQREADMIN_TOKEN" \
+            --ignore-manifest-versions \
+            --ignore-git-tagger \
+            --ignore-git-message \
+            --manifest 'b3595' \
+            --manifest-only \
+            'w.2018.18'
         else
           echo "Unable to test without travis secure env vars."
         fi
