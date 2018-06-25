@@ -19,7 +19,6 @@ matrix:
           # verify a past weekly tag -- the eups tag name and git tag names are
           # in sync except for s/_/-/
           github-tag-release \
-            --dry-run \
             --verify \
             --debug \
             --limit 10 \
@@ -40,7 +39,6 @@ matrix:
           # an rcX eups tag.  This validates the location of the git tags but
           # does not inspect the official eups release tag at all.
           github-tag-release \
-            --dry-run \
             --verify \
             --debug \
             --limit 10 \
@@ -63,7 +61,6 @@ matrix:
           # manifest it was based on and the eups tag, the eups product version
           # strings have to be ignored.
           github-tag-release \
-            --dry-run \
             --verify \
             --debug \
             --limit 10 \
