@@ -41,13 +41,21 @@ def parse_args():
 
             Examples:
 
+                # eups tag is derived from git tag
                 {prog} \\
+                    --dry-run \\
+                    --debug \\
+                    --limit 10 \\
                     --org lsst \\
                     --allow-team 'Data Management' \\
                     --allow-team 'DM Externals' \\
                     'w.2018.18' 'b3595'
 
+                # explicit eups tag and git tag
                 {prog} \\
+                    --dry-run \\
+                    --debug \\
+                    --limit 10 \\
                     --org lsst \\
                     --allow-team 'Data Management' \\
                     --allow-team 'DM Externals' \\
@@ -55,10 +63,11 @@ def parse_args():
                     --eups-tag v11_0_rc2 \\
                     11.0.rc2 b1679
 
+                # verify a past eups tag + git tag release
                 {prog} \\
-                    --dry-run \\
                     --verify \\
                     --debug \\
+                    --limit 10 \\
                     --org 'lsst' \\
                     --allow-team 'Data Management' \\
                     --allow-team 'DM Externals' \\
@@ -69,8 +78,27 @@ def parse_args():
                     --token "$GITHUB_TOKEN" \\
                     --ignore-git-tagger \\
                     --ignore-git-message \\
-                    --limit 10 \\
                     --manifest 'b3595' \\
+                    'w.2018.18'
+
+                # tag a git release from a manifest *without* a pre-existing
+                # eups tag.
+                {prog} \\
+                    --dry-run \\
+                    --debug \\
+                    --limit 10 \\
+                    --org 'lsst' \\
+                    --allow-team 'Data Management' \\
+                    --allow-team 'DM Externals' \\
+                    --external-team 'DM Externals' \\
+                    --deny-team 'DM Auxilliaries' \\
+                    --email 'sqre-admin@lists.lsst.org' \\
+                    --user 'sqreadmin' \\
+                    --token "$GITHUB_TOKEN" \\
+                    --ignore-git-tagger \\
+                    --ignore-git-message \\
+                    --manifest 'b3595' \\
+                    --manifest-only \\
                     'w.2018.18'
 
             Note that the access token must have access to these oauth scopes:
@@ -109,7 +137,6 @@ def parse_args():
         action='append',
         help='git repos to be tagged MUST NOT be a member of ANY of'
              ' these teams (can specify several times)')
-    parser.add_argument('--eups-tag')
     parser.add_argument(
         '--dry-run',
         action='store_true',
@@ -182,6 +209,16 @@ def parse_args():
         help='Debug mode (can specify several times)')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
     parser.add_argument('tag')
+
+    manifest_group = parser.add_mutually_exclusive_group()
+    manifest_group.add_argument('--eups-tag')
+    manifest_group.add_argument(
+        '--manifest-only',
+        action='store_true',
+        help='Do not cross reference a published eups tag with the manifest'
+             ' -- use only the metadata from the manifest to determine'
+             ' git tag location.'
+             ' This allows a git tag to be created without a prior eups tag.')
 
     return parser.parse_args()
 
@@ -665,22 +702,32 @@ def run():
     # and git tag post-facto. However for official releases, we don't want to
     # publish until the git tag goes down, because we want to eups publish the
     # build that has the official versions in the eups ref.
-    eups_tag = args.eups_tag
-    if not eups_tag:
-        # generate eups-style version
-        eups_tag = eups.git_tag2eups_tag(git_tag)
-    debug("using eups tag: {eups_tag}".format(eups_tag=eups_tag))
+    if not args.manifest_only:
+        eups_tag = args.eups_tag
+        if not eups_tag:
+            # generate eups-style version
+            eups_tag = eups.git_tag2eups_tag(git_tag)
+        debug("using eups tag: {eups_tag}".format(eups_tag=eups_tag))
 
     # sadly we need to "just" know this
     # XXX this can be parsed from the eups tag file post d_2018_05_08
     manifest = args.manifest
     debug("using manifest: {manifest}".format(manifest=manifest))
 
-    message_template = "Version {{git_tag}}"\
-        " release from {eups_tag}/{manifest}".format(
-            eups_tag=eups_tag,
-            manifest=manifest,
-        )
+    if not args.manifest_only:
+        # release from eups tag
+        message_template = "Version {{git_tag}}"\
+            " release from {eups_tag}/{manifest}".format(
+                eups_tag=eups_tag,
+                manifest=manifest,
+            )
+    else:
+        # release from manifest only
+        message_template = "Version {{git_tag}}"\
+            " release from manifest {manifest}".format(
+                manifest=manifest,
+            )
+
     debug("using tag message: {msg}".format(msg=message_template))
 
     tagger = github.InputGitAuthor(
@@ -695,22 +742,30 @@ def run():
     org = g.get_organization(args.org)
     info("tagging repos in org: {org}".format(org=org.login))
 
-    eups_products = eups.EupsTag(
-        eups_tag,
-        base_url=args.eupstag_base_url).products
+    problems = []
+
     manifest_products = versiondb.Manifest(
         manifest,
         base_url=args.versiondb_base_url).products
 
-    problems = []
-    # do not fail-fast on non-write operations
-    products, err = cross_reference_products(
-        eups_products,
-        manifest_products,
-        ignore_manifest_versions=args.ignore_manifest_versions,
-        fail_fast=False,
-    )
-    problems += err
+    if not args.manifest_only:
+        # cross-reference eups tag version strings with manifest
+        eups_products = eups.EupsTag(
+            eups_tag,
+            base_url=args.eupstag_base_url).products
+
+        # do not fail-fast on non-write operations
+        products, err = cross_reference_products(
+            eups_products,
+            manifest_products,
+            ignore_manifest_versions=args.ignore_manifest_versions,
+            fail_fast=False,
+        )
+        problems += err
+    else:
+        # no eups tag; use manifest products without sanity check against eups
+        # tag version strings
+        products = manifest_products
 
     if args.limit:
         products = dict(itertools.islice(products.items(), args.limit))
