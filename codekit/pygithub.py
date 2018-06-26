@@ -347,3 +347,39 @@ def check_repo_teams(repo, allow_teams, deny_teams, team_names=None):
             allow_teams=allow_teams,
             deny_teams=deny_teams
         )
+
+
+@public
+def get_default_ref(repo):
+    """Return a `github.GitRef` object for the HEAD of the default branch.
+
+    Parameters
+    ----------
+    repo: github.Repository.Repository
+        repo to get default branch head ref from
+
+    Returns
+    -------
+    head : :class:`github.GitRef` instance
+
+    Raises
+    ------
+    github.RateLimitExceededException
+    codekit.pygithub.CaughtRepositoryError
+    """
+    assert isinstance(repo, github.Repository.Repository), type(repo)
+
+    # XXX this probably should be resolved via repos.yaml
+    default_branch = repo.default_branch
+    default_branch_ref = "heads/{ref}".format(ref=default_branch)
+
+    # if accessing the default branch fails something is seriously wrong...
+    try:
+        head = repo.get_git_ref(default_branch_ref)
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = "error getting ref: {ref}".format(ref=default_branch_ref)
+        raise CaughtRepositoryError(repo, e, msg) from None
+
+    return head
