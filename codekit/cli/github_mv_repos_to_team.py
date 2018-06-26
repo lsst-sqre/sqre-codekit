@@ -115,7 +115,13 @@ def run():
     added = []
     removed = []
     for name in move_me:
-        r = org.get_repo(name)
+        try:
+            r = org.get_repo(name)
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = "error getting repo by name: {r}".format(r=name)
+            raise pygithub.CaughtOrganizationError(org, e, msg) from None
 
         # Add team to the repo
         debug("Adding {repo} to '{team}' ...".format(
