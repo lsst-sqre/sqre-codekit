@@ -228,7 +228,13 @@ def find_repo_teams(repo):
 def get_candidate_teams(org, target_teams):
     assert isinstance(org, github.Organization.Organization), type(org)
 
-    teams = org.get_teams()
+    try:
+        teams = list(org.get_teams())
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise pygithub.CaughtOrganizationError(org, e, msg) from None
 
     debug("looking for teams: {teams}".format(teams=target_teams))
     tag_teams = [t for t in teams if t.name in target_teams]
