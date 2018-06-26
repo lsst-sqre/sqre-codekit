@@ -123,7 +123,7 @@ class RepositoryTeamMembershipError(Exception):
 class TargetTag(collections.UserDict):
     """Represents an abstract git tag that is independent of a git repository.
     This is an a rough analog of `pygithub`s `github.GitTag.GitTag` class but
-    is intended to be directly instatiated while `GitTag` is not.
+    is intended to be directly instantiated while `GitTag` is not.
 
     Objects of this class may generally be treated as a `dict`.
     """
@@ -165,7 +165,7 @@ def login_github(token_path=None, token=None):
         Path to the token file. The default token is used otherwise.
 
     token: str, optional
-        Literial token string. If specifified, this value is used instead of
+        Literal token string. If specified, this value is used instead of
         reading from the token_path file.
 
     Returns
@@ -315,11 +315,11 @@ def check_repo_teams(repo, allow_teams, deny_teams, team_names=None):
         list of team names that repo MUST belong to at least one of.
 
     deny_teams: list(str)
-        list of team that repo MSUT NOT be a member of.
+        list of team that repo MUST NOT be a member of.
 
     team_names: list(str)
         list of the team name which the repo is a member of (optional).
-        Providing this list saves retriving the list of teams from the github
+        Providing this list saves retrieving the list of teams from the github
         API.
 
     Raises
