@@ -18,8 +18,11 @@ class TeamError(Exception):
 
 def parse_args():
     """Parse command-line arguments"""
+    prog = 'github-fork-org'
+
     parser = argparse.ArgumentParser(
-        prog='github-fork-org',
+        prog=prog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""
         Fork repositories from one GitHub organization to another.
 
@@ -35,8 +38,7 @@ def parse_args():
                 --team 'DM Externals' \\
                 --team 'Data Management' \\
                 --copy-teams
-        """),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        """).format(prog=prog),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
         '--src-org',

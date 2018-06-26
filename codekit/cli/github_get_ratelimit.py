@@ -11,9 +11,10 @@ import textwrap
 
 def parse_args():
     """Parse command-line arguments"""
+    prog = 'github-get-ratelimit',
 
     parser = argparse.ArgumentParser(
-        prog='github-get-ratelimit',
+        prog=prog,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""
             Display the current github ReST API request ratelimit.
@@ -21,7 +22,7 @@ def parse_args():
             Examples:
 
                 {prog}
-        """),
+        """).format(prog=prog),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
 

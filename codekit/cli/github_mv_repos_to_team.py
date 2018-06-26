@@ -19,8 +19,10 @@ class TeamError(Exception):
 
 def parse_args():
     """Parse command-line args"""
+    prog = 'github-mv-repos-to-team'
+
     parser = argparse.ArgumentParser(
-        prog='github-mv-repos-to-team',
+        prog=prog,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""
             Move repo(s) from one team to another.
@@ -33,7 +35,7 @@ def parse_args():
                     --from test_ext2 \\
                     --to test_ext \\
                     pipe_tasks apr_util
-        """),
+        """).format(prog=prog),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit'
     )
 
