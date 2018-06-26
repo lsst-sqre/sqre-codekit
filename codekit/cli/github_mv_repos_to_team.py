@@ -98,7 +98,14 @@ def run():
     org = g.get_organization(args.org)
 
     # only iterate over all teams once
-    teams = list(org.get_teams())
+    try:
+        teams = list(org.get_teams())
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise pygithub.CaughtOrganizationError(org, e, msg) from None
+
     old_team = find_team(teams, args.oldteam)
     new_team = find_team(teams, args.newteam)
 

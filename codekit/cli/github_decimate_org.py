@@ -133,7 +133,14 @@ def delete_all_teams(org, **kwargs):
     assert isinstance(org, github.Organization.Organization), type(org)
     limit = kwargs.pop('limit', None)
 
-    teams = list(itertools.islice(org.get_teams(), limit))
+    try:
+        teams = list(itertools.islice(org.get_teams(), limit))
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise pygithub.CaughtOrganizationError(org, e, msg) from None
+
     info("found {n} teams in {org}".format(n=len(teams), org=org.login))
     [debug("  '{t}'".format(t=t.name)) for t in teams]
 

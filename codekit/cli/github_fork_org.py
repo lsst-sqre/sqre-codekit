@@ -202,8 +202,7 @@ def create_teams(
                     msg = oops['message']
                     if 'Name has already been taken' in msg:
                         # find existing team
-                        dst_t = next(t for t in org.get_teams()
-                                     if t.name in name)
+                        dst_t = pygithub.get_teams_by_name(org, name)[0]
                         team_exists = True
             if not (ignore_existing and team_exists):
                 msg = "error creating team: {t}".format(t=name)
@@ -303,14 +302,21 @@ def run():
     debug('looking for repos -- this can take a while for large orgs...')
     if args.team:
         debug('checking that selection team(s) exist')
-        org_teams = list(src_org.get_teams())
+        try:
+            org_teams = list(src_org.get_teams())
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = 'error getting teams'
+            raise pygithub.CaughtOrganizationError(src_org, e, msg) from None
+
         missing_teams = [n for n in args.team if n not in
                          [t.name for t in org_teams]]
         if missing_teams:
             error("{n} team(s) do not exist:".format(n=len(missing_teams)))
             [error("  '{t}'".format(t=n)) for n in missing_teams]
             return
-        fork_teams = [t for t in src_org.get_teams() if t.name in args.team]
+        fork_teams = [t for t in org_teams if t.name in args.team]
         repos = pygithub.get_repos_by_team(fork_teams)
         debug('selecting repos by membership in team(s):')
         [debug("  '{t}'".format(t=t.name)) for t in fork_teams]

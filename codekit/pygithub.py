@@ -288,7 +288,13 @@ def get_teams_by_name(org, team_names):
     """
     assert isinstance(org, github.Organization.Organization), type(org)
 
-    org_teams = list(org.get_teams())
+    try:
+        org_teams = list(org.get_teams())
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise CaughtOrganizationError(org, e, msg) from None
 
     found_teams = []
     for name in team_names:
