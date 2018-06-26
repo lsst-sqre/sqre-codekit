@@ -28,14 +28,19 @@ def parse_args():
 
             Examples:
 
+                # mininum required arguments
                 {prog} --org lsst --team 'DM Auxilliaries' --tag w.2015.33
 
+                # *DELETE* an existing git tag
+                # --debug is always recommended
                 {prog} \\
+                    --debug \\
                     --org lsst \\
                     --team 'DM Auxilliaries' \\
                     --tag w.2015.33 \\
                     --delete
 
+                # "dry run" with multiple git tags
                 {prog} \\
                     --debug \\
                     --dry-run \\
@@ -48,6 +53,7 @@ def parse_args():
                     --tag 'foo' \\
                     --tag 'bar'
 
+                # *do not* fail if git tag already exists in any repo
                 {prog} \\
                     --debug \\
                     --dry-run \\
@@ -58,8 +64,8 @@ def parse_args():
                     --token "$GITHUB_TOKEN" \\
                     --user 'sqreadmin' \\
                     --email 'sqre-admin@lists.lsst.org' \\
-                    --tag 'foo' \\
-                    --tag 'bar'
+                    --ignore-existing-tag \\
+                    --tag 'v999.0.0.rc1'
 
 
             Note that the access token must have access to these oauth scopes:
@@ -100,10 +106,6 @@ def parse_args():
         '--email',
         help='Email address of tagger - defaults to gitconfig value')
     parser.add_argument(
-        '--delete',
-        action='store_true',
-        help='*Delete* instead of create tag(s)')
-    parser.add_argument(
         '--token-path',
         default='~/.sq_github_token_delete',
         help='Use a token (made with github-auth) in a non-standard location')
@@ -117,6 +119,20 @@ def parse_args():
         default=os.getenv('DM_SQUARE_DEBUG'),
         help='Debug mode (can specify several times)')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
+
+    delete_group = parser.add_mutually_exclusive_group()
+    delete_group.add_argument(
+        '--delete',
+        action='store_true',
+        help='*Delete* instead of create tag(s)'
+             ' (mutually exclusive with --ignore-existing-tag)')
+    delete_group.add_argument(
+        '--ignore-existing-tag',
+        action='store_true',
+        help='Ignore git tag(s) which already exist in a repo'
+             ' -- normally this would be an error.'
+             ' (mutually exclusive with --delete)')
+
     return parser.parse_args()
 
 
@@ -439,11 +455,14 @@ def run():
         fail_fast=False,
     )
 
+    # existing tags are always ignored (not an error) under --delete
+    ignore_existing = True if args.delete else args.ignore_existing_tag
+
     # do not fail-fast on non-write operations
     present_tags, absent_tags, err = check_tags(
         target_repos,
         tags,
-        ignore_existing=args.delete,
+        ignore_existing=ignore_existing,
         fail_fast=False,
     )
     problems += err
