@@ -89,7 +89,14 @@ def delete_all_repos(org, **kwargs):
     assert isinstance(org, github.Organization.Organization), type(org)
     limit = kwargs.pop('limit', None)
 
-    repos = list(itertools.islice(org.get_repos(), limit))
+    try:
+        repos = list(itertools.islice(org.get_repos(), limit))
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting repos'
+        raise pygithub.CaughtOrganizationError(org, e, msg) from None
+
     info("found {n} repos in {org}".format(n=len(repos), org=org.login))
     [debug("  {r}".format(r=r.full_name)) for r in repos]
 
@@ -119,8 +126,8 @@ def delete_repos(repos, fail_fast=False, dry_run=False, delay=0):
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:
-            error('FAILED - does your token have delete_repo scope?')
-            yikes = pygithub.CaughtRepositoryError(r, e)
+            msg = 'FAILED - does your token have delete_repo scope?'
+            yikes = pygithub.CaughtRepositoryError(r, e, msg)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)
@@ -133,7 +140,14 @@ def delete_all_teams(org, **kwargs):
     assert isinstance(org, github.Organization.Organization), type(org)
     limit = kwargs.pop('limit', None)
 
-    teams = list(itertools.islice(org.get_teams(), limit))
+    try:
+        teams = list(itertools.islice(org.get_teams(), limit))
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise pygithub.CaughtOrganizationError(org, e, msg) from None
+
     info("found {n} teams in {org}".format(n=len(teams), org=org.login))
     [debug("  '{t}'".format(t=t.name)) for t in teams]
 

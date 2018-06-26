@@ -24,21 +24,24 @@ class CaughtRepositoryError(Exception):
     """Simple exception class intended to bundle together a
     github.Repository.Repository object and a thrown exception
     """
-    def __init__(self, repo, caught):
+    def __init__(self, repo, caught, msg):
         assert isinstance(repo, github.Repository.Repository), type(repo)
         assert isinstance(caught, github.GithubException), type(caught)
 
         self.repo = repo
         self.caught = caught
+        self.msg = msg
 
     def __str__(self):
         return textwrap.dedent("""\
             Caught: {cls}
               In repo: {repo}
-              Message: {e}\
+              Message: {msg}
+              Exception Message: {e}\
             """.format(
             cls=type(self.caught),
             repo=self.repo.full_name,
+            msg=self.msg,
             e=str(self.caught)
         ))
 
@@ -89,32 +92,6 @@ class CaughtOrganizationError(Exception):
             cls=type(self.caught),
             org=self.org.login,
             msg=self.msg,
-            e=str(self.caught)
-        ))
-
-
-class CaughtUnknownObjectError(Exception):
-    """Simple exception class intended to bundle together the name of the
-    resource that was attempted to be accessed and a thrown exception.
-    """
-    def __init__(self, name, caught):
-        assert isinstance(name, str), type(name)
-        assert isinstance(
-            caught,
-            github.UnknownObjectException
-        ), type(caught)
-
-        self.name = name
-        self.caught = caught
-
-    def __str__(self):
-        return textwrap.dedent("""\
-            Caught: {cls}
-              Name: {name}
-              Message: {e}\
-            """.format(
-            cls=type(self.caught),
-            name=self.name,
             e=str(self.caught)
         ))
 
@@ -285,7 +262,13 @@ def get_teams_by_name(org, team_names):
     """
     assert isinstance(org, github.Organization.Organization), type(org)
 
-    org_teams = list(org.get_teams())
+    try:
+        org_teams = list(org.get_teams())
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise CaughtOrganizationError(org, e, msg) from None
 
     found_teams = []
     for name in team_names:
@@ -347,7 +330,13 @@ def check_repo_teams(repo, allow_teams, deny_teams, team_names=None):
 
     # fetch team names if a list was not passed
     if not team_names:
-        team_names = [t.name for t in repo.get_teams()]
+        try:
+            team_names = [t.name for t in repo.get_teams()]
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = 'error getting teams'
+            raise CaughtRepositoryError(repo, e, msg) from None
 
     if not any(x in team_names for x in allow_teams)\
        or any(x in team_names for x in deny_teams):
