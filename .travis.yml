@@ -8,6 +8,7 @@ matrix:
       python: &pyver '3.6'
       install: pip install --upgrade 'pip>=9' setuptools_scm
       script: python setup.py test
+
     - env: TEST='github-tag-release'
       language: python
       python: *pyver
@@ -105,6 +106,7 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+
     - env: TEST='github-tag-teams'
       language: python
       python: *pyver
@@ -145,6 +147,7 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+
     - env: TEST='github-decimate-org'
       language: python
       python: *pyver
@@ -168,6 +171,7 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+
     - env: TEST='github-fork-org'
       language: python
       python: *pyver
@@ -193,6 +197,7 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+
     - env: TEST='github-get-ratelimit'
       language: python
       python: *pyver
@@ -210,6 +215,7 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+
     - env: TEST='github-auth'
       language: python
       python: *pyver
@@ -219,6 +225,7 @@ matrix:
 
         # check argparse help formatting for errors
         "$TEST" -h
+
     - env: TEST='github-list-repos'
       language: python
       python: *pyver
@@ -228,6 +235,7 @@ matrix:
 
         # check argparse help formatting for errors
         "$TEST" -h
+
     - env: TEST='github-mv-repos-to-team'
       language: python
       python: *pyver
@@ -237,44 +245,34 @@ matrix:
 
         # check argparse help formatting for errors
         "$TEST" -h
-    - env: TEST=hadolint
-      language: c
-      services:
-        - docker
-      script: |
-        set -e
-        shopt -s globstar nullglob
-        CHECK=( **/Dockerfile )
-        [[ ${#CHECK[@]} -eq 0 ]] && exit
-        for f in "${CHECK[@]}"; do
-          docker run -ti -v$(pwd):$(pwd) -w $(pwd) \
-            hadolint/hadolint hadolint "$f"
-        done
-    - env: TEST=make
-      language: c
-      script: |
-        set -e
-        shopt -s globstar nullglob
-        CHECK=( **/Makefile )
-        [[ ${#CHECK[@]} -eq 0 ]] && exit
-        for f in "${CHECK[@]}"; do
-          ( set -e
-            cd $(dirname "$f")
-            echo "checking $f"
-            make --dry-run --warn-undefined-variables
-          )
-        done
+
     - env: TEST=markdownlint
       language: c
       services:
         - docker
-      script: |
-        set -e
-        shopt -s globstar nullglob
-        CHECK=( **/*.md )
-        [[ ${#CHECK[@]} -eq 0 ]] && exit
-        docker run -ti -v $(pwd):$(pwd) -w $(pwd) \
-          mivok/markdownlint:0.4.0 "${CHECK[@]}"
+      script: ./tests/mdl.sh
+
+    - env: TEST=make
+      language: c
+      script: ./tests/make.sh
+
+    - env: TEST=hadolint
+      language: c
+      services:
+        - docker
+      script: ./tests/hadolint.sh
+
+    - env: TEST=yamllint
+      language: c
+      services:
+        - docker
+      script: ./tests/yamllint.sh
+
+    - env: TEST=shellcheck
+      language: c
+      services:
+        - docker
+      script: ./tests/shellcheck.sh
 env:
   global:
     - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
