@@ -3,12 +3,12 @@ matrix:
   include:
     - env: TEST='pytest' DEPLOYER=true
       language: python
-      python: '3.6'
+      python: &pyver '3.6'
       install: pip install --upgrade 'pip>=9' setuptools_scm
       script: python setup.py test
     - env: TEST='github-tag-release'
       language: python
-      python: '3.6'
+      python: *pyver
       install:
       - pip install --upgrade 'pip>=9' setuptools_scm
       - python setup.py sdist
@@ -105,7 +105,7 @@ matrix:
         fi
     - env: TEST='github-tag-teams'
       language: python
-      python: '3.6'
+      python: *pyver
       install:
       - pip install --upgrade 'pip>=9' setuptools_scm
       - python setup.py sdist
@@ -148,7 +148,7 @@ matrix:
         fi
     - env: TEST='github-decimate-org'
       language: python
-      python: '3.6'
+      python: *pyver
       install:
       - pip install --upgrade 'pip>=9' setuptools_scm
       - python setup.py sdist
@@ -174,7 +174,7 @@ matrix:
         fi
     - env: TEST='github-fork-org'
       language: python
-      python: '3.6'
+      python: *pyver
       install:
       - pip install --upgrade 'pip>=9' setuptools_scm
       - python setup.py sdist
@@ -202,7 +202,7 @@ matrix:
         fi
     - env: TEST='github-get-ratelimit'
       language: python
-      python: '3.6'
+      python: *pyver
       install:
       - pip install --upgrade 'pip>=9' setuptools_scm
       - python setup.py sdist
