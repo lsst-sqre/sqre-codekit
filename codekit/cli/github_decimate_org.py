@@ -14,7 +14,7 @@ import textwrap
 
 def parse_args():
     """Parse command-line arguments"""
-    prog = 'github-decimate-org',
+    prog = 'github-decimate-org'
 
     parser = argparse.ArgumentParser(
         prog=prog,

@@ -17,7 +17,7 @@ import textwrap
 
 def parse_args():
     """Parse command line arguments"""
-    prog = 'github-auth',
+    prog = 'github-auth'
 
     parser = argparse.ArgumentParser(
         prog=prog,
