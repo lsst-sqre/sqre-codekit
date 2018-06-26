@@ -119,8 +119,8 @@ def delete_repos(repos, fail_fast=False, dry_run=False, delay=0):
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:
-            error('FAILED - does your token have delete_repo scope?')
-            yikes = pygithub.CaughtRepositoryError(r, e)
+            msg = 'FAILED - does your token have delete_repo scope?'
+            yikes = pygithub.CaughtRepositoryError(r, e, msg)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)
