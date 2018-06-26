@@ -318,8 +318,16 @@ def create_tags(repo, tags, tagger, dry_run=False):
     # tag the head of the designated "default branch"
     # XXX this probably should be resolved via repos.yaml
     default_branch = repo.default_branch
-    head = repo.get_git_ref("heads/{ref}".format(
-        ref=default_branch))
+    default_branch_ref = "heads/{ref}".format(ref=default_branch)
+
+    try:
+        # if accessing the default branch fails something is serously wrong
+        head = repo.get_git_ref(default_branch_ref)
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = "error getting ref: {ref}".format(ref=default_branch_ref)
+        raise pygithub.CaughtRepositoryError(repo, e, msg) from None
 
     debug(textwrap.dedent("""\
         tagging repo: {repo} @
