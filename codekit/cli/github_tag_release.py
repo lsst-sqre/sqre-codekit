@@ -328,8 +328,11 @@ def get_repo_for_products(
 
         try:
             repo = org.get_repo(name)
-        except github.UnknownObjectException as e:
-            yikes = pygithub.CaughtUnknownObjectError(name, e)
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = "error getting repo by name: {r}".format(r=name)
+            yikes = pygithub.CaughtOrganizationError(org, e, msg)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)
@@ -339,7 +342,20 @@ def get_repo_for_products(
 
         debug("  found: {slug}".format(slug=repo.full_name))
 
-        repo_team_names = [t.name for t in repo.get_teams()]
+        try:
+            repo_team_names = [t.name for t in repo.get_teams()]
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = 'error getting teams'
+            yikes = pygithub.CaughtRepositoryError(repo, e, msg)
+            if fail_fast:
+                raise yikes from None
+            problems.append(yikes)
+            error(yikes)
+
+            continue
+
         debug("  teams: {teams}".format(teams=repo_team_names))
 
         try:
@@ -457,10 +473,20 @@ def check_existing_git_tag(repo, t_tag, **kwargs):
         return False
 
     # find tag object pointed to by the ref
-    e_tag = repo.get_git_tag(e_ref.object.sha)
+    try:
+        e_tag = repo.get_git_tag(e_ref.object.sha)
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = "error getting tag: {tag} [{sha}]".format(
+            tag=e_tag.tag,
+            sha=e_tag.sha,
+        )
+        raise pygithub.CaughtRepositoryError(repo, e, msg) from None
+
     debug("  found existing: {tag} [{sha}]".format(
         tag=e_tag.tag,
-        sha=e_tag.sha
+        sha=e_tag.sha,
     ))
 
     if cmp_existing_git_tag(t_tag, e_tag, **kwargs):
@@ -568,7 +594,10 @@ def check_product_tags(
                 error(e)
                 continue
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(repo, e)
+            msg = "error checking for existance of tag: {t}".format(
+                t=t_tag.name,
+            )
+            yikes = pygithub.CaughtRepositoryError(repo, e, msg)
 
             if fail_fast:
                 raise yikes from None
@@ -672,7 +701,8 @@ def tag_products(
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(repo, e)
+            msg = "error creating tag: {t}".format(t=t_tag.name)
+            yikes = pygithub.CaughtRepositoryError(repo, e, msg)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)

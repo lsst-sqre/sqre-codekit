@@ -211,8 +211,15 @@ def find_repo_teams(repo):
     if repo.full_name in cached_teams:
         return cached_teams[repo.full_name]
 
-    # flatten iterator so the results are cached
-    teams = list(repo.get_teams())
+    try:
+        # flatten iterator so the results are cached
+        teams = list(repo.get_teams())
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise pygithub.CaughtRepositoryError(repo, e, msg) from None
+
     cached_teams[repo.full_name] = teams
 
     return teams
@@ -221,7 +228,13 @@ def find_repo_teams(repo):
 def get_candidate_teams(org, target_teams):
     assert isinstance(org, github.Organization.Organization), type(org)
 
-    teams = org.get_teams()
+    try:
+        teams = list(org.get_teams())
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise pygithub.CaughtOrganizationError(org, e, msg) from None
 
     debug("looking for teams: {teams}".format(teams=target_teams))
     tag_teams = [t for t in teams if t.name in target_teams]
@@ -305,8 +318,16 @@ def create_tags(repo, tags, tagger, dry_run=False):
     # tag the head of the designated "default branch"
     # XXX this probably should be resolved via repos.yaml
     default_branch = repo.default_branch
-    head = repo.get_git_ref("heads/{ref}".format(
-        ref=default_branch))
+    default_branch_ref = "heads/{ref}".format(ref=default_branch)
+
+    try:
+        # if accessing the default branch fails something is serously wrong
+        head = repo.get_git_ref(default_branch_ref)
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = "error getting ref: {ref}".format(ref=default_branch_ref)
+        raise pygithub.CaughtRepositoryError(repo, e, msg) from None
 
     debug(textwrap.dedent("""\
         tagging repo: {repo} @
