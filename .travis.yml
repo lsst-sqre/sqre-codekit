@@ -9,10 +9,10 @@ matrix:
     - env: TEST='github-tag-release'
       language: python
       python: *pyver
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      install: &codekit_install
+        - pip install --upgrade 'pip>=9' setuptools_scm
+        - python setup.py sdist
+        - pip install dist/sqre-codekit-*.tar.gz
       script: |
         set -e
 
@@ -106,10 +106,7 @@ matrix:
     - env: TEST='github-tag-teams'
       language: python
       python: *pyver
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      install: *codekit_install
       script: |
         set -e
 
@@ -149,10 +146,7 @@ matrix:
     - env: TEST='github-decimate-org'
       language: python
       python: *pyver
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      install: *codekit_install
       script: |
         set -e
 
@@ -175,10 +169,7 @@ matrix:
     - env: TEST='github-fork-org'
       language: python
       python: *pyver
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      install: *codekit_install
       script: |
         set -e
 
@@ -203,10 +194,7 @@ matrix:
     - env: TEST='github-get-ratelimit'
       language: python
       python: *pyver
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      install: *codekit_install
       script: |
         set -e
 
@@ -223,10 +211,7 @@ matrix:
     - env: TEST='github-auth'
       language: python
       python: *pyver
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      install: *codekit_install
       script: |
         set -e
 
@@ -235,10 +220,7 @@ matrix:
     - env: TEST='github-list-repos'
       language: python
       python: *pyver
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      install: *codekit_install
       script: |
         set -e
 
@@ -247,10 +229,7 @@ matrix:
     - env: TEST='github-mv-repos-to-team'
       language: python
       python: *pyver
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      install: *codekit_install
       script: |
         set -e
 
