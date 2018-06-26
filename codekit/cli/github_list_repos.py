@@ -11,8 +11,10 @@ import textwrap
 
 def parse_args():
     """Parse command-line arguments"""
+    prog = 'github-list-repos'
+
     parser = argparse.ArgumentParser(
-        prog='github-list-repos',
+        prog=prog,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""
         List repositories on Github using various criteria.
@@ -33,7 +35,7 @@ def parse_args():
             {prog} --maxt 0 --hide Owners --org lsst
 
         returns the list of repos that are owned by no team besides Owners.
-        """),
+        """).format(prog=prog),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
         '-o', '--org',

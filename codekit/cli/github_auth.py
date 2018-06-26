@@ -17,9 +17,11 @@ import textwrap
 
 def parse_args():
     """Parse command line arguments"""
+    prog = 'github-auth',
 
     parser = argparse.ArgumentParser(
-        prog='github-auth',
+        prog=prog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""
             Generate a GitHub authentication token.
 
@@ -35,8 +37,7 @@ def parse_args():
                 {prog} \\
                     --debug \\
                     --user sqreadmin
-        """),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        """).format(prog=prog),
         epilog='Part of codekit: https://github.com/lsst-sqre/sqre-codekit')
     parser.add_argument(
         '-u', '--user',
