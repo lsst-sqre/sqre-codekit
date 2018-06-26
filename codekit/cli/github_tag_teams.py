@@ -211,8 +211,15 @@ def find_repo_teams(repo):
     if repo.full_name in cached_teams:
         return cached_teams[repo.full_name]
 
-    # flatten iterator so the results are cached
-    teams = list(repo.get_teams())
+    try:
+        # flatten iterator so the results are cached
+        teams = list(repo.get_teams())
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting teams'
+        raise pygithub.CaughtRepositoryError(repo, e, msg) from None
+
     cached_teams[repo.full_name] = teams
 
     return teams

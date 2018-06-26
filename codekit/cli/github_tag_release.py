@@ -339,7 +339,20 @@ def get_repo_for_products(
 
         debug("  found: {slug}".format(slug=repo.full_name))
 
-        repo_team_names = [t.name for t in repo.get_teams()]
+        try:
+            repo_team_names = [t.name for t in repo.get_teams()]
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = 'error getting teams'
+            yikes = pygithub.CaughtRepositoryError(repo, e, msg)
+            if fail_fast:
+                raise yikes from None
+            problems.append(yikes)
+            error(yikes)
+
+            continue
+
         debug("  teams: {teams}".format(teams=repo_team_names))
 
         try:

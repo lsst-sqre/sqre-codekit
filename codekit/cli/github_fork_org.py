@@ -103,7 +103,14 @@ def find_teams_by_repo(src_repos):
 
     src_rt = {}
     for r in src_repos:
-        teams = r.get_teams()
+        try:
+            teams = r.get_teams()
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = 'error getting teams'
+            raise pygithub.CaughtRepositoryError(r, e, msg) from None
+
         team_names = [t.name for t in teams]
         debug("  {repo: >{w}} {teams}".format(
             repo=r.full_name,

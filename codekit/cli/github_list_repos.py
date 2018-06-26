@@ -3,6 +3,7 @@
 from codekit.codetools import debug, error
 from codekit import codetools, pygithub
 import argparse
+import github
 import os
 import sys
 import textwrap
@@ -83,8 +84,15 @@ def run():
     org = g.get_organization(args.organization)
 
     for r in org.get_repos():
-        teamnames = [t.name for t in r.get_teams()
-                     if t.name not in args.hide]
+        try:
+            teamnames = [t.name for t in r.get_teams()
+                         if t.name not in args.hide]
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = 'error getting teams'
+            raise pygithub.CaughtRepositoryError(r, e, msg) from None
+
         maxt = args.maxt if (args.maxt is not None and
                              args.maxt >= 0) else len(teamnames)
         if args.debug:
