@@ -275,7 +275,7 @@ matrix:
       script: ./tests/shellcheck.sh
 
     - stage: pypi release
-      if: branch = master AND tag = true
+      if: (NOT type IN (pull_request)) AND (branch = master)
       language: python
       python: &pyver '3.6'
       install: *codekit_install
