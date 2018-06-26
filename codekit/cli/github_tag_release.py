@@ -139,11 +139,6 @@ def parse_args():
         help='git repos to be tagged MUST NOT be a member of ANY of'
              ' these teams (can specify several times)')
     parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Do not create/update tag(s) or modify any state.'
-             ' (has no effect if specified in addition to --verify)')
-    parser.add_argument(
         '--user',
         help='Name of person making the tag - defaults to gitconfig value')
     parser.add_argument(
@@ -188,12 +183,6 @@ def parse_args():
         type=int,
         help='Maximum number of products/repos to tags. (useful for testing)')
     parser.add_argument(
-        '--verify',
-        action='store_true',
-        help='Verify that all git tags for a release are present and correct.'
-             ' (will not create/update tag(s) or modify any state)'
-             ' (has precedence over --dry-run)')
-    parser.add_argument(
         '--fail-fast',
         action='store_true',
         help='Fail immediately on github API error.')
@@ -212,14 +201,30 @@ def parse_args():
     parser.add_argument('tag')
 
     manifest_group = parser.add_mutually_exclusive_group()
-    manifest_group.add_argument('--eups-tag')
+    manifest_group.add_argument(
+        '--eups-tag',
+        help='(mutually exclusive with --manifest-only)')
     manifest_group.add_argument(
         '--manifest-only',
         action='store_true',
         help='Do not cross reference a published eups tag with the manifest'
              ' -- use only the metadata from the manifest to determine'
              ' git tag location.'
-             ' This allows a git tag to be created without a prior eups tag.')
+             ' This allows a git tag to be created without a prior eups tag.'
+             ' (mutually exclusive with --eups-tag)')
+
+    dryrun_group = parser.add_mutually_exclusive_group()
+    dryrun_group.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Do not create/update tag(s) or modify any state.'
+             ' (mutually exclusive with --verify)')
+    dryrun_group.add_argument(
+        '--verify',
+        action='store_true',
+        help='Verify that all git tags for a release are present and correct.'
+             ' will not create/update tag(s) or modify any state.'
+             ' (mutually exclusive with --dry-run)')
 
     return parser.parse_args()
 
