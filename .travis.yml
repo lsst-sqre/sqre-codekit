@@ -6,7 +6,7 @@ matrix:
       python: '3.6'
       install: pip install --upgrade 'pip>=9' setuptools_scm
       script: python setup.py test
-    - env: TEST='github-tag-release --dry-run'
+    - env: TEST='github-tag-release'
       language: python
       python: '3.6'
       install:
@@ -15,10 +15,14 @@ matrix:
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           # verify a past weekly tag -- the eups tag name and git tag names are
           # in sync except for s/_/-/
-          github-tag-release \
+          "$TEST" \
             --verify \
             --debug \
             --limit 10 \
@@ -38,7 +42,7 @@ matrix:
           # verify a past official release where the git tag was generated from
           # an rcX eups tag.  This validates the location of the git tags but
           # does not inspect the official eups release tag at all.
-          github-tag-release \
+          "$TEST" \
             --verify \
             --debug \
             --limit 10 \
@@ -60,7 +64,7 @@ matrix:
           # product version strings will be out of sync between the versiondb
           # manifest it was based on and the eups tag, the eups product version
           # strings have to be ignored.
-          github-tag-release \
+          "$TEST" \
             --verify \
             --debug \
             --limit 10 \
@@ -78,7 +82,7 @@ matrix:
             --manifest 'b3504' \
             '15.0'
 
-          github-tag-release \
+          "$TEST" \
             --dry-run \
             --debug \
             --limit 10 \
@@ -99,7 +103,7 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
-    - env: TEST='github-tag-teams --dry-run'
+    - env: TEST='github-tag-teams'
       language: python
       python: '3.6'
       install:
@@ -108,9 +112,13 @@ matrix:
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           # create
-          github-tag-teams \
+          "$TEST" \
             --debug \
             --dry-run \
             --org 'lsst' \
@@ -123,7 +131,7 @@ matrix:
             --tag 'bar'
 
           # --delete
-          github-tag-teams \
+          "$TEST" \
             --debug \
             --dry-run \
             --delete \
@@ -138,7 +146,7 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
-    - env: TEST='github-decimate-org --dry-run'
+    - env: TEST='github-decimate-org'
       language: python
       python: '3.6'
       install:
@@ -147,8 +155,12 @@ matrix:
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-          github-decimate-org \
+          "$TEST" \
             --dry-run \
             --debug \
             --org 'batmanuel-sandbox' \
@@ -160,7 +172,7 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
-    - env: TEST='github-fork-org --dry-run'
+    - env: TEST='github-fork-org'
       language: python
       python: '3.6'
       install:
@@ -169,8 +181,12 @@ matrix:
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-          github-fork-org \
+          "$TEST" \
             --dry-run \
             --debug \
             --src-org 'lsst' \
@@ -193,13 +209,53 @@ matrix:
       - pip install dist/sqre-codekit-*.tar.gz
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-          github-get-ratelimit \
+          "$TEST" \
             --debug \
             --token "$SQREADMIN_TOKEN"
         else
           echo "Unable to test without travis secure env vars."
         fi
+    - env: TEST='github-auth'
+      language: python
+      python: *pyver
+      install:
+      - pip install --upgrade 'pip>=9' setuptools_scm
+      - python setup.py sdist
+      - pip install dist/sqre-codekit-*.tar.gz
+      script: |
+        set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+    - env: TEST='github-list-repos'
+      language: python
+      python: *pyver
+      install:
+      - pip install --upgrade 'pip>=9' setuptools_scm
+      - python setup.py sdist
+      - pip install dist/sqre-codekit-*.tar.gz
+      script: |
+        set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+    - env: TEST='github-mv-repos-to-team'
+      language: python
+      python: *pyver
+      install:
+      - pip install --upgrade 'pip>=9' setuptools_scm
+      - python setup.py sdist
+      - pip install dist/sqre-codekit-*.tar.gz
+      script: |
+        set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
     - env: TEST=hadolint
       language: c
       services:
