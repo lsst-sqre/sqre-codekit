@@ -11,7 +11,7 @@ import textwrap
 
 def parse_args():
     """Parse command-line arguments"""
-    prog = 'github-get-ratelimit',
+    prog = 'github-get-ratelimit'
 
     parser = argparse.ArgumentParser(
         prog=prog,
