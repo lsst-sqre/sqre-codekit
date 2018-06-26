@@ -1,24 +1,31 @@
+---
+# yamllint disable rule:line-length
 sudo: false
 matrix:
   include:
     - env: TEST='pytest' DEPLOYER=true
       language: python
-      python: '3.6'
+      python: &pyver '3.6'
       install: pip install --upgrade 'pip>=9' setuptools_scm
       script: python setup.py test
-    - env: TEST='github-tag-release --dry-run'
+
+    - env: TEST='github-tag-release'
       language: python
-      python: '3.6'
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      python: *pyver
+      install: &codekit_install
+        - pip install --upgrade 'pip>=9' setuptools_scm
+        - python setup.py sdist
+        - pip install dist/sqre-codekit-*.tar.gz
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           # verify a past weekly tag -- the eups tag name and git tag names are
           # in sync except for s/_/-/
-          github-tag-release \
+          "$TEST" \
             --verify \
             --debug \
             --limit 10 \
@@ -38,7 +45,7 @@ matrix:
           # verify a past official release where the git tag was generated from
           # an rcX eups tag.  This validates the location of the git tags but
           # does not inspect the official eups release tag at all.
-          github-tag-release \
+          "$TEST" \
             --verify \
             --debug \
             --limit 10 \
@@ -60,7 +67,7 @@ matrix:
           # product version strings will be out of sync between the versiondb
           # manifest it was based on and the eups tag, the eups product version
           # strings have to be ignored.
-          github-tag-release \
+          "$TEST" \
             --verify \
             --debug \
             --limit 10 \
@@ -78,7 +85,7 @@ matrix:
             --manifest 'b3504' \
             '15.0'
 
-          github-tag-release \
+          "$TEST" \
             --dry-run \
             --debug \
             --limit 10 \
@@ -99,18 +106,20 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
-    - env: TEST='github-tag-teams --dry-run'
+
+    - env: TEST='github-tag-teams'
       language: python
-      python: '3.6'
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      python: *pyver
+      install: *codekit_install
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
           # create
-          github-tag-teams \
+          "$TEST" \
             --debug \
             --dry-run \
             --org 'lsst' \
@@ -123,7 +132,7 @@ matrix:
             --tag 'bar'
 
           # --delete
-          github-tag-teams \
+          "$TEST" \
             --debug \
             --dry-run \
             --delete \
@@ -138,17 +147,19 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
-    - env: TEST='github-decimate-org --dry-run'
+
+    - env: TEST='github-decimate-org'
       language: python
-      python: '3.6'
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      python: *pyver
+      install: *codekit_install
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-          github-decimate-org \
+          "$TEST" \
             --dry-run \
             --debug \
             --org 'batmanuel-sandbox' \
@@ -160,17 +171,19 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
-    - env: TEST='github-fork-org --dry-run'
+
+    - env: TEST='github-fork-org'
       language: python
-      python: '3.6'
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      python: *pyver
+      install: *codekit_install
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-          github-fork-org \
+          "$TEST" \
             --dry-run \
             --debug \
             --src-org 'lsst' \
@@ -184,63 +197,85 @@ matrix:
         else
           echo "Unable to test without travis secure env vars."
         fi
+
     - env: TEST='github-get-ratelimit'
       language: python
-      python: '3.6'
-      install:
-      - pip install --upgrade 'pip>=9' setuptools_scm
-      - python setup.py sdist
-      - pip install dist/sqre-codekit-*.tar.gz
+      python: *pyver
+      install: *codekit_install
       script: |
         set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
         if [[ $TRAVIS_SECURE_ENV_VARS == true ]]; then
-          github-get-ratelimit \
+          "$TEST" \
             --debug \
             --token "$SQREADMIN_TOKEN"
         else
           echo "Unable to test without travis secure env vars."
         fi
-    - env: TEST=hadolint
-      language: c
-      services:
-        - docker
+
+    - env: TEST='github-auth'
+      language: python
+      python: *pyver
+      install: *codekit_install
       script: |
         set -e
-        shopt -s globstar nullglob
-        CHECK=( **/Dockerfile )
-        [[ ${#CHECK[@]} -eq 0 ]] && exit
-        for f in "${CHECK[@]}"; do
-          docker run -ti -v$(pwd):$(pwd) -w $(pwd) \
-            hadolint/hadolint hadolint "$f"
-        done
-    - env: TEST=make
-      language: c
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
+    - env: TEST='github-list-repos'
+      language: python
+      python: *pyver
+      install: *codekit_install
       script: |
         set -e
-        shopt -s globstar nullglob
-        CHECK=( **/Makefile )
-        [[ ${#CHECK[@]} -eq 0 ]] && exit
-        for f in "${CHECK[@]}"; do
-          ( set -e
-            cd $(dirname "$f")
-            echo "checking $f"
-            make --dry-run --warn-undefined-variables
-          )
-        done
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
+    - env: TEST='github-mv-repos-to-team'
+      language: python
+      python: *pyver
+      install: *codekit_install
+      script: |
+        set -e
+
+        # check argparse help formatting for errors
+        "$TEST" -h
+
     - env: TEST=markdownlint
       language: c
       services:
         - docker
-      script: |
-        set -e
-        shopt -s globstar nullglob
-        CHECK=( **/*.md )
-        [[ ${#CHECK[@]} -eq 0 ]] && exit
-        docker run -ti -v $(pwd):$(pwd) -w $(pwd) \
-          mivok/markdownlint:0.4.0 "${CHECK[@]}"
+      script: ./tests/mdl.sh
+
+    - env: TEST=make
+      language: c
+      script: ./tests/make.sh
+
+    - env: TEST=hadolint
+      language: c
+      services:
+        - docker
+      script: ./tests/hadolint.sh
+
+    - env: TEST=yamllint
+      language: c
+      services:
+        - docker
+      script: ./tests/yamllint.sh
+
+    - env: TEST=shellcheck
+      language: c
+      services:
+        - docker
+      script: ./tests/shellcheck.sh
 env:
   global:
-  - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
+    - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
 deploy:
   provider: pypi
   user: sqre-admin
@@ -248,6 +283,7 @@ deploy:
   distributions: sdist bdist_wheel
   password:
     secure: f88F6UgUAxe73pQuX5yGHdl96e/dcQIFClBc6mNgzAVDjxWXskQ/YRCcbO81yxdjsQRfBJsOiiQKcuM76k1iaOQTazQtdG2Wc/S29qzLlReBNTvo4iMBTg1TDSkT5RnDKrxG4omphlgJP2C9i+b0TjDcKJ26uh8t6m6eUs/Mffw=
+  # yamllint disable-line rule:truthy
   on:
     tags: true
     branch: master
@@ -255,8 +291,8 @@ deploy:
     repo: lsst-sqre/sqre-codekit
 branches:
   only:
-  - master
-  # also matched against tag pushes
-  - /^\d+\.\d+\.\d+$/
+    - master
+    # also matched against tag pushes
+    - /^\d+\.\d+\.\d+$/
 notifications:
   email: false
