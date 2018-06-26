@@ -83,7 +83,15 @@ def run():
 
     org = g.get_organization(args.organization)
 
-    for r in org.get_repos():
+    try:
+        repos = list(org.get_repos())
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting repos'
+        raise pygithub.CaughtOrganizationError(org, e, msg) from None
+
+    for r in repos:
         try:
             teamnames = [t.name for t in r.get_teams()
                          if t.name not in args.hide]

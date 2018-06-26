@@ -89,7 +89,14 @@ def delete_all_repos(org, **kwargs):
     assert isinstance(org, github.Organization.Organization), type(org)
     limit = kwargs.pop('limit', None)
 
-    repos = list(itertools.islice(org.get_repos(), limit))
+    try:
+        repos = list(itertools.islice(org.get_repos(), limit))
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = 'error getting repos'
+        raise pygithub.CaughtOrganizationError(org, e, msg) from None
+
     info("found {n} repos in {org}".format(n=len(repos), org=org.login))
     [debug("  {r}".format(r=r.full_name)) for r in repos]
 

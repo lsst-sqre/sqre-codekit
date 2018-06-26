@@ -328,8 +328,11 @@ def get_repo_for_products(
 
         try:
             repo = org.get_repo(name)
-        except github.UnknownObjectException as e:
-            yikes = pygithub.CaughtUnknownObjectError(name, e)
+        except github.RateLimitExceededException:
+            raise
+        except github.GithubException as e:
+            msg = "error getting repo by name: {r}".format(r=name)
+            yikes = pygithub.CaughtOrganizationError(org, e, msg)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)
