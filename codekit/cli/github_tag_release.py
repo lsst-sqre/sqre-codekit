@@ -473,10 +473,20 @@ def check_existing_git_tag(repo, t_tag, **kwargs):
         return False
 
     # find tag object pointed to by the ref
-    e_tag = repo.get_git_tag(e_ref.object.sha)
+    try:
+        e_tag = repo.get_git_tag(e_ref.object.sha)
+    except github.RateLimitExceededException:
+        raise
+    except github.GithubException as e:
+        msg = "error getting tag: {tag} [{sha}]".format(
+            tag=e_tag.tag,
+            sha=e_tag.sha,
+        )
+        raise pygithub.CaughtRepositoryError(repo, e, msg) from None
+
     debug("  found existing: {tag} [{sha}]".format(
         tag=e_tag.tag,
-        sha=e_tag.sha
+        sha=e_tag.sha,
     ))
 
     if cmp_existing_git_tag(t_tag, e_tag, **kwargs):
