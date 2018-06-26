@@ -568,7 +568,10 @@ def check_product_tags(
                 error(e)
                 continue
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(repo, e)
+            msg = "error checking for existance of tag: {t}".format(
+                t=t_tag.name,
+            )
+            yikes = pygithub.CaughtRepositoryError(repo, e, msg)
 
             if fail_fast:
                 raise yikes from None
@@ -672,7 +675,8 @@ def tag_products(
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:
-            yikes = pygithub.CaughtRepositoryError(repo, e)
+            msg = "error creating tag: {t}".format(t=t_tag.name)
+            yikes = pygithub.CaughtRepositoryError(repo, e, msg)
             if fail_fast:
                 raise yikes from None
             problems.append(yikes)

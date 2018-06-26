@@ -24,18 +24,20 @@ class CaughtRepositoryError(Exception):
     """Simple exception class intended to bundle together a
     github.Repository.Repository object and a thrown exception
     """
-    def __init__(self, repo, caught):
+    def __init__(self, repo, caught, msg):
         assert isinstance(repo, github.Repository.Repository), type(repo)
         assert isinstance(caught, github.GithubException), type(caught)
 
         self.repo = repo
         self.caught = caught
+        self.msg = msg
 
     def __str__(self):
         return textwrap.dedent("""\
             Caught: {cls}
               In repo: {repo}
-              Message: {e}\
+              Message: {msg}
+              Exception Message: {e}\
             """.format(
             cls=type(self.caught),
             repo=self.repo.full_name,
