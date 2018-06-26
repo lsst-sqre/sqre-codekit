@@ -1,3 +1,5 @@
+---
+# yamllint disable rule:line-length
 sudo: false
 matrix:
   include:
@@ -275,7 +277,7 @@ matrix:
           mivok/markdownlint:0.4.0 "${CHECK[@]}"
 env:
   global:
-  - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
+    - secure: WEvb3zfO3XL0vUqIyckr3qZ7RWP5Iw9Pxbgw2Ei8tB8FSqz5DzU99xwl+ucTDQXIGYs4M1ROnf0hpCPP9OM0eSZaRPTf8BEK0SNjDEIQO4Rc89dskNqhf1CFQnCauJhk2ZJ/q0i4J9dV/igN6Ub/3kMRHov6i1UTfqs6ixfo3Fg=
 deploy:
   provider: pypi
   user: sqre-admin
@@ -283,6 +285,7 @@ deploy:
   distributions: sdist bdist_wheel
   password:
     secure: f88F6UgUAxe73pQuX5yGHdl96e/dcQIFClBc6mNgzAVDjxWXskQ/YRCcbO81yxdjsQRfBJsOiiQKcuM76k1iaOQTazQtdG2Wc/S29qzLlReBNTvo4iMBTg1TDSkT5RnDKrxG4omphlgJP2C9i+b0TjDcKJ26uh8t6m6eUs/Mffw=
+  # yamllint disable-line rule:truthy
   on:
     tags: true
     branch: master
@@ -290,8 +293,8 @@ deploy:
     repo: lsst-sqre/sqre-codekit
 branches:
   only:
-  - master
-  # also matched against tag pushes
-  - /^\d+\.\d+\.\d+$/
+    - master
+    # also matched against tag pushes
+    - /^\d+\.\d+\.\d+$/
 notifications:
   email: false
