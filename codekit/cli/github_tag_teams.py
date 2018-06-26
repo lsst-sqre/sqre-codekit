@@ -141,6 +141,11 @@ def tag_name_from_ref(ref):
     return re.sub(r'^refs/tags/', '', ref.ref)
 
 
+# XXX this should be refactored to operate similar to
+# github_tag_release.check_product_tags() in that it would create a
+# codekit.pygithub.TargetTag object and then compare it to an existing tag (if
+# present) -- it should also return list of tags to be applied instead of only
+# errors.
 def check_tags(repos, tags, ignore_existing=False, fail_fast=False):
     """ check if tags already exist in repos"""
 
