@@ -336,3 +336,29 @@ def validate_org(org):
         To chicken out on org name
     """
     assert 'lsst' not in org, '"lsst" not allowed in org name.'
+
+
+@public
+def debug_lvl_from_env():
+    """Read and return `DM_SQUARE_DEBUG` env var, if defined.
+
+    Raises
+    ------
+    RuntimeError
+        If DM_SQUARE_DEBUG is not an int convertable value
+    """
+    debug_lvl = os.environ.get('DM_SQUARE_DEBUG')
+    if not debug_lvl:
+        return 0
+
+    try:
+        debug_lvl = int(debug_lvl)
+    except ValueError:
+        # ensure that logging is configured as this method is likely to be
+        # called prior to configuring logging.
+        setup_logging(verbosity=1)
+        raise RuntimeError(
+            textwrap.dedent("""\
+            env var DM_SQUARE_DEBUG '{debug_lvl}' is not a string value that
+            can be converted to an int.""".format(debug_lvl=debug_lvl))
+        ) from None
