@@ -246,6 +246,17 @@ matrix:
         # check argparse help formatting for errors
         "$TEST" -h
 
+    - env:
+        TEST='github-auth'
+        DM_SQUARE_DEBUG='bogus_non_int_able_value'
+      language: python
+      python: *pyver
+      install: *codekit_install
+      script: |
+        # should fail
+        "$TEST" -u foo
+        [[ $? == 1 ]]
+
     - env: TEST=markdownlint
       language: c
       services:
