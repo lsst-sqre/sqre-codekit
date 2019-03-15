@@ -138,7 +138,7 @@ def run():
                 debug('  ok')
             except github.RateLimitExceededException:
                 raise
-            except github.GithubException as e:
+            except github.GithubException:
                 debug('  FAILED')
 
         if old_team.name in 'Owners':
@@ -157,7 +157,7 @@ def run():
                 debug('  ok')
             except github.RateLimitExceededException:
                 raise
-            except github.GithubException as e:
+            except github.GithubException:
                 debug('  FAILED')
 
     info('Added:', added)

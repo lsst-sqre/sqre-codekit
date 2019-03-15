@@ -176,7 +176,7 @@ def git_tag2eups_tag(git_tag):
 
     # eups tags should not start with a numeric value -- prefix `v` if
     # it does
-    if re.match('\d', eups_tag):
+    if re.match(r'\d', eups_tag):
         eups_tag = "v{eups_tag}".format(eups_tag=eups_tag)
 
     # convert '.'s and '-'s to '_'s

@@ -543,7 +543,7 @@ def check_product_tags(
         tag_name = git_tag
 
         # prefix tag name with `v`?
-        if data['v'] and re.match('\d', tag_name):
+        if data['v'] and re.match(r'\d', tag_name):
             tag_name = "v{git_tag}".format(git_tag=tag_name)
 
         # message can not be formatted until we've determined if the tag must
