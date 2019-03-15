@@ -8,7 +8,6 @@ from codekit.codetools import debug, error, info, warn
 from codekit import codetools, pygithub
 import argparse
 import github
-import os
 import sys
 import textwrap
 
@@ -69,7 +68,7 @@ def parse_args():
     parser.add_argument(
         '-d', '--debug',
         action='count',
-        default=os.getenv('DM_SQUARE_DEBUG'),
+        default=codetools.debug_lvl_from_env(),
         help='Debug mode (can specify several times)')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('-v', '--version', action=codetools.ScmVersionAction)
