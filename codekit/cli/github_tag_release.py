@@ -2,7 +2,6 @@
 
 # Technical Debt
 # --------------
-# - support repos.yaml for github repo resolution
 # - worth doing the smart thing for externals? (yes for Sims)
 
 # Known Bugs
@@ -19,6 +18,7 @@ import os
 import re
 import sys
 import textwrap
+import yaml
 
 
 class GitTagExistsError(Exception):
@@ -325,6 +325,9 @@ def get_repo_for_products(
 
     resolved_products = {}
 
+    repos_yaml = org.get_rep("repos").get_content("etc/repos.yaml")
+    repo_index = yaml.safe_load(repos_yaml.decoded_content)
+
     problems = []
     for name, data in products.items():
         debug("looking for git repo for: {name} [{ver}]".format(
@@ -333,7 +336,22 @@ def get_repo_for_products(
         ))
 
         try:
-            repo = org.get_repo(name)
+            entry = repo_index[name]
+            if isinstance(entry, dict):
+                entry = entry['url']
+            entry = re.sub(r"^https?://github.com/(.+)\.git$", r"\1", entry)
+        except Exception as exc:
+            msg = f"repo {name} cannot be found in repos.yaml"
+            yikes = RuntimeError(msg)
+            if fail_fast:
+                raise yikes from exc
+            problems.append(yikes)
+            error(yikes)
+            continue
+
+        try:
+            global g
+            repo = g.get_repo(entry)
         except github.RateLimitExceededException:
             raise
         except github.GithubException as e:

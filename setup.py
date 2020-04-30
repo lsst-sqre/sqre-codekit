@@ -44,6 +44,7 @@ setup(
         'progressbar2==3.37.1',
         'public==1.0',
         'pygithub==1.40a3',
+        'pyyaml>=5.1',
         'requests>=2.8.1,<3.0.0',
     ],
     setup_requires=[
@@ -51,7 +52,7 @@ setup(
         'setuptools_scm',
     ],
     tests_require=[
-        'flake8>=3.7.7,<4',
+        'flake8>=3.7.7,<3.8',
         'pytest>=4.3,<5',
         'pytest-flake8>=1.0.4,<2',
         'responses>=0.9.0,<1',
