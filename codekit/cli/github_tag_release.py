@@ -325,7 +325,7 @@ def get_repo_for_products(
 
     resolved_products = {}
 
-    repos_yaml = org.get_repo("repos").get_content("etc/repos.yaml")
+    repos_yaml = org.get_repo("repos").get_contents("etc/repos.yaml")
     repo_index = yaml.safe_load(repos_yaml.decoded_content)
 
     problems = []
