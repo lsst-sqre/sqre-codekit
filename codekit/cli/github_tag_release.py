@@ -340,7 +340,7 @@ def get_repo_for_products(
             entry = repo_index[name]
             if isinstance(entry, dict):
                 entry = entry['url']
-            entry = re.sub(r"^https?://github.com/(.+)\.git$", r"\1", entry)
+            entry = re.sub(r"^https?://github.com/(.+?)(\.git)?$", r"\1", entry)
         except Exception as exc:
             msg = f"repo {name} cannot be found in repos.yaml"
             yikes = RuntimeError(msg)
