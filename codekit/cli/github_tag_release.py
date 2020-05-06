@@ -325,7 +325,8 @@ def get_repo_for_products(
 
     resolved_products = {}
 
-    repos_yaml = org.get_rep("repos").get_content("etc/repos.yaml")
+    global g
+    repos_yaml = g.get_repo("lsst/repos").get_contents("etc/repos.yaml")
     repo_index = yaml.safe_load(repos_yaml.decoded_content)
 
     problems = []
@@ -339,7 +340,11 @@ def get_repo_for_products(
             entry = repo_index[name]
             if isinstance(entry, dict):
                 entry = entry['url']
-            entry = re.sub(r"^https?://github.com/(.+)\.git$", r"\1", entry)
+            entry = re.sub(
+                r"^https?://github\.com/(.+?)(\.git)?$",
+                r"\1",
+                entry
+            )
         except Exception as exc:
             msg = f"repo {name} cannot be found in repos.yaml"
             yikes = RuntimeError(msg)
@@ -350,7 +355,6 @@ def get_repo_for_products(
             continue
 
         try:
-            global g
             repo = g.get_repo(entry)
         except github.RateLimitExceededException:
             raise
