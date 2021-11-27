@@ -8,7 +8,7 @@ import requests
 import textwrap
 
 default_base_url =\
-    'https://raw.githubusercontent.com/lsst/versiondb/master/manifests'
+    'https://raw.githubusercontent.com/lsst/versiondb/main/manifests'
 
 
 @public
@@ -39,7 +39,7 @@ class Manifest(object):
         Base url to the path for `manifest` files`. Optional.
 
         Eg.:
-            `https://raw.githubusercontent.com/lsst/versiondb/master/manifests`
+            `https://raw.githubusercontent.com/lsst/versiondb/main/manifests`
     """
 
     def __init__(self, name, base_url=None):
