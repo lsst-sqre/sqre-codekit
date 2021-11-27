@@ -35,7 +35,7 @@ def test_b3504(b3504):
         responses.Response(
             method='GET',
             url='https://raw.githubusercontent.com/lsst/versiondb'
-                '/master/manifests/b3504.txt',
+                '/main/manifests/b3504.txt',
             body=b3504,
         ),
     )
